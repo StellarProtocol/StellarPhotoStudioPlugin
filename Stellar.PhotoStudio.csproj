@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="$(MSBuildThisFileDirectory)Local.props" Condition="Exists('$(MSBuildThisFileDirectory)Local.props')" />
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <NoWarn>CS8632;CS8765</NoWarn>
+    <RootNamespace>Stellar.PhotoStudio</RootNamespace>
+    <AssemblyName>Stellar.PhotoStudio</AssemblyName>
+    <Version>1.0.0</Version>
+    <Deterministic>true</Deterministic>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Photo Studio: hide layers, supersampled capture, and looks built from the game's own render
+         pipeline volumes (IScreenCapture, ISceneVisibility, IRenderLook, IPhotoModeState — framework 2.13.0). -->
+    <PackageReference Include="Stellar.Abstractions"       Version="2.13.0" />
+    <PackageReference Include="Stellar.PluginContracts"    Version="2.0.0" />
+    <PackageReference Include="Stellar.Plugin.InteropRefs" Version="2.0.0" />
+  </ItemGroup>
+
+  <!-- Local framework build: framework 2.13.0 is unreleased. Pass -p:StellarLocalFramework=<path to the
+       framework checkout root> (the directory containing src/Stellar.Abstractions/) to build against a
+       live Abstractions source tree instead of the (not yet published) NuGet package. -->
+  <ItemGroup Condition="'$(StellarLocalFramework)' != ''">
+    <PackageReference Remove="Stellar.Abstractions" />
+    <ProjectReference Include="$(StellarLocalFramework)/src/Stellar.Abstractions/Stellar.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Lang/en.json" LogicalName="Stellar.PhotoStudio.Lang.en.json" />
+    <EmbeddedResource Include="Lang/ja.json" LogicalName="Stellar.PhotoStudio.Lang.ja.json" />
+    <EmbeddedResource Include="Lang/th.json" LogicalName="Stellar.PhotoStudio.Lang.th.json" />
+    <EmbeddedResource Include="Lang/id.json" LogicalName="Stellar.PhotoStudio.Lang.id.json" />
+    <EmbeddedResource Include="Lang/fil.json" LogicalName="Stellar.PhotoStudio.Lang.fil.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="tests/**/*.cs" />
+    <InternalsVisibleTo Include="Stellar.PhotoStudio.Tests" />
+  </ItemGroup>
+</Project>

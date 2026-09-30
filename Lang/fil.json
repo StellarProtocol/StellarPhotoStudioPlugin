@@ -1,0 +1,13 @@
+{
+  "plugin.name": "Photo Studio",
+  "hotkey.panel": "Photo Studio: buksan / isara ang panel",
+  "hotkey.capture": "Photo Studio: kumuha ng screenshot",
+  "hotkey.hideall": "Photo Studio: itago lahat",
+  "hotkey.nextpreset": "Photo Studio: susunod na look",
+  "toast.saved": "Na-save ang {0} ({1}×{2})",
+  "toast.failed": "Nabigo ang screenshot: {0}",
+  "toast.openfolder": "Buksan ang folder",
+  "look.unavailable": "Hindi available ang mga look sa client na ito.",
+  "lut.bad": "Ang {0} ay hindi valid na LUT (gumamit ng 256×16 o 1024×32 PNG).",
+  "preset.bad": "Hindi mabasa ang naka-save na look kaya na-skip ito."
+}

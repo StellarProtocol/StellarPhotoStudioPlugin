@@ -1,0 +1,13 @@
+{
+  "plugin.name": "Photo Studio",
+  "hotkey.panel": "Photo Studio: パネルの開閉",
+  "hotkey.capture": "Photo Studio: スクリーンショットを撮る",
+  "hotkey.hideall": "Photo Studio: すべて非表示",
+  "hotkey.nextpreset": "Photo Studio: 次のルック",
+  "toast.saved": "{0} を保存しました（{1}×{2}）",
+  "toast.failed": "スクリーンショットに失敗しました: {0}",
+  "toast.openfolder": "フォルダを開く",
+  "look.unavailable": "このクライアントではルックを利用できません。",
+  "lut.bad": "{0} は有効なLUTではありません（256×16 または 1024×32 のPNGを使用してください）。",
+  "preset.bad": "保存されたルックを読み込めなかったためスキップしました。"
+}

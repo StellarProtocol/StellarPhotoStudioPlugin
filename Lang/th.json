@@ -1,0 +1,13 @@
+{
+  "plugin.name": "Photo Studio",
+  "hotkey.panel": "Photo Studio: เปิด/ปิดแผง",
+  "hotkey.capture": "Photo Studio: ถ่ายภาพหน้าจอ",
+  "hotkey.hideall": "Photo Studio: ซ่อนทั้งหมด",
+  "hotkey.nextpreset": "Photo Studio: ลุคถัดไป",
+  "toast.saved": "บันทึก {0} แล้ว ({1}×{2})",
+  "toast.failed": "ถ่ายภาพหน้าจอล้มเหลว: {0}",
+  "toast.openfolder": "เปิดโฟลเดอร์",
+  "look.unavailable": "ลุคไม่พร้อมใช้งานบนไคลเอนต์นี้",
+  "lut.bad": "{0} ไม่ใช่ LUT ที่ถูกต้อง (ใช้ PNG ขนาด 256×16 หรือ 1024×32)",
+  "preset.bad": "ลุคที่บันทึกไว้ไม่สามารถอ่านได้และถูกข้ามไป"
+}

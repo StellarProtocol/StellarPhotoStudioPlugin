@@ -1,0 +1,13 @@
+{
+  "plugin.name": "Photo Studio",
+  "hotkey.panel": "Photo Studio: buka / tutup panel",
+  "hotkey.capture": "Photo Studio: ambil screenshot",
+  "hotkey.hideall": "Photo Studio: sembunyikan semua",
+  "hotkey.nextpreset": "Photo Studio: look berikutnya",
+  "toast.saved": "{0} disimpan ({1}×{2})",
+  "toast.failed": "Screenshot gagal: {0}",
+  "toast.openfolder": "Buka folder",
+  "look.unavailable": "Look tidak tersedia di client ini.",
+  "lut.bad": "{0} bukan LUT yang valid (gunakan PNG 256×16 atau 1024×32).",
+  "preset.bad": "Look tersimpan tidak dapat dibaca dan dilewati."
+}

@@ -1,0 +1,13 @@
+{
+  "plugin.name": "Photo Studio",
+  "hotkey.panel": "Photo Studio: open / close",
+  "hotkey.capture": "Photo Studio: take screenshot",
+  "hotkey.hideall": "Photo Studio: hide everything",
+  "hotkey.nextpreset": "Photo Studio: next look",
+  "toast.saved": "Saved {0} ({1}×{2})",
+  "toast.failed": "Screenshot failed: {0}",
+  "toast.openfolder": "Open folder",
+  "look.unavailable": "Looks are not available on this client.",
+  "lut.bad": "{0} is not a valid LUT (use 256×16 or 1024×32 PNG).",
+  "preset.bad": "A saved look could not be read and was skipped."
+}
