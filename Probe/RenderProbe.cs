@@ -39,6 +39,7 @@ public sealed partial class RenderProbe : IStellarPlugin
         Directory.CreateDirectory(_outDir);
         _logPath = Path.Combine(_outDir, "photoprobe.log");
         Log($"loaded; out={_outDir}");
+        LogModules();
         _steps = BuildSteps();
         InstallHooks();
         _stepAction = _services.Hotkeys.DeclareAction(

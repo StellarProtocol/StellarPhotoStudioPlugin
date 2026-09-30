@@ -36,6 +36,12 @@ public sealed partial class RenderProbe
         Hook(h, typeof(CutsceneManager), "Play");
         Hook(h, typeof(CutsceneManager), "StopCutscene");
         Hook(h, typeof(CutsceneManager), "SetHidingFlags");
+        Hook(h, typeof(CameraStateSelfPhoto), "OnEnter");
+        Hook(h, typeof(CameraStateSelfPhoto), "OnExit");
+        Hook(h, typeof(CameraStateMachine), "onCameraStateChange");
+        Hook(h, typeof(CameraFrameCtrl), "SetPhotoType");
+        Hook(h, typeof(CameraFrameCtrl), "Init");
+        Hook(h, typeof(CameraFrameCtrl), "UnInit");
     }
 
     private void Hook(Harmony h, Type t, string method)

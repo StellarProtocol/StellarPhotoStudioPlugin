@@ -20,6 +20,8 @@ public sealed partial class RenderProbe
     {
         ("env", StepEnv),
         ("baseline", () => Snap("00_baseline")),
+        ("others_measured", StepOthersMeasured),
+        ("photo_mode_player_path", StepPhotoModePlayerPath),
         ("grey", StepGrey),
         ("dof_ZDofVolume", StepDofZ),
         ("dof_ZUnityDepthOfField", StepDofUnity),

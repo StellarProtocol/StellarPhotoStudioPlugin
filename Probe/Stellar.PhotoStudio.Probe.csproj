@@ -19,7 +19,7 @@
     <BepInExCore>$(GameMini)/BepInEx/core</BepInExCore>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Stellar.Abstractions" Version="2.1.0" />
+    <PackageReference Include="Stellar.Abstractions" Version="2.9.0" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="BepInEx.Core"><HintPath>$(BepInExCore)/BepInEx.Core.dll</HintPath><Private>false</Private></Reference>
@@ -41,6 +41,8 @@
     <Reference Include="Panda.Script"><HintPath>$(GameInterop)/Panda.Script.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="ZUtil"><HintPath>$(GameInterop)/ZUtil.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Panda.AOT.Quality"><HintPath>$(GameInterop)/Panda.AOT.Quality.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Unity.TextMeshPro"><HintPath>$(GameInterop)/Unity.TextMeshPro.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Cinemachine"><HintPath>$(GameInterop)/Cinemachine.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UniTask"><HintPath>$(GameInterop)/UniTask.dll</HintPath><Private>false</Private></Reference>
   </ItemGroup>
 </Project>
