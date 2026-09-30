@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- THROWAWAY recon probe (Photo Studio plan, Task 0). Branch probe/render-recon — never merged.
+       Unlike shipping plugins it references the game interop assemblies DIRECTLY (render pipeline, Panda.Script)
+       because the probe's job is to find which members work; Infrastructure owns these paths later. -->
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <NoWarn>CS8632;CS8765;CS8600;CS8602;CS8604;CS8618;CS8625</NoWarn>
+    <RootNamespace>Stellar.PhotoStudioProbe</RootNamespace>
+    <AssemblyName>Stellar.PhotoStudioProbe</AssemblyName>
+    <Version>0.0.1</Version>
+    <Deterministic>true</Deterministic>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GameMini Condition="'$(GameMini)' == ''">/opt/game/BlueProtocol2/drive_c/Star/StarLauncher/game/release_3.7/game_mini</GameMini>
+    <GameInterop>$(GameMini)/BepInEx/interop</GameInterop>
+    <BepInExCore>$(GameMini)/BepInEx/core</BepInExCore>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Stellar.Abstractions" Version="2.1.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="BepInEx.Core"><HintPath>$(BepInExCore)/BepInEx.Core.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="BepInEx.Unity.IL2CPP"><HintPath>$(BepInExCore)/BepInEx.Unity.IL2CPP.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="0Harmony"><HintPath>$(BepInExCore)/0Harmony.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2CppInterop.Runtime"><HintPath>$(BepInExCore)/Il2CppInterop.Runtime.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2CppInterop.Common"><HintPath>$(BepInExCore)/Il2CppInterop.Common.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2Cppmscorlib"><HintPath>$(GameInterop)/Il2Cppmscorlib.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2CppSystem"><HintPath>$(GameInterop)/Il2CppSystem.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2CppSystem.Core"><HintPath>$(GameInterop)/Il2CppSystem.Core.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine"><HintPath>$(GameInterop)/UnityEngine.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(GameInterop)/UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.ImageConversionModule"><HintPath>$(GameInterop)/UnityEngine.ImageConversionModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.ScreenCaptureModule"><HintPath>$(GameInterop)/UnityEngine.ScreenCaptureModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.UIModule"><HintPath>$(GameInterop)/UnityEngine.UIModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.UI"><HintPath>$(GameInterop)/UnityEngine.UI.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Unity.RenderPipelines.Core.Runtime"><HintPath>$(GameInterop)/Unity.RenderPipelines.Core.Runtime.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="ZRenderPipeline"><HintPath>$(GameInterop)/ZRenderPipeline.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Panda.Script"><HintPath>$(GameInterop)/Panda.Script.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="ZUtil"><HintPath>$(GameInterop)/ZUtil.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UniTask"><HintPath>$(GameInterop)/UniTask.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+</Project>
