@@ -35,29 +35,23 @@ public sealed class PhotoModeAttachTests
         public void RaiseCutsceneChanged(bool v) { InCutscene = v; CutsceneChanged?.Invoke(v); }
     }
 
-    // Task 15 fix round item 2: PhotoModeAttach and the panel hotkey (TogglePanel) must go through the SAME
-    // "set view open" method so panel-open state has one writer. This test stands in for Plugin's real
-    // SetViewOpen/TogglePanel (which need a full IPluginServices to construct) by composing the same three
-    // real pieces (PhotoModeAttach, LookController, a view that tracks IsOpen honestly) around a local delegate
-    // that mirrors Plugin.SetViewOpen exactly.
+    // Task 15 fix round item 2 (+ follow-up): PhotoModeAttach and the panel hotkey (TogglePanel) must go through
+    // the SAME PanelOpenState so panel-open state has one writer. This test uses the REAL PanelOpenState (not a
+    // hand-mirrored copy of its logic), so a future change to PanelOpenState is exercised by both this test and
+    // Plugin.cs automatically.
     [Fact]
     public void Game_photo_mode_opens_the_view_then_a_toggle_hotkey_closes_it()
     {
         var view = new NoOpStudioView();
         var look = new LookController(new FakeLook());
-        void SetViewOpen(bool open) // == Plugin.SetViewOpen
-        {
-            if (open) view.Open(); else view.Close();
-            look.SetPanelOpen(view.IsOpen);
-        }
+        var panel = new PanelOpenState(view, look);
         var photoMode = new FakePhotoMode();
-        using var attach = new PhotoModeAttach(photoMode, look, SetViewOpen);
+        using var attach = new PhotoModeAttach(photoMode, look, panel);
 
         photoMode.RaiseEntered(PhotoModeKind.CameraFrame);
         Assert.True(view.IsOpen);
 
-        // Shift+F10 (TogglePanel) toggles based on the view's OWN current state, through the same shared method.
-        SetViewOpen(!view.IsOpen);
+        panel.Toggle(); // == Plugin.TogglePanel (Shift+F10)
         Assert.False(view.IsOpen);
     }
 
@@ -66,15 +60,14 @@ public sealed class PhotoModeAttachTests
     {
         var view = new NoOpStudioView();
         var look = new LookController(new FakeLook());
-        var opens = 0;
-        void SetViewOpen(bool open) { opens++; if (open) view.Open(); else view.Close(); }
+        var panel = new PanelOpenState(view, look);
         var photoMode = new FakePhotoMode();
-        var attach = new PhotoModeAttach(photoMode, look, SetViewOpen);
+        var attach = new PhotoModeAttach(photoMode, look, panel);
         attach.Dispose();
 
         photoMode.RaiseEntered(PhotoModeKind.CameraFrame);
         photoMode.RaiseExited();
 
-        Assert.Equal(0, opens);
+        Assert.False(view.IsOpen); // neither handler fired after Dispose, so the view was never touched
     }
 }

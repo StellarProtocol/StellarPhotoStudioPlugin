@@ -21,6 +21,7 @@ public sealed partial class Plugin : IStellarPlugin
     private readonly PresetStore _presets;
     private readonly StudioSession _session;
     private readonly IStudioView _view;
+    private readonly PanelOpenState _panel;
     private readonly PhotoModeAttach _photoModeAttach;
     private readonly Action<float> _onFrameworkUpdate;
     private readonly Action<bool> _onCutsceneChanged;
@@ -54,10 +55,11 @@ public sealed partial class Plugin : IStellarPlugin
         _look.SetDraft(_presets.All[_presetIndex].Look);
 
         _session = new StudioSession(services.ScreenCapture, BuildRequest, OnCaptureResult, services.Log.Warning);
+        _panel = new PanelOpenState(_view, _look);
 
         DeclareHotkeys();
 
-        _photoModeAttach = new PhotoModeAttach(services.PhotoMode, _look, SetViewOpen);
+        _photoModeAttach = new PhotoModeAttach(services.PhotoMode, _look, _panel);
         _onCutsceneChanged = suspended => _look.SetSuspended(suspended);
         services.PhotoMode.CutsceneChanged += _onCutsceneChanged;
 
@@ -107,20 +109,7 @@ public sealed partial class Plugin : IStellarPlugin
         }
     }
 
-    private void TogglePanel() => SetViewOpen(!_view.IsOpen);
-
-    /// <summary>The ONE place panel-open state is driven from: <see cref="IStudioView.IsOpen"/> is the single
-    /// source of truth (no separate bool here), and <see cref="LookController.SetPanelOpen"/> is always set from
-    /// the view's ACTUAL resulting state — not from what we asked for — so a concrete view that no-ops
-    /// <see cref="IStudioView.Close"/> (e.g. pinned open by the user) still previews correctly. Both
-    /// <see cref="TogglePanel"/> (the hotkey) and <see cref="PhotoModeAttach"/> (the game's own photo mode) call
-    /// this method; neither touches <see cref="_view"/> or <see cref="_look"/> directly for open/close.</summary>
-    private void SetViewOpen(bool open)
-    {
-        if (open) _view.Open();
-        else _view.Close();
-        _look.SetPanelOpen(_view.IsOpen);
-    }
+    private void TogglePanel() => _panel.Toggle();
 
     private void ToggleHideAll()
     {
