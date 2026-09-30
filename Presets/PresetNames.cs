@@ -12,6 +12,11 @@ internal static class PresetNames
 {
     public const int MaxLength = 48;
     private static readonly char[] Extra = { '/', '\\', ':', '*', '?', '"', '<', '>', '|' };
+    private static readonly string[] Reserved =
+    {
+        "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+        "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+    };
 
     /// <summary>Why <paramref name="name"/> can't be used, or null when it's fine.</summary>
     public static NameProblem? Check(string name)
@@ -21,6 +26,7 @@ internal static class PresetNames
         if (n.Length > MaxLength) return NameProblem.TooLong;
         if (n.IndexOfAny(Extra) >= 0 || n.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) return NameProblem.BadCharacters;
         if (n.EndsWith(".", StringComparison.Ordinal) || n.Contains("..", StringComparison.Ordinal)) return NameProblem.BadCharacters;
+        if (Array.Exists(Reserved, r => string.Equals(r, n, StringComparison.OrdinalIgnoreCase))) return NameProblem.BadCharacters;   // Windows device names
         return null;
     }
 
@@ -33,7 +39,8 @@ internal static class PresetNames
             if (Array.IndexOf(Extra, chars[i]) >= 0 || Array.IndexOf(bad, chars[i]) >= 0) chars[i] = '_';
         var s = new string(chars).TrimEnd('.', ' ').Replace("..", "_");
         if (s.Length > MaxLength) s = s.Substring(0, MaxLength).TrimEnd('.', ' ');
-        return s.Length == 0 ? "Imported" : s;
+        if (s.Length == 0) return "Imported";
+        return Array.Exists(Reserved, r => string.Equals(r, s, StringComparison.OrdinalIgnoreCase)) ? s + "_" : s;
     }
 }
 

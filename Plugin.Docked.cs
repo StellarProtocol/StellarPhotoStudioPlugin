@@ -40,7 +40,13 @@ public sealed partial class Plugin
         new ButtonElement(() => "✕", OnClick: DismissDocked, Width: 28f),
     }, Gap: 6f);
 
-    private HudElement DockedSliderRow() => new RowElement(new HudElement[]
+    // Row B shows the sliders, or — for the toast's few seconds after a capture from the strip — the saved line in
+    // their place: the row is ~1034 of 1100 px wide already, so the line can't sit beside them, and a toast window
+    // above would cover row A.
+    private HudElement DockedSliderRow() => new ConditionalElement(() => _toastLeft > 0f && _dockedShown,
+        DockedSavedRow(), DockedMinisRow());
+
+    private HudElement DockedMinisRow() => new RowElement(new HudElement[]
     {
         Mini(() => T("ps.look.exposure"),
             new SliderElement(() => _editor.Color.PostExposure, v => _editor.EditColor(c => c with { PostExposure = v }), -3f, 3f,
@@ -54,15 +60,22 @@ public sealed partial class Plugin
             new SliderElement(BlurAmount, SetBlurAmount, 0f, 1f, Enabled: () => Supported(LookGroups.Dof)),
             () => _editor.IsOn(LookGroups.Dof) ? "f/" + F(_editor.Dof.Aperture, "0.0") : T("ps.docked.blurOff"), labelWidth: 112f),
         new SpacerElement(),
-        // The saved line lives in the strip while it is shown: the toast window would sit on top of row A.
-        new ConditionalElement(() => _toastLeft > 0f && _dockedShown, new RowElement(new HudElement[]
-        {
-            new TextElement(() => _loc.TFormat("ps.docked.saved", _toastFile), Color: Muted, NoWrap: true),
-            new ButtonElement(() => T("ps.cap.openFolder"), OnClick: () => OpenFolderSafe(_toastDir)),
-        }, Gap: 6f)),
-        new ButtonElement(() => _loc.TFormat("ps.docked.capture", BindingText("photostudio.capture")),
-            OnClick: CaptureNow, Enabled: () => !Capturing, Style: MenuButtonStyle.Filled, Width: 170f),
+        DockedCaptureButton(),
     }, Gap: 12f);
+
+    private HudElement DockedSavedRow() => new RowElement(new HudElement[]
+    {
+        new TextElement(() => _loc.TFormat("ps.docked.saved", _toastFile), NoWrap: true),
+        new TextElement(() => _toastDetail, Color: Muted, NoWrap: true),
+        new ConditionalElement(() => _toastWarning.Length > 0,
+            new TextElement(() => _toastWarning, Color: () => _services.Theme.Colors.Warning, NoWrap: true)),
+        new SpacerElement(),
+        new ButtonElement(() => T("ps.cap.openFolder"), OnClick: () => OpenFolderSafe(_toastDir)),
+        DockedCaptureButton(),
+    }, Gap: 12f);
+
+    private HudElement DockedCaptureButton() => new ButtonElement(() => _loc.TFormat("ps.docked.capture", BindingText("photostudio.capture")),
+        OnClick: CaptureNow, Enabled: () => !Capturing, Style: MenuButtonStyle.Filled, Width: 170f);
 
     private HudElement Mini(Func<string> label, SliderElement slider, Func<string> value, float labelWidth = 76f) => new RowElement(new HudElement[]
     {

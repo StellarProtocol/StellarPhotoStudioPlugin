@@ -220,7 +220,8 @@ public sealed partial class Plugin
             Directory.CreateDirectory(_settings.Folder);
             var probe = Path.Combine(_settings.Folder, ".photostudio-write-test");
             File.WriteAllBytes(probe, Array.Empty<byte>());
-            File.Delete(probe);
+            try { File.Delete(probe); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }   // writable is what matters
             return _settings.Folder;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)

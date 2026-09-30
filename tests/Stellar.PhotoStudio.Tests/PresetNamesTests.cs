@@ -20,6 +20,9 @@ public sealed class PresetNamesTests
     [InlineData("what?", 2)]
     [InlineData("trailing.", 2)]
     [InlineData("a..b", 2)]
+    [InlineData("CON", 2)]
+    [InlineData("nul", 2)]
+    [InlineData("Com3", 2)]
     public void Rejects_names_the_store_or_windows_cannot_hold(string n, int p) => Assert.Equal((NameProblem)p, PresetNames.Check(n));
 
     [Fact]
@@ -30,6 +33,7 @@ public sealed class PresetNamesTests
     [InlineData("../evil", "__evil")]
     [InlineData("   ", "Imported")]
     [InlineData("dots...", "dots")]
+    [InlineData("nul", "nul_")]
     public void Sanitize_always_yields_a_valid_name(string raw, string expected)
     {
         var s = PresetNames.Sanitize(raw);

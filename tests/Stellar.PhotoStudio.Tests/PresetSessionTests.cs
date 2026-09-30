@@ -42,12 +42,54 @@ public sealed class PresetSessionTests
         e.EditColor(c => c with { Saturation = -77 });
         s.Apply(store.All.Single(p => p.Name == "Film"));
 
-        Assert.Equal("Cinematic", s.Unsaved!.Value.Origin);
+        Assert.Equal("Cinematic", s.Stash[0].Origin);
         s.RestoreUnsaved();
         Assert.Equal("Cinematic", s.ActiveName);
         Assert.True(s.Modified);
         Assert.Equal(-77, e.Build().Color!.Saturation);
-        Assert.Null(s.Unsaved);
+        Assert.Empty(s.Stash);
+    }
+
+    [Fact]
+    public void Restoring_while_modified_swaps_the_current_edits_into_the_stash()
+    {
+        var (s, e, store) = Make();
+        s.Apply(store.All.Single(p => p.Name == "Cinematic"));
+        e.EditColor(c => c with { Saturation = -10 });
+        s.Apply(store.All.Single(p => p.Name == "Film"));
+        e.EditColor(c => c with { Saturation = -20 });
+
+        s.RestoreUnsaved(0);
+
+        Assert.Equal("Cinematic", s.ActiveName);
+        Assert.Equal(-10, e.Build().Color!.Saturation);
+        Assert.Equal("Film", s.Stash[0].Origin);
+        Assert.Equal(-20, s.Stash[0].Look.Color!.Saturation);
+    }
+
+    [Fact]
+    public void Several_set_aside_edits_are_all_kept_newest_first()
+    {
+        var (s, e, store) = Make();
+        foreach (var name in new[] { "Cinematic", "Noir", "Film" })
+        {
+            s.Apply(store.All.Single(p => p.Name == name));
+            e.EditColor(c => c with { Contrast = 1 });
+        }
+        s.Apply(store.All.Single(p => p.Name == "Natural"));
+        Assert.Equal(new[] { "Film", "Noir", "Cinematic" }, s.Stash.Select(x => x.Origin));
+    }
+
+    [Fact]
+    public void Rename_carries_stashed_edits_to_the_new_name()
+    {
+        var (s, e, store) = Make();
+        s.SaveAs("Mine");
+        e.EditColor(c => c with { Contrast = 9 });
+        s.Apply(store.All.Single(p => p.Name == "Noir"));
+        s.Apply(store.All.Single(p => p.Name == "Mine"));
+        s.Rename("Mine 2");
+        Assert.Equal("Mine 2", s.Stash[0].Origin);
     }
 
     [Fact]
@@ -70,7 +112,7 @@ public sealed class PresetSessionTests
         e.EditColor(c => c with { Contrast = 50 });
         s.ResetToSaved();
         Assert.False(s.Modified);
-        Assert.Null(s.Unsaved);
+        Assert.Empty(s.Stash);
         Assert.Null(e.Build().Color);   // Natural has no groups
     }
 

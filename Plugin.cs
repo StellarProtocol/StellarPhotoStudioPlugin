@@ -27,6 +27,7 @@ public sealed partial class Plugin : IStellarPlugin
     private readonly PhotoModeAttach _photoModeAttach;
     private readonly Action<float> _onFrameworkUpdate;
     private readonly Action<bool> _onCutsceneChanged;
+    private readonly Action _onLanguageChanged;
 
     private IDisposable? _hideAllToken;
     private readonly string _screenshotFolder;
@@ -65,6 +66,8 @@ public sealed partial class Plugin : IStellarPlugin
 
         _onFrameworkUpdate = OnUpdate;
         services.Framework.Update += _onFrameworkUpdate;
+        _onLanguageChanged = () => { _lutOptionsCache = null; _importOptionsCache = null; };
+        _loc.LanguageChanged += _onLanguageChanged;
     }
 
     public string Name => "Photo Studio";
@@ -72,6 +75,7 @@ public sealed partial class Plugin : IStellarPlugin
     public void Dispose()
     {
         _services.Framework.Update -= _onFrameworkUpdate;
+        _loc.LanguageChanged -= _onLanguageChanged;
         _services.PhotoMode.CutsceneChanged -= _onCutsceneChanged;
         _photoModeAttach.Dispose();
         foreach (var h in _hotkeys) h.Dispose();
@@ -113,7 +117,7 @@ public sealed partial class Plugin : IStellarPlugin
         if (r.Path is null) return; // Success is true only when CaptureResult.Ok wrote a path; defensive only.
         try
         {
-            var json = CaptureController.SidecarJson(r, _activePresetName, MapName(), _settings.Scale, _look.Draft);
+            var json = CaptureController.SidecarJson(r, _activePresetName, MapName(), CapturedScale(r), _look.Draft);
             File.WriteAllText(Path.ChangeExtension(r.Path, ".json"), json);
         }
         catch (Exception ex)
@@ -150,6 +154,14 @@ public sealed partial class Plugin : IStellarPlugin
             return;
         }
         _hideAllToken = _services.SceneVisibility.Hide(VisibilityLayers.GameHud | VisibilityLayers.StellarOverlay | VisibilityLayers.Nameplates);
+    }
+
+    /// <summary>The scale the image was ACTUALLY captured at — the framework lowers 4× to 2× on the pixel cap or a
+    /// memory fallback, so the requested setting would be wrong in the sidecar.</summary>
+    private int CapturedScale(CaptureResult r)
+    {
+        var w = _services.Framework.ScreenWidth;
+        return w > 0 ? Math.Max(1, (int)Math.Round((double)r.Width / w)) : _settings.Scale;
     }
 
     /// <summary>The map's display name for the sidecar; <c>CurrentSceneName</c> is a numeric scene id.</summary>

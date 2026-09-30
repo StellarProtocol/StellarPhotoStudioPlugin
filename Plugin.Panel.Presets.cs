@@ -13,7 +13,7 @@ namespace Stellar.PhotoStudio;
 // lives in PresetSession (Presets/PresetSession.cs, unit-tested); this file is the view.
 public sealed partial class Plugin
 {
-    private const int PresetPool = 8;          // visible rows; VirtualListElement recycles them (CooldownBar recipe)
+    private const int PresetPool = 10;         // 220/28 ≈ 7.9 visible rows + margin for a part-scrolled row (CooldownBar recipe)
     private const float PresetRowHeight = 28f;
     private enum NameMode { None, SaveAs, Rename, ConfirmDelete, Import }
 
@@ -68,7 +68,7 @@ public sealed partial class Plugin
 
     // ── list rows ────────────────────────────────────────────────────────────────────────────────────────────
 
-    private int UnsavedRows => _presetSession.Unsaved is null ? 0 : 1;
+    private int UnsavedRows => _presetSession.Stash.Count;
     private int PresetRowCount() => UnsavedRows + _presets.All.Count;
 
     private HudElement PresetSlot(int slot) => new SelectableElement(new RowElement(new HudElement[]
@@ -79,7 +79,7 @@ public sealed partial class Plugin
             new PillElement(() => T("ps.pill.modified"), Color: () => _services.Theme.Colors.Accent)),
     }, Gap: 6f), OnClick: () => ClickRow(slot), Selected: () => RowIsActive(slot));
 
-    private bool IsUnsavedRow(int slot) => UnsavedRows == 1 && _presetOffset + slot == 0;
+    private bool IsUnsavedRow(int slot) => _presetOffset + slot < UnsavedRows;
 
     private Preset? RowPreset(int slot)
     {
@@ -89,7 +89,7 @@ public sealed partial class Plugin
     }
 
     private string RowName(int slot) => IsUnsavedRow(slot)
-        ? _loc.TFormat("ps.pre.unsavedFrom", _presetSession.Unsaved?.Origin ?? "")
+        ? _loc.TFormat("ps.pre.unsavedFrom", _presetSession.Stash[_presetOffset + slot].Origin)
         : RowPreset(slot)?.Name ?? "";
 
     private bool RowBuiltIn(int slot) => !IsUnsavedRow(slot) && (RowPreset(slot)?.BuiltIn ?? false);
@@ -99,7 +99,7 @@ public sealed partial class Plugin
     private void ClickRow(int slot)
     {
         _nameMode = NameMode.None;
-        if (IsUnsavedRow(slot)) { _presetSession.RestoreUnsaved(); return; }
+        if (IsUnsavedRow(slot)) { _presetSession.RestoreUnsaved(_presetOffset + slot); return; }
         if (RowPreset(slot) is { } p) ApplyPreset(p);
     }
 

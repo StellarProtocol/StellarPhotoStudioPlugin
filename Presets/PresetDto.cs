@@ -39,7 +39,9 @@ internal sealed class PresetDto
         Dof = Dof is { Length: 4 } d ? new DofLook { FocusDistance = d[0], Aperture = d[1], FocalLength = d[2], FocusOnLocalPlayer = d[3] > 0.5f } : null,
         Color = Color is { Length: 6 } c ? new ColorLook { PostExposure = c[0], Contrast = c[1], Saturation = c[2], Filter = new RgbColor(c[3], c[4], c[5]) } : null,
         WhiteBalance = WhiteBalance is { Length: 2 } w ? new WhiteBalanceLook { Temperature = w[0], Tint = w[1] } : null,
-        Lut = LutFile is { Length: > 0 } l ? new LutLook { FilePath = l, Contribution = LutContribution } : null,
+        // File name only, also for imported files: a crafted "../x.png" must not reach outside the LUT folder.
+        Lut = LutFile is { Length: > 0 } l && System.IO.Path.GetFileName(l).Length > 0
+            ? new LutLook { FilePath = System.IO.Path.GetFileName(l), Contribution = LutContribution } : null,
         Bloom = Bloom is { Length: 2 } b ? new BloomLook { Intensity = b[0], Threshold = b[1] } : null,
         Vignette = Vignette is { Length: 2 } v ? new VignetteLook { Intensity = v[0], Smoothness = v[1] } : null,
         FilmGrain = FilmGrain is { Length: 2 } f ? new FilmGrainLook { Intensity = f[0], Response = f[1] } : null,

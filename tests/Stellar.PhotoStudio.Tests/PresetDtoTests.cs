@@ -20,4 +20,11 @@ public sealed class PresetDtoTests
         var dto = PresetDto.From("X", new LookSettings { Lut = new LutLook { FilePath = System.IO.Path.Combine("C:", "Users", "me", "luts", "teal.png"), Contribution = 1f } });
         Assert.Equal("teal.png", dto.LutFile);
     }
+
+    [Fact]
+    public void An_imported_lut_path_cannot_reach_outside_the_lut_folder()
+    {
+        var dto = new PresetDto { Name = "X", LutFile = "../../secret/x.png", LutContribution = 1f };
+        Assert.Equal("x.png", dto.ToLook().Lut!.FilePath);
+    }
 }
