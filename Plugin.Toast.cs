@@ -65,6 +65,7 @@ public sealed partial class Plugin
         _toastDir = Path.GetDirectoryName(path) ?? _screenshotFolder;
         _toastDetail = detail;
         _toastLeft = ToastSeconds;
+        if (_dockedShown) { _dockedWin.MarkDirty(); return; }   // shown inside the strip instead
         _toastWin.SetVisible(true);
         _toastWin.MarkDirty();
     }

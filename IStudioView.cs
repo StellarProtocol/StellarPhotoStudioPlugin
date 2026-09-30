@@ -3,9 +3,8 @@ using Stellar.Abstractions.Domain;
 namespace Stellar.PhotoStudio;
 
 /// <summary>
-/// Seam for the Photo Studio panel UI (Task 14, not yet built). <see cref="Plugin"/> calls only these four
-/// members and never reaches into panel internals; <see cref="NoOpStudioView"/> is wired in until the real panel
-/// exists. The saved-capture toast routes through here (not <c>INotifications</c>) because it wants an
+/// Seam between the plugin's logic and the Photo Studio panel UI. Production uses <c>Plugin.WindowStudioView</c>;
+/// tests use <see cref="NoOpStudioView"/>. The saved-capture toast routes through here (not <c>INotifications</c>) because it wants an
 /// "Open folder" action, which <c>INotifications</c> toasts cannot carry — how (and whether) to render that
 /// action is entirely the concrete panel's decision.
 /// </summary>
@@ -33,7 +32,7 @@ internal interface IStudioView
 }
 
 /// <summary>Renders nothing, but still tracks <see cref="IsOpen"/> honestly (unconditional open/close, never
-/// pins) so callers driven by it behave correctly. Wired in until Task 14 replaces it with the real panel.</summary>
+/// pins) so callers driven by it behave correctly. Test double for the real panel.</summary>
 internal sealed class NoOpStudioView : IStudioView
 {
     public bool IsOpen { get; private set; }

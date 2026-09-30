@@ -27,13 +27,14 @@ public sealed partial class Plugin
     {
         new TextElement(() => T("ps.title"), Emphasis: true, Width: 104f),
         new TextElement(() => T("ps.docked.preset"), Color: Muted, Width: 48f),
-        new DropdownElement(() => IndexOfPreset(_activePresetName), PresetNames, i => ApplyPreset(_presets.All[i]), Width: 220f),
+        new DropdownElement(() => IndexOfPreset(_activePresetName), PresetNameOptions, i => ApplyPreset(_presets.All[i]), Width: 220f),
         new ButtonElement(() => "◀", OnClick: PrevPreset, Width: 28f),
         new ButtonElement(() => "▶", OnClick: NextPreset, Width: 28f),
         new ConditionalElement(() => _modified, new PillElement(() => T("ps.pill.modified"), Color: () => _services.Theme.Colors.Accent)),
         new SpacerElement(),
         new ConditionalElement(() => LayerAvailable(VisibilityLayers.OtherPlayers), LabeledToggle(() => T("ps.hide.others"),
             () => IsHidden(VisibilityLayers.OtherPlayers), on => SetHidden(VisibilityLayers.OtherPlayers, on))),
+        new SpacerElement(Width: 12f),   // separate the two [switch][label] pairs so each label reads as its own
         LabeledToggle(() => T("ps.docked.keepLook"), () => _settings.Pinned, SetPinned),
         new ButtonElement(() => T("ps.docked.fullPanel"), OnClick: DockedToFullPanel, Width: 96f),
         new ButtonElement(() => "✕", OnClick: DismissDocked, Width: 28f),
@@ -51,8 +52,14 @@ public sealed partial class Plugin
             () => F(_editor.WhiteBalance.Temperature, Signed)),
         Mini(() => T("ps.docked.blur"),
             new SliderElement(BlurAmount, SetBlurAmount, 0f, 1f, Enabled: () => Supported(LookGroups.Dof)),
-            () => "f/" + F(_editor.Dof.Aperture, "0.0"), labelWidth: 112f),
+            () => _editor.IsOn(LookGroups.Dof) ? "f/" + F(_editor.Dof.Aperture, "0.0") : T("ps.docked.blurOff"), labelWidth: 112f),
         new SpacerElement(),
+        // The saved line lives in the strip while it is shown: the toast window would sit on top of row A.
+        new ConditionalElement(() => _toastLeft > 0f && _dockedShown, new RowElement(new HudElement[]
+        {
+            new TextElement(() => _loc.TFormat("ps.docked.saved", _toastFile), Color: Muted, NoWrap: true),
+            new ButtonElement(() => T("ps.cap.openFolder"), OnClick: () => OpenFolderSafe(_toastDir)),
+        }, Gap: 6f)),
         new ButtonElement(() => _loc.TFormat("ps.docked.capture", BindingText("photostudio.capture")),
             OnClick: CaptureNow, Enabled: () => !Capturing, Style: MenuButtonStyle.Filled, Width: 170f),
     }, Gap: 12f);
@@ -81,12 +88,16 @@ public sealed partial class Plugin
         _editor.EditDof(d => d with { Aperture = aperture, FocusOnLocalPlayer = true });
     }
 
-    private IReadOnlyList<string> PresetNames()
+    // Built once per preset-list change: the dropdown polls Options() every refresh.
+    private List<string>? _presetNamesCache;
+
+    private IReadOnlyList<string> PresetNameOptions()
     {
+        if (_presetNamesCache is not null) return _presetNamesCache;
         var all = _presets.All;
         var names = new List<string>(all.Count);
         foreach (var p in all) names.Add(p.Name);
-        return names;
+        return _presetNamesCache = names;
     }
 
     private void PrevPreset()

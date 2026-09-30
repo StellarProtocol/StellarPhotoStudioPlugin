@@ -33,7 +33,7 @@
   "ps.cap.jpgQuality": "คุณภาพ JPG",
   "ps.cap.folder": "โฟลเดอร์",
   "ps.cap.folderDefault": "ค่าเริ่มต้น — stellar\\screenshots",
-  "ps.cap.folderFallback": " (เขียนไม่ได้ — ใช้ค่าเริ่มต้น)",
+  "ps.cap.folderFallback": "เขียนลงโฟลเดอร์ไม่ได้ — จะบันทึกในโฟลเดอร์เริ่มต้นแทน",
   "ps.cap.change": "เปลี่ยน...",
   "ps.cap.useDefault": "ใช้ค่าเริ่มต้น",
   "ps.cap.openFolder": "เปิดโฟลเดอร์",
@@ -50,7 +50,7 @@
   "ps.hide.others": "ผู้เล่นคนอื่น",
   "ps.hide.party": "ยังแสดงปาร์ตี้ของฉัน",
   "ps.help.hide.hud": "ซ่อนหน้าจอของเกมขณะเปิดแผงนี้",
-  "ps.help.hide.overlay": "ซ่อนหน้าต่าง Stellar ทั้งหมด รวมถึงแผงนี้ กดปุ่มลัดของแผง (ค่าเริ่มต้น Shift+F10) เพื่อแสดงกลับมา",
+  "ps.help.hide.overlay": "ซ่อนหน้าต่าง Stellar ทั้งหมด รวมถึงแผงนี้ กด {0} เพื่อแสดงกลับมา",
   "ps.help.hide.names": "ซ่อนชื่อเหนือตัวละคร",
   "ps.help.hide.others": "ซ่อนตัวละครของผู้เล่นคนอื่น",
   "ps.help.hide.party": "ยังแสดงสมาชิกปาร์ตี้ขณะซ่อนผู้เล่นคนอื่น",
@@ -128,5 +128,11 @@
   "ps.docked.fullPanel": "แผงเต็ม",
   "ps.docked.warmth": "ความอุ่น",
   "ps.docked.blur": "เบลอฉากหลัง",
-  "ps.docked.capture": "ถ่ายภาพ  ({0})"
+  "ps.docked.capture": "ถ่ายภาพ  ({0})",
+  "ps.pre.unsavedFrom": "โทนภาพที่ยังไม่บันทึก (จาก {0})",
+  "ps.pre.errTooLong": "ชื่อต้องยาวไม่เกิน {0} ตัวอักษร",
+  "ps.pre.errBadChars": "ชื่อต้องไม่มี / \\ : * ? \" < > | และต้องไม่ลงท้ายด้วยจุด",
+  "ps.pre.importFailed": "นำเข้า {0} ไม่ได้ — เป็นไฟล์พรีเซ็ตของสตูดิโอภาพถ่ายหรือไม่?",
+  "ps.docked.blurOff": "ปิด",
+  "ps.docked.saved": "บันทึก {0} แล้ว"
 }

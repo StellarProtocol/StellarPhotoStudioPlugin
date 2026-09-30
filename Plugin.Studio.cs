@@ -6,9 +6,9 @@ using Stellar.PhotoStudio.Presets;
 
 namespace Stellar.PhotoStudio;
 
-// Panel coordination: window registration, live hides while composing, preset selection / modified tracking,
-// the saved toast timer and the shutter flash. Tab contents live in Plugin.Panel.*.cs; the docked strip in
-// Plugin.Docked.cs; the "?" popover in Plugin.Help.cs.
+// Panel coordination: window registration, live hides while composing, the preset session, the saved toast timer
+// and the shutter flash. Tab contents live in Plugin.Panel.*.cs; the docked strip in Plugin.Docked.cs; the "?"
+// popover in Plugin.Help.cs.
 public sealed partial class Plugin
 {
     private IWindowControl _panelWin = null!;
@@ -23,13 +23,19 @@ public sealed partial class Plugin
     private bool _folderFellBack;
     private IDisposable? _liveHideToken;
 
-    private string _activePresetName = "Natural";
-    private bool _modified;
-    private LookSettings? _unsavedLook;  // edits kept when another preset was applied over them (panel session only)
+    private PresetSession _presetSession = null!;
+
+    // The working look is saved debounced: a slider drag fires every frame, and every config save is a
+    // main-thread file write (perf review blocker).
+    private const float WorkingSaveDelay = 0.5f;
+    private float _workingSaveIn = -1f;
 
     private const float ToastSeconds = 6f;
     private float _toastLeft;
     private float _flash;
+
+    // Layers the framework can drive, read once per framework tick — the panel's lambdas poll it many times.
+    private VisibilityLayers _availableThisTick = (VisibilityLayers)0x1F;
 
     private bool InWorld() => _services.ClientState.Phase == GamePhase.World
                               && (_services.ClientState.UiState & GameUIState.Loading) == 0;
@@ -59,7 +65,10 @@ public sealed partial class Plugin
         if (show) RescanLuts();
         if (show && _dockedShown) ShowDocked(false);    // never both sets of controls at once
         if (!show && _tipWindow.IsShown) { _tipKey = ""; _tipWindow.SetVisible(false); }
+        if (!show) FlushWorkingLook();
         ApplyLiveHides();
+        // Closing the full panel while the game's photo mode is still open brings the strip back.
+        if (!show) SetDockedForGamePhotoMode(_services.PhotoMode.IsActive);
     }
 
     private void ShowDocked(bool show)
@@ -67,6 +76,7 @@ public sealed partial class Plugin
         if (_dockedShown == show) return;
         _dockedShown = show;
         _dockedWin.SetVisible(show);
+        if (show && _toastWin.IsShown) _toastWin.SetVisible(false);   // the strip shows the saved line itself
         ApplyLiveHides();
     }
 
@@ -93,11 +103,17 @@ public sealed partial class Plugin
 
     private void ApplyLiveHides()
     {
-        ReleaseLiveHides();
-        if (!_panelShown && !_dockedShown && !_overlayHidden) return;
-        var layers = _settings.Hides | (_overlayHidden ? VisibilityLayers.StellarOverlay : VisibilityLayers.None);
-        if ((layers & VisibilityLayers.OtherPlayers) == 0) layers &= ~VisibilityLayers.KeepParty;
-        if (layers != VisibilityLayers.None) _liveHideToken = _services.SceneVisibility.Hide(layers);
+        // Take the new token BEFORE releasing the old one: with the old one gone first, the framework briefly sees
+        // "nothing hidden", shows everything and hides it again — a reflection round-trip and a visible flicker.
+        var previous = _liveHideToken;
+        _liveHideToken = null;
+        if (_panelShown || _dockedShown || _overlayHidden)
+        {
+            var layers = _settings.Hides | (_overlayHidden ? VisibilityLayers.StellarOverlay : VisibilityLayers.None);
+            if ((layers & VisibilityLayers.OtherPlayers) == 0) layers &= ~VisibilityLayers.KeepParty;
+            if (layers != VisibilityLayers.None) _liveHideToken = _services.SceneVisibility.Hide(layers);
+        }
+        previous?.Dispose();
     }
 
     private void ReleaseLiveHides()
@@ -117,55 +133,44 @@ public sealed partial class Plugin
         ApplyLiveHides();
     }
 
-    private bool LayerAvailable(VisibilityLayers layer) => (_services.SceneVisibility.Available & layer) == layer;
+    private bool LayerAvailable(VisibilityLayers layer) => (_availableThisTick & layer) == layer;
 
     // ── presets + working look ───────────────────────────────────────────────────────────────────────────────
 
-    private void RestoreWorkingLook()
+    private string _activePresetName => _presetSession.ActiveName;
+    private bool _modified => _presetSession.Modified;
+    private bool ActiveIsBuiltIn => _presetSession.ActiveIsBuiltIn;
+    private Preset? FindPreset(string name) => _presetSession.Find(name);
+    private void ApplyPreset(Preset p) => _presetSession.Apply(p);
+
+    private void StartPresetSession()
     {
-        _activePresetName = _settings.PresetName;
-        var preset = FindPreset(_activePresetName) ?? _presets.All[0];
-        _activePresetName = preset.Name;
-        var working = ParseLook(_settings.WorkingJson);
-        _editor.Load(working ?? preset.Look);
-        _modified = working is not null;
-        _look.SetDraft(_editor.Build());
+        _presetSession = new PresetSession(_presets, _editor, _settings.PresetName, ParseLook(_settings.WorkingJson));
+        _presetSession.StateChanged += OnPresetStateChanged;
+        _look.SetDraft(DraftFromEditor());
     }
 
     private void OnEditorChanged()
     {
-        var built = _editor.Build();
-        _look.SetDraft(built);
-        _modified = true;
-        _settings.SetWorkingJson(System.Text.Json.JsonSerializer.Serialize(PresetDto.From(_activePresetName, built)));
+        _look.SetDraft(DraftFromEditor());
+        _workingSaveIn = WorkingSaveDelay;
     }
 
-    private void ApplyPreset(Preset p)
+    private void OnPresetStateChanged()
     {
-        if (_modified) _unsavedLook = _editor.Build();
-        _activePresetName = p.Name;
-        _settings.SetPresetName(p.Name);
-        _editor.Changed -= OnEditorChanged;
-        _editor.Load(p.Look);
-        _editor.Changed += OnEditorChanged;
-        _modified = false;
-        _settings.SetWorkingJson(null);
-        _look.SetDraft(_editor.Build());
+        _settings.SetPresetName(_presetSession.ActiveName);
+        if (_presetSession.Modified) _workingSaveIn = WorkingSaveDelay;
+        else { _workingSaveIn = -1f; _settings.SetWorkingJson(null); }
+        _presetNamesCache = null;
     }
 
-    private void RestoreUnsavedLook()
+    private void FlushWorkingLook()
     {
-        if (_unsavedLook is null) return;
-        var look = _unsavedLook;
-        _unsavedLook = null;
-        _editor.Load(look);   // raises Changed → marks modified + persists the working look
-    }
-
-    private Preset? FindPreset(string name)
-    {
-        foreach (var p in _presets.All)
-            if (string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)) return p;
-        return null;
+        if (_workingSaveIn < 0f) return;
+        _workingSaveIn = -1f;
+        _settings.SetWorkingJson(_presetSession.Modified
+            ? System.Text.Json.JsonSerializer.Serialize(PresetDto.From(_presetSession.ActiveName, _editor.Build()))
+            : null);
     }
 
     private int IndexOfPreset(string name)
@@ -176,8 +181,6 @@ public sealed partial class Plugin
         return 0;
     }
 
-    private bool ActiveIsBuiltIn => FindPreset(_activePresetName)?.BuiltIn ?? true;
-
     private static LookSettings? ParseLook(string? json)
     {
         if (string.IsNullOrEmpty(json)) return null;
@@ -185,18 +188,29 @@ public sealed partial class Plugin
         catch (System.Text.Json.JsonException) { return null; }
     }
 
+    /// <summary>The editor keeps LUTs as a file name (so presets travel between PCs); the framework needs the path.</summary>
+    private LookSettings DraftFromEditor()
+    {
+        var built = _editor.Build();
+        if (built.Lut is not { } lut || Path.IsPathRooted(lut.FilePath)) return built;
+        return built with { Lut = lut with { FilePath = Path.Combine(LutFolder, lut.FilePath) } };
+    }
+
     // ── capture ──────────────────────────────────────────────────────────────────────────────────────────────
 
     private void CaptureNow()
     {
+        if (Capturing) return;
         _flash = 0.6f;
+        _flashWin.SetRect(new WindowRect(0f, 0f, _services.Framework.ScreenWidth, _services.Framework.ScreenHeight));
         _flashWin.SetVisible(true);
         _ = _session.CaptureAsync();
     }
 
     private bool Capturing => _session.State == StudioState.Capturing;
 
-    /// <summary>The custom folder when it exists or can be created, else the default (flagged for the toast).</summary>
+    /// <summary>The custom folder when it exists (or can be created) and is writable, else the default
+    /// (flagged for the toast). Probed with a real write — an existing read-only folder must fall back too.</summary>
     private string EffectiveFolder(out bool fellBack)
     {
         fellBack = false;
@@ -204,6 +218,9 @@ public sealed partial class Plugin
         try
         {
             Directory.CreateDirectory(_settings.Folder);
+            var probe = Path.Combine(_settings.Folder, ".photostudio-write-test");
+            File.WriteAllBytes(probe, Array.Empty<byte>());
+            File.Delete(probe);
             return _settings.Folder;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
@@ -215,6 +232,7 @@ public sealed partial class Plugin
 
     private void TickStudio(float dt)
     {
+        _availableThisTick = _services.SceneVisibility.Available;
         if (_toastLeft > 0f)
         {
             _toastLeft -= dt;
@@ -224,6 +242,11 @@ public sealed partial class Plugin
         {
             _flash = Math.Max(0f, _flash - dt * 4f);
             if (_flash <= 0f) _flashWin.SetVisible(false);
+        }
+        if (_workingSaveIn > 0f)
+        {
+            _workingSaveIn -= dt;
+            if (_workingSaveIn <= 0f) { _workingSaveIn = 0f; FlushWorkingLook(); }
         }
         TipRepositionTick();
     }

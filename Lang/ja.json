@@ -33,7 +33,7 @@
   "ps.cap.jpgQuality": "JPG品質",
   "ps.cap.folder": "フォルダー",
   "ps.cap.folderDefault": "既定 — stellar\\screenshots",
-  "ps.cap.folderFallback": "（書き込めません — 既定を使用）",
+  "ps.cap.folderFallback": "フォルダーに書き込めないため、既定のフォルダーに保存します。",
   "ps.cap.change": "変更...",
   "ps.cap.useDefault": "既定に戻す",
   "ps.cap.openFolder": "フォルダーを開く",
@@ -50,7 +50,7 @@
   "ps.hide.others": "ほかのプレイヤー",
   "ps.hide.party": "パーティーは表示したまま",
   "ps.help.hide.hud": "パネルを開いている間、ゲームのUIを非表示にします。",
-  "ps.help.hide.overlay": "このパネルを含むすべてのStellarウィンドウを非表示にします。パネルのホットキー（既定はShift+F10）で元に戻せます。",
+  "ps.help.hide.overlay": "このパネルを含むすべてのStellarウィンドウを非表示にします。{0} で元に戻せます。",
   "ps.help.hide.names": "キャラクターの頭上の名前を非表示にします。",
   "ps.help.hide.others": "ほかのプレイヤーのキャラクターを非表示にします。",
   "ps.help.hide.party": "ほかのプレイヤーを非表示にしている間も、パーティーメンバーは表示したままにします。",
@@ -128,5 +128,11 @@
   "ps.docked.fullPanel": "フルパネル",
   "ps.docked.warmth": "暖かさ",
   "ps.docked.blur": "背景ぼかし",
-  "ps.docked.capture": "撮影  ({0})"
+  "ps.docked.capture": "撮影  ({0})",
+  "ps.pre.unsavedFrom": "未保存のルック（{0}）",
+  "ps.pre.errTooLong": "名前は{0}文字以内にしてください。",
+  "ps.pre.errBadChars": "名前に / \\ : * ? \" < > | は使えず、末尾をドットにできません。",
+  "ps.pre.importFailed": "{0} をインポートできませんでした — フォトスタジオのプリセットファイルですか？",
+  "ps.docked.blurOff": "オフ",
+  "ps.docked.saved": "保存: {0}"
 }

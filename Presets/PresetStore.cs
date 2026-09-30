@@ -85,7 +85,7 @@ internal sealed class PresetStore
     {
         var dto = Parse(json);
         if (dto is null) return null;
-        var name = UniqueName(dto.Name);
+        var name = UniqueName(PresetNames.Sanitize(dto.Name));
         Save(name, dto.ToLook());
         return _user.Single(p => NameEquals(p.Name, name));
     }

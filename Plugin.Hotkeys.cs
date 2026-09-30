@@ -14,7 +14,7 @@ public sealed partial class Plugin
     // (no default chord free on F10-4); the player can bind it in Settings.
     private void DeclareHotkeys()
     {
-        Declare("photostudio.capture", "hotkey.capture", new KeyBinding(StellarKeyCode.F10), () => _ = _session.CaptureAsync());
+        Declare("photostudio.capture", "hotkey.capture", new KeyBinding(StellarKeyCode.F10), CaptureNow);
         Declare("photostudio.panel", "hotkey.panel", new KeyBinding(StellarKeyCode.F10, ModifierKeys.Shift), TogglePanel);
         Declare("photostudio.hideall", "hotkey.hideall", new KeyBinding(StellarKeyCode.F10, ModifierKeys.Alt), ToggleHideAll);
         Declare("photostudio.nextpreset", "hotkey.nextpreset", null, NextPreset);

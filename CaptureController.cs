@@ -21,7 +21,7 @@ internal static class CaptureController
         HideDuringCapture = s.Hide,
     };
 
-    public static string SidecarJson(CaptureResult r, string presetName, string mapName, LookSettings? look) =>
+    public static string SidecarJson(CaptureResult r, string presetName, string mapName, int scale, LookSettings? look) =>
         JsonSerializer.Serialize(new
         {
             file = Path.GetFileName(r.Path),
@@ -29,6 +29,7 @@ internal static class CaptureController
             height = r.Height,
             preset = presetName,
             map = mapName,
+            scale,
             dofFocus = look?.Dof?.FocusDistance,
         });
 }

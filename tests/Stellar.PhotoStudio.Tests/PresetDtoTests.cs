@@ -13,4 +13,11 @@ public sealed class PresetDtoTests
         Assert.Null(dto.LutFile);
         Assert.Null(dto.ToLook().Lut);
     }
+
+    [Fact]
+    public void Lut_is_stored_as_a_file_name_so_exported_presets_travel()
+    {
+        var dto = PresetDto.From("X", new LookSettings { Lut = new LutLook { FilePath = System.IO.Path.Combine("C:", "Users", "me", "luts", "teal.png"), Contribution = 1f } });
+        Assert.Equal("teal.png", dto.LutFile);
+    }
 }

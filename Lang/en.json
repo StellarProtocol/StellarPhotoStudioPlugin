@@ -33,7 +33,7 @@
   "ps.cap.jpgQuality": "JPG quality",
   "ps.cap.folder": "Folder",
   "ps.cap.folderDefault": "Default — stellar\\screenshots",
-  "ps.cap.folderFallback": " (not writable — using default)",
+  "ps.cap.folderFallback": "Folder not writable — saving to the default folder.",
   "ps.cap.change": "Change...",
   "ps.cap.useDefault": "Use default",
   "ps.cap.openFolder": "Open folder",
@@ -50,7 +50,7 @@
   "ps.hide.others": "Other players",
   "ps.hide.party": "Keep my party visible",
   "ps.help.hide.hud": "Hides the game's own interface while the panel is open.",
-  "ps.help.hide.overlay": "Hides every Stellar window, this panel included. Press the panel hotkey (Shift+F10 by default) to bring it back.",
+  "ps.help.hide.overlay": "Hides every Stellar window, this panel included. Press {0} to bring it back.",
   "ps.help.hide.names": "Hides names above characters.",
   "ps.help.hide.others": "Hides other players' characters.",
   "ps.help.hide.party": "Keeps your party visible while other players are hidden.",
@@ -128,5 +128,11 @@
   "ps.docked.fullPanel": "Full panel",
   "ps.docked.warmth": "Warmth",
   "ps.docked.blur": "Background blur",
-  "ps.docked.capture": "Capture  ({0})"
+  "ps.docked.capture": "Capture  ({0})",
+  "ps.pre.unsavedFrom": "Unsaved look (from {0})",
+  "ps.pre.errTooLong": "Keep names to {0} characters or fewer.",
+  "ps.pre.errBadChars": "Names can't contain / \\ : * ? \" < > | or end with a dot.",
+  "ps.pre.importFailed": "{0} could not be imported — is it a Photo Studio preset file?",
+  "ps.docked.blurOff": "Off",
+  "ps.docked.saved": "Saved {0}"
 }

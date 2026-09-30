@@ -49,7 +49,7 @@ public sealed partial class Plugin : IStellarPlugin
         _look = new LookController(services.RenderLook);
         _look.SetPinned(_settings.Pinned);
         _presets = new PresetStore(new DataStorePresetFiles(services.Data), m => services.Log.Warning(m));
-        RestoreWorkingLook();
+        StartPresetSession();                    // Plugin.Studio.cs
         _editor.Changed += OnEditorChanged;
 
         _session = new StudioSession(services.ScreenCapture, BuildRequest, OnCaptureResult, services.Log.Warning);
@@ -78,6 +78,7 @@ public sealed partial class Plugin : IStellarPlugin
         _hotkeys.Clear();
         _hideAllToken?.Dispose();
         _hideAllToken = null;
+        FlushWorkingLook();
         ReleaseLiveHides();
         RemoveWindows();
         _look.Dispose();
@@ -112,7 +113,7 @@ public sealed partial class Plugin : IStellarPlugin
         if (r.Path is null) return; // Success is true only when CaptureResult.Ok wrote a path; defensive only.
         try
         {
-            var json = CaptureController.SidecarJson(r, _activePresetName, _services.ClientState.CurrentSceneName ?? "", _look.Draft);
+            var json = CaptureController.SidecarJson(r, _activePresetName, MapName(), _settings.Scale, _look.Draft);
             File.WriteAllText(Path.ChangeExtension(r.Path, ".json"), json);
         }
         catch (Exception ex)
@@ -123,10 +124,13 @@ public sealed partial class Plugin : IStellarPlugin
 
     private void TogglePanel()
     {
-        // The overlay hide also hides this panel — the panel hotkey is the way back, so it releases it first.
-        if (_overlayHidden)
+        // Both overlay hides (the Capture-tab toggle and hide-all) also hide this panel — the panel hotkey is the
+        // way back, so it releases them first instead of toggling a panel nobody can see.
+        if (_overlayHidden || _hideAllToken is not null)
         {
             _overlayHidden = false;
+            _hideAllToken?.Dispose();
+            _hideAllToken = null;
             ApplyLiveHides();
             _panel.Set(true);
             return;
@@ -136,13 +140,25 @@ public sealed partial class Plugin : IStellarPlugin
 
     private void ToggleHideAll()
     {
-        if (_hideAllToken is not null)
+        // Anything hiding the overlay counts as "hidden": pressing hide-all again must bring everything back.
+        if (_hideAllToken is not null || _overlayHidden)
         {
-            _hideAllToken.Dispose();
+            _hideAllToken?.Dispose();
             _hideAllToken = null;
+            _overlayHidden = false;
+            ApplyLiveHides();
             return;
         }
         _hideAllToken = _services.SceneVisibility.Hide(VisibilityLayers.GameHud | VisibilityLayers.StellarOverlay | VisibilityLayers.Nameplates);
+    }
+
+    /// <summary>The map's display name for the sidecar; <c>CurrentSceneName</c> is a numeric scene id.</summary>
+    private string MapName()
+    {
+        var id = _services.ClientState.CurrentSceneName;
+        if (int.TryParse(id, out var sceneId) && _services.GameData.World.GetScene(sceneId) is { } scene && scene.Name.Length > 0)
+            return scene.Name;
+        return id ?? "";
     }
 
     private void NextPreset()

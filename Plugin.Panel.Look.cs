@@ -23,9 +23,13 @@ public sealed partial class Plugin
 
     private HudElement BuildLookTab() => new ColumnElement(new HudElement[]
     {
-        new ConditionalElement(() => !LooksAvailable(),
-            new TextElement(() => T("ps.look.unavailable"), Color: () => _services.Theme.Colors.Warning)),
-        HelpToggle("look.pin", () => _settings.Pinned, SetPinned, () => T("ps.look.pin"), () => T("ps.help.look.pin")),
+        new ConditionalElement(() => !LooksAvailable(), new RowElement(new HudElement[]
+        {
+            new TextElement(() => T("ps.look.unavailable"), Color: () => _services.Theme.Colors.Warning),
+            new SpacerElement(),
+            HelpDot("look.na", () => T("ps.look.unavailable"), () => T("ps.help.lookUnavailable")),
+        }, Gap: 6f)),
+        HelpToggle("look.pin", () => _settings.Pinned, SetPinned, new HelpText(() => T("ps.look.pin"), () => T("ps.help.look.pin"))),
         new ConditionalElement(() => _settings.Pinned, new TextElement(() => T("ps.look.pinHint"), Color: Muted)),
         new RowElement(new HudElement[]
         {
@@ -48,12 +52,7 @@ public sealed partial class Plugin
         _look.SetPinned(on);
     }
 
-    private void ResetAllToPreset()
-    {
-        var p = FindPreset(_activePresetName) ?? _presets.All[0];
-        _modified = false;   // throwing the edits away on purpose: don't stash them as "unsaved"
-        ApplyPreset(p);
-    }
+    private void ResetAllToPreset() => _presetSession.ResetToSaved();   // on purpose: nothing is stashed
 
     private HudElement LookGroup(LookGroups g, string key, bool photoOnly, params HudElement[] rows)
     {
@@ -92,7 +91,7 @@ public sealed partial class Plugin
         return LookGroup(LookGroups.Dof, "dof", photoOnly: true,
             HelpToggle("look.dofTrack", () => _editor.Dof.FocusOnLocalPlayer,
                 on => _editor.EditDof(d => d with { FocusOnLocalPlayer = on }),
-                () => T("ps.look.focusOnMe"), () => T("ps.help.look.focusOnMe")),
+                new HelpText(() => T("ps.look.focusOnMe"), () => T("ps.help.look.focusOnMe"))),
             SliderRow(() => T("ps.look.focusDistance"),
                 new SliderElement(() => _editor.Dof.FocusDistance, v => _editor.EditDof(d => d with { FocusDistance = v }),
                     0.1f, 100f, Enabled: () => !_editor.Dof.FocusOnLocalPlayer),
@@ -200,18 +199,24 @@ public sealed partial class Plugin
             new ButtonElement(() => T("ps.look.rescan"), OnClick: RescanLuts, Width: 72f),
         }, Gap: 6f));
 
+    // Built once per rescan: the dropdown polls Options() every refresh.
+    private List<string>? _lutOptionsCache;
+
     private IReadOnlyList<string> LutOptions()
     {
+        if (_lutOptionsCache is not null) return _lutOptionsCache;
         var names = new List<string>(_lutFiles.Count + 1) { T("ps.look.lutNone") };
         foreach (var f in _lutFiles) names.Add(Path.GetFileName(f));
-        return names;
+        return _lutOptionsCache = names;
     }
 
     private int LutSelectedIndex()
     {
         if (!_editor.IsOn(LookGroups.Lut)) return 0;
-        var i = _lutFiles.FindIndex(f => string.Equals(f, _editor.Lut.FilePath, StringComparison.OrdinalIgnoreCase));
-        return i < 0 ? 0 : i + 1;
+        var current = Path.GetFileName(_editor.Lut.FilePath);
+        for (var i = 0; i < _lutFiles.Count; i++)
+            if (string.Equals(Path.GetFileName(_lutFiles[i]), current, StringComparison.OrdinalIgnoreCase)) return i + 1;
+        return 0;
     }
 
     private void SelectLut(int index)
@@ -223,7 +228,7 @@ public sealed partial class Plugin
             _view.ShowError(_loc.TFormat("lut.bad", Path.GetFileName(path)));
             return;   // the previous LUT stays
         }
-        _editor.EditLut(l => l with { FilePath = path });
+        _editor.EditLut(l => l with { FilePath = Path.GetFileName(path) });   // resolved against LutFolder on apply
     }
 
     private static bool IsValidLut(string path)
@@ -246,5 +251,6 @@ public sealed partial class Plugin
         try { Directory.CreateDirectory(LutFolder); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
         _lutFiles = new List<string>(LutLibrary.List(LutFolder));
+        _lutOptionsCache = null;
     }
 }

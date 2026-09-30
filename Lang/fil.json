@@ -33,7 +33,7 @@
   "ps.cap.jpgQuality": "Kalidad ng JPG",
   "ps.cap.folder": "Folder",
   "ps.cap.folderDefault": "Default — stellar\\screenshots",
-  "ps.cap.folderFallback": " (hindi masulatan — gamit ang default)",
+  "ps.cap.folderFallback": "Hindi masulatan ang folder — sa default na folder magse-save.",
   "ps.cap.change": "Palitan...",
   "ps.cap.useDefault": "Gamitin ang default",
   "ps.cap.openFolder": "Buksan ang folder",
@@ -50,7 +50,7 @@
   "ps.hide.others": "Ibang player",
   "ps.hide.party": "Ipakita pa rin ang party ko",
   "ps.help.hide.hud": "Itinatago ang interface ng laro habang bukas ang panel.",
-  "ps.help.hide.overlay": "Itinatago ang lahat ng Stellar window, kasama ang panel na ito. Pindutin ang panel hotkey (Shift+F10 bilang default) para ibalik.",
+  "ps.help.hide.overlay": "Itinatago ang lahat ng Stellar window, kasama ang panel na ito. Pindutin ang {0} para ibalik.",
   "ps.help.hide.names": "Itinatago ang mga pangalan sa ibabaw ng mga character.",
   "ps.help.hide.others": "Itinatago ang mga character ng ibang player.",
   "ps.help.hide.party": "Nakikita pa rin ang party mo habang nakatago ang ibang player.",
@@ -128,5 +128,11 @@
   "ps.docked.fullPanel": "Buong panel",
   "ps.docked.warmth": "Init",
   "ps.docked.blur": "Labo ng background",
-  "ps.docked.capture": "Kumuha  ({0})"
+  "ps.docked.capture": "Kumuha  ({0})",
+  "ps.pre.unsavedFrom": "Hindi pa na-save na itsura (mula sa {0})",
+  "ps.pre.errTooLong": "Hanggang {0} character lang ang pangalan.",
+  "ps.pre.errBadChars": "Bawal ang / \\ : * ? \" < > | sa pangalan, at hindi puwedeng magtapos sa tuldok.",
+  "ps.pre.importFailed": "Hindi ma-import ang {0} — Photo Studio preset file ba ito?",
+  "ps.docked.blurOff": "Off",
+  "ps.docked.saved": "Na-save ang {0}"
 }

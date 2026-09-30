@@ -22,11 +22,12 @@ public sealed class CaptureControllerTests
     [Fact]
     public void Sidecar_contains_preset_map_and_scale()
     {
-        var json = CaptureController.SidecarJson(CaptureResult.Ok("/p/a.png", 7680, 4320), "Cinematic", "Asterleeds", new LookSettings { Dof = new DofLook { FocusDistance = 3 } });
+        var json = CaptureController.SidecarJson(CaptureResult.Ok("/p/a.png", 7680, 4320), "Cinematic", "Asterleeds", 4, new LookSettings { Dof = new DofLook { FocusDistance = 3 } });
         using var doc = System.Text.Json.JsonDocument.Parse(json);
         Assert.Equal("Cinematic", doc.RootElement.GetProperty("preset").GetString());
         Assert.Equal("Asterleeds", doc.RootElement.GetProperty("map").GetString());
         Assert.Equal(7680, doc.RootElement.GetProperty("width").GetInt32());
         Assert.Equal(3f, doc.RootElement.GetProperty("dofFocus").GetSingle());
+        Assert.Equal(4, doc.RootElement.GetProperty("scale").GetInt32());
     }
 }

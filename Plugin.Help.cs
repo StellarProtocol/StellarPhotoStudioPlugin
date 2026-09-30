@@ -78,15 +78,17 @@ public sealed partial class Plugin
         { OnClickWithRect = r => ToggleTip(key, r) }, Width: 26f);
     }
 
+    /// <summary>A toggle's label plus the body of its "?" popover.</summary>
+    private readonly record struct HelpText(Func<string> Label, Func<string> Body);
+
     /// <summary>[toggle] [label] … [?] — the "?" lands in the panel's right-edge column.</summary>
-    private HudElement HelpToggle(string key, Func<bool> get, Action<bool> set, Func<string> label,
-                                  Func<string> help, Func<bool>? enabled = null)
+    private HudElement HelpToggle(string key, Func<bool> get, Action<bool> set, HelpText text, Func<bool>? enabled = null)
         => new RowElement(new HudElement[]
         {
             new ToggleElement(Label: () => "", Get: get, Set: set, Enabled: enabled),
-            new TextElement(label, Color: () => enabled is null || enabled() ? Normal() : MenuMuted()),
+            new TextElement(text.Label, Color: () => enabled is null || enabled() ? Normal() : MenuMuted()),
             new SpacerElement(),
-            HelpDot(key, label, help),
+            HelpDot(key, text.Label, text.Body),
         }, Gap: 6f);
 
     /// <summary>[label] [slider] [value] [↺] — Maestro's slider row without the "?" (the group header carries it).</summary>

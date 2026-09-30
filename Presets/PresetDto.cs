@@ -26,7 +26,8 @@ internal sealed class PresetDto
         WhiteBalance = s.WhiteBalance is { } w ? new[] { w.Temperature, w.Tint } : null,
         // An empty FilePath means "no LUT" (same as Lut being absent entirely) — normalize it away
         // here so a round trip never has to distinguish "no LUT" from "a LUT with no file".
-        LutFile = s.Lut is { FilePath.Length: > 0 } lut ? lut.FilePath : null,
+        // File name only: an exported preset must find the LUT in the importer's own LUT folder.
+        LutFile = s.Lut is { FilePath.Length: > 0 } lut ? System.IO.Path.GetFileName(lut.FilePath) : null,
         LutContribution = s.Lut?.Contribution ?? 1f,
         Bloom = s.Bloom is { } b ? new[] { b.Intensity, b.Threshold } : null,
         Vignette = s.Vignette is { } v ? new[] { v.Intensity, v.Smoothness } : null,

@@ -3,20 +3,25 @@ using System.Collections.Generic;
 using System.IO;
 using Stellar.Abstractions.Domain;
 using Stellar.Abstractions.Services;
+using Stellar.PhotoStudio.Presets;
 
 namespace Stellar.PhotoStudio;
 
-// Presets tab: a pooled list (built-ins first, then user presets A→Z, plus an "Unsaved look" row when edits were
+// Presets tab: a virtual list (built-ins first, then user presets A→Z, plus an "Unsaved look" row when edits were
 // set aside), Save / Save as / Rename / Delete, Import from a folder, Export to a folder. There is no native file
-// dialog, so import/export use folders under stellar/photostudio/ with an "Open folder" button.
+// dialog, so import/export use folders under stellar/photostudio/ with an "Open folder" button. All preset state
+// lives in PresetSession (Presets/PresetSession.cs, unit-tested); this file is the view.
 public sealed partial class Plugin
 {
-    private const int PresetSlots = 64;
+    private const int PresetPool = 8;          // visible rows; VirtualListElement recycles them (CooldownBar recipe)
+    private const float PresetRowHeight = 28f;
     private enum NameMode { None, SaveAs, Rename, ConfirmDelete, Import }
 
     private NameMode _nameMode;
     private string _nameDraft = "";
+    private int _presetOffset;
     private List<string> _importFiles = new();
+    private List<string>? _importOptionsCache;
     private int _importIndex;
 
     private string ImportFolder => Path.Combine(_studioFolder, "presets-import");
@@ -24,8 +29,12 @@ public sealed partial class Plugin
 
     private HudElement BuildPresetsTab()
     {
-        var slots = new HudElement[PresetSlots];
-        for (var i = 0; i < PresetSlots; i++) slots[i] = PresetSlot(i);
+        var pool = new HudElement[PresetPool];
+        for (var i = 0; i < PresetPool; i++)
+        {
+            var slot = i;
+            pool[i] = new ConditionalElement(() => _presetOffset + slot < PresetRowCount(), PresetSlot(slot));
+        }
         return new ColumnElement(new HudElement[]
         {
             new RowElement(new HudElement[]
@@ -34,18 +43,20 @@ public sealed partial class Plugin
                 new SpacerElement(),
                 new TextElement(() => T("ps.pre.clickToApply"), Color: Muted),
             }, Gap: 6f),
-            new ScrollElement(new ListElement(PresetRowCount, slots), Height: 220f),
+            new VirtualListElement(PresetRowCount, PresetRowHeight, pool, o => _presetOffset = o, Height: 220f),
+            // No fixed widths: fixed-width buttons wrap their label by a hair at non-1.0 UI scales and render
+            // taller (D5, measured in game); auto-sized buttons never wrap and also fit every locale.
             new RowElement(new HudElement[]
             {
-                new ButtonElement(() => T("ps.pre.save"), OnClick: SaveActive, Enabled: () => !ActiveIsBuiltIn && _modified, Width: 64f),
-                new ButtonElement(() => T("ps.pre.saveAs"), OnClick: () => BeginName(NameMode.SaveAs, _activePresetName + T("ps.pre.mineSuffix")), Width: 84f),
-                new ButtonElement(() => T("ps.pre.rename"), OnClick: () => BeginName(NameMode.Rename, _activePresetName), Enabled: () => !ActiveIsBuiltIn, Width: 84f),
-                new ButtonElement(() => T("ps.pre.delete"), OnClick: () => _nameMode = NameMode.ConfirmDelete, Enabled: () => !ActiveIsBuiltIn, Width: 68f),
+                new ButtonElement(() => T("ps.pre.save"), OnClick: _presetSession.Save, Enabled: () => !ActiveIsBuiltIn && _modified),
+                new ButtonElement(() => T("ps.pre.saveAs"), OnClick: () => BeginName(NameMode.SaveAs, _activePresetName + T("ps.pre.mineSuffix"))),
+                new ButtonElement(() => T("ps.pre.rename"), OnClick: () => BeginName(NameMode.Rename, _activePresetName), Enabled: () => !ActiveIsBuiltIn),
+                new ButtonElement(() => T("ps.pre.delete"), OnClick: () => _nameMode = NameMode.ConfirmDelete, Enabled: () => !ActiveIsBuiltIn),
             }, Gap: 4f),
             new RowElement(new HudElement[]
             {
-                new ButtonElement(() => T("ps.pre.import"), OnClick: BeginImport, Width: 84f),
-                new ButtonElement(() => T("ps.pre.export"), OnClick: ExportActive, Width: 72f),
+                new ButtonElement(() => T("ps.pre.import"), OnClick: BeginImport),
+                new ButtonElement(() => T("ps.pre.export"), OnClick: ExportActive),
                 new SpacerElement(),
                 HelpDot("presets", () => T("ps.tab.presets"), () => T("ps.help.presets")),
             }, Gap: 4f),
@@ -57,47 +68,42 @@ public sealed partial class Plugin
 
     // ── list rows ────────────────────────────────────────────────────────────────────────────────────────────
 
-    private int UnsavedRows => _unsavedLook is null ? 0 : 1;
-    private int PresetRowCount() => Math.Min(PresetSlots, UnsavedRows + _presets.All.Count);
+    private int UnsavedRows => _presetSession.Unsaved is null ? 0 : 1;
+    private int PresetRowCount() => UnsavedRows + _presets.All.Count;
 
-    private HudElement PresetSlot(int i) => new SelectableElement(new RowElement(new HudElement[]
+    private HudElement PresetSlot(int slot) => new SelectableElement(new RowElement(new HudElement[]
     {
-        new CellElement(new TextElement(() => RowName(i), NoWrap: true, Color: () => IsUnsavedRow(i) ? Muted() : Normal()), Weight: 1f),
-        new ConditionalElement(() => RowBuiltIn(i), new PillElement(() => T("ps.pill.builtIn"))),
-        new ConditionalElement(() => IsUnsavedRow(i) || (RowIsActive(i) && _modified),
+        new CellElement(new TextElement(() => RowName(slot), NoWrap: true, Color: () => IsUnsavedRow(slot) ? Muted() : Normal()), Weight: 1f),
+        new ConditionalElement(() => RowBuiltIn(slot), new PillElement(() => T("ps.pill.builtIn"))),
+        new ConditionalElement(() => IsUnsavedRow(slot) || (RowIsActive(slot) && _modified),
             new PillElement(() => T("ps.pill.modified"), Color: () => _services.Theme.Colors.Accent)),
-    }, Gap: 6f), OnClick: () => ClickRow(i), Selected: () => RowIsActive(i));
+    }, Gap: 6f), OnClick: () => ClickRow(slot), Selected: () => RowIsActive(slot));
 
-    private bool IsUnsavedRow(int i) => UnsavedRows == 1 && i == 0;
+    private bool IsUnsavedRow(int slot) => UnsavedRows == 1 && _presetOffset + slot == 0;
 
-    private Presets.Preset? RowPreset(int i)
+    private Preset? RowPreset(int slot)
     {
-        var k = i - UnsavedRows;
+        var k = _presetOffset + slot - UnsavedRows;
         var all = _presets.All;
         return k >= 0 && k < all.Count ? all[k] : null;
     }
 
-    private string RowName(int i) => IsUnsavedRow(i) ? T("ps.pre.unsaved") : RowPreset(i)?.Name ?? "";
-    private bool RowBuiltIn(int i) => !IsUnsavedRow(i) && (RowPreset(i)?.BuiltIn ?? false);
-    private bool RowIsActive(int i) => !IsUnsavedRow(i)
-        && string.Equals(RowPreset(i)?.Name, _activePresetName, StringComparison.OrdinalIgnoreCase);
+    private string RowName(int slot) => IsUnsavedRow(slot)
+        ? _loc.TFormat("ps.pre.unsavedFrom", _presetSession.Unsaved?.Origin ?? "")
+        : RowPreset(slot)?.Name ?? "";
 
-    private void ClickRow(int i)
+    private bool RowBuiltIn(int slot) => !IsUnsavedRow(slot) && (RowPreset(slot)?.BuiltIn ?? false);
+    private bool RowIsActive(int slot) => !IsUnsavedRow(slot)
+        && string.Equals(RowPreset(slot)?.Name, _activePresetName, StringComparison.OrdinalIgnoreCase);
+
+    private void ClickRow(int slot)
     {
         _nameMode = NameMode.None;
-        if (IsUnsavedRow(i)) { RestoreUnsavedLook(); return; }
-        if (RowPreset(i) is { } p) ApplyPreset(p);
+        if (IsUnsavedRow(slot)) { _presetSession.RestoreUnsaved(); return; }
+        if (RowPreset(slot) is { } p) ApplyPreset(p);
     }
 
-    // ── save / rename / delete ───────────────────────────────────────────────────────────────────────────────
-
-    private void SaveActive()
-    {
-        if (ActiveIsBuiltIn) return;
-        _presets.Save(_activePresetName, _editor.Build());
-        _modified = false;
-        _settings.SetWorkingJson(null);
-    }
+    // ── save as / rename / delete ────────────────────────────────────────────────────────────────────────────
 
     private void BeginName(NameMode mode, string initial)
     {
@@ -110,17 +116,22 @@ public sealed partial class Plugin
         new RowElement(new HudElement[]
         {
             new InputElement(() => _nameDraft, s => { _nameDraft = s; CommitName(); }, Width: 220f, OnChange: s => _nameDraft = s),
-            new ButtonElement(() => T("ps.ok"), OnClick: CommitName, Enabled: () => NameError() is null, Width: 48f),
-            new ButtonElement(() => T("ps.cancel"), OnClick: () => _nameMode = NameMode.None, Width: 72f),
+            new ButtonElement(() => T("ps.ok"), OnClick: CommitName, Enabled: () => NameError() is null),
+            new ButtonElement(() => T("ps.cancel"), OnClick: () => _nameMode = NameMode.None),
         }, Gap: 6f),
-        new ConditionalElement(() => NameError() is not null, new TextElement(() => NameError() ?? "", Color: Muted)),
+        new ConditionalElement(() => NameError() is not null,
+            new TextElement(() => NameError() ?? "", Color: () => _services.Theme.Colors.Warning)),
     }, Gap: 4f);
 
     private string? NameError()
     {
-        var name = _nameDraft.Trim();
-        if (name.Length == 0) return T("ps.pre.errEmpty");
-        var existing = FindPreset(name);
+        switch (PresetNames.Check(_nameDraft))
+        {
+            case NameProblem.Empty: return T("ps.pre.errEmpty");
+            case NameProblem.TooLong: return _loc.TFormat("ps.pre.errTooLong", PresetNames.MaxLength);
+            case NameProblem.BadCharacters: return T("ps.pre.errBadChars");
+        }
+        var existing = FindPreset(_nameDraft.Trim());
         if (existing is null) return null;
         if (_nameMode == NameMode.Rename && string.Equals(existing.Name, _activePresetName, StringComparison.OrdinalIgnoreCase)) return null;
         return existing.BuiltIn ? T("ps.pre.errBuiltIn") : T("ps.pre.errTaken");
@@ -132,8 +143,8 @@ public sealed partial class Plugin
         var name = _nameDraft.Trim();
         try
         {
-            if (_nameMode == NameMode.SaveAs) _presets.Save(name, _editor.Build());
-            else _presets.Rename(_activePresetName, name);
+            if (_nameMode == NameMode.SaveAs) _presetSession.SaveAs(name);
+            else _presetSession.Rename(name);
         }
         catch (InvalidOperationException ex)
         {
@@ -141,26 +152,15 @@ public sealed partial class Plugin
             return;
         }
         _nameMode = NameMode.None;
-        _modified = false;
-        if (FindPreset(name) is { } p) ApplyPreset(p);
     }
 
     private HudElement DeleteConfirm() => new RowElement(new HudElement[]
     {
         new TextElement(() => _loc.TFormat("ps.pre.confirmDelete", _activePresetName), Color: () => _services.Theme.Colors.Warning),
         new SpacerElement(),
-        new ButtonElement(() => T("ps.pre.delete"), OnClick: DeleteActive, Width: 68f),
-        new ButtonElement(() => T("ps.cancel"), OnClick: () => _nameMode = NameMode.None, Width: 72f),
+        new ButtonElement(() => T("ps.pre.delete"), OnClick: () => { _nameMode = NameMode.None; _presetSession.Delete(); }),
+        new ButtonElement(() => T("ps.cancel"), OnClick: () => _nameMode = NameMode.None),
     }, Gap: 6f);
-
-    private void DeleteActive()
-    {
-        _nameMode = NameMode.None;
-        if (ActiveIsBuiltIn) return;
-        _presets.Delete(_activePresetName);
-        _modified = false;
-        ApplyPreset(_presets.All[0]);
-    }
 
     // ── import / export ──────────────────────────────────────────────────────────────────────────────────────
 
@@ -169,6 +169,7 @@ public sealed partial class Plugin
         try { Directory.CreateDirectory(ImportFolder); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
         _importFiles = ListJson(ImportFolder);
+        _importOptionsCache = null;
         _importIndex = 0;
         _nameMode = NameMode.Import;
     }
@@ -178,33 +179,35 @@ public sealed partial class Plugin
         new RowElement(new HudElement[]
         {
             new CellElement(new DropdownElement(() => _importIndex, ImportOptions, i => _importIndex = i), Weight: 1f),
-            new ButtonElement(() => T("ps.pre.importOne"), OnClick: ImportSelected, Enabled: () => _importFiles.Count > 0, Width: 72f),
-            new ButtonElement(() => T("ps.cancel"), OnClick: () => _nameMode = NameMode.None, Width: 72f),
+            new ButtonElement(() => T("ps.pre.importOne"), OnClick: ImportSelected, Enabled: () => _importFiles.Count > 0),
+            new ButtonElement(() => T("ps.cancel"), OnClick: () => _nameMode = NameMode.None),
         }, Gap: 6f),
         new RowElement(new HudElement[]
         {
-            new ButtonElement(() => T("ps.pre.openImport"), OnClick: () => OpenFolderSafe(ImportFolder), Width: 140f),
-            new ButtonElement(() => T("ps.look.rescan"), OnClick: BeginImport, Width: 72f),
+            new ButtonElement(() => T("ps.pre.openImport"), OnClick: () => OpenFolderSafe(ImportFolder)),
+            new ButtonElement(() => T("ps.look.rescan"), OnClick: BeginImport),
         }, Gap: 6f),
         new TextElement(() => T("ps.pre.importHint"), Color: Muted),
     }, Gap: 4f);
 
     private IReadOnlyList<string> ImportOptions()
     {
-        if (_importFiles.Count == 0) return new[] { T("ps.pre.importNone") };
-        var names = new List<string>(_importFiles.Count);
+        if (_importOptionsCache is not null) return _importOptionsCache;
+        var names = new List<string>(Math.Max(1, _importFiles.Count));
+        if (_importFiles.Count == 0) names.Add(T("ps.pre.importNone"));
         foreach (var f in _importFiles) names.Add(Path.GetFileName(f));
-        return names;
+        return _importOptionsCache = names;
     }
 
     private void ImportSelected()
     {
         if (_importIndex < 0 || _importIndex >= _importFiles.Count) return;
-        Presets.Preset? p = null;
+        Preset? p = null;
         try { p = _presets.Import(File.ReadAllText(_importFiles[_importIndex])); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
-        if (p is null) { _view.ShowError(T("preset.bad")); return; }
+        if (p is null) { _view.ShowError(_loc.TFormat("ps.pre.importFailed", Path.GetFileName(_importFiles[_importIndex]))); return; }
         _nameMode = NameMode.None;
+        _presetNamesCache = null;
         ApplyPreset(p);
     }
 
@@ -213,18 +216,26 @@ public sealed partial class Plugin
         try
         {
             Directory.CreateDirectory(ExportFolder);
-            var path = Path.Combine(ExportFolder, SafeFileName(_activePresetName) + ".json");
+            var path = UniqueExportPath(PresetNames.Sanitize(_activePresetName));
             var p = FindPreset(_activePresetName);
             var json = p is not null && !_modified
                 ? _presets.Export(p.Name)
-                : System.Text.Json.JsonSerializer.Serialize(Presets.PresetDto.From(_activePresetName, _editor.Build()));
+                : System.Text.Json.JsonSerializer.Serialize(PresetDto.From(_activePresetName, _editor.Build()));
             File.WriteAllText(path, json);
+            _toastWarning = "";
             ShowFileToast(T("ps.toast.exported"), path, T("ps.toast.exportedDetail"));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             _view.ShowError(T("ps.pre.exportFailed"));
         }
+    }
+
+    private string UniqueExportPath(string stem)
+    {
+        var path = Path.Combine(ExportFolder, stem + ".json");
+        for (var n = 2; File.Exists(path); n++) path = Path.Combine(ExportFolder, $"{stem} ({n}).json");
+        return path;
     }
 
     private static List<string> ListJson(string dir)
@@ -235,14 +246,5 @@ public sealed partial class Plugin
             if (string.Equals(Path.GetExtension(f), ".json", StringComparison.OrdinalIgnoreCase)) list.Add(f);
         list.Sort(StringComparer.OrdinalIgnoreCase);
         return list;
-    }
-
-    private static string SafeFileName(string name)
-    {
-        var chars = name.ToCharArray();
-        var bad = Path.GetInvalidFileNameChars();
-        for (var i = 0; i < chars.Length; i++)
-            if (Array.IndexOf(bad, chars[i]) >= 0 || chars[i] is ':' or '\\' or '/') chars[i] = '_';
-        return new string(chars);
     }
 }

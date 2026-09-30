@@ -33,7 +33,7 @@
   "ps.cap.jpgQuality": "Kualitas JPG",
   "ps.cap.folder": "Folder",
   "ps.cap.folderDefault": "Bawaan — stellar\\screenshots",
-  "ps.cap.folderFallback": " (tidak bisa ditulis — memakai bawaan)",
+  "ps.cap.folderFallback": "Folder tidak bisa ditulis — menyimpan ke folder bawaan.",
   "ps.cap.change": "Ganti...",
   "ps.cap.useDefault": "Pakai bawaan",
   "ps.cap.openFolder": "Buka folder",
@@ -50,7 +50,7 @@
   "ps.hide.others": "Pemain lain",
   "ps.hide.party": "Tetap tampilkan party saya",
   "ps.help.hide.hud": "Menyembunyikan antarmuka game selama panel terbuka.",
-  "ps.help.hide.overlay": "Menyembunyikan semua jendela Stellar, termasuk panel ini. Tekan hotkey panel (bawaan Shift+F10) untuk memunculkannya lagi.",
+  "ps.help.hide.overlay": "Menyembunyikan semua jendela Stellar, termasuk panel ini. Tekan {0} untuk memunculkannya lagi.",
   "ps.help.hide.names": "Menyembunyikan nama di atas karakter.",
   "ps.help.hide.others": "Menyembunyikan karakter pemain lain.",
   "ps.help.hide.party": "Anggota party tetap terlihat saat pemain lain disembunyikan.",
@@ -128,5 +128,11 @@
   "ps.docked.fullPanel": "Panel penuh",
   "ps.docked.warmth": "Kehangatan",
   "ps.docked.blur": "Blur latar",
-  "ps.docked.capture": "Tangkap  ({0})"
+  "ps.docked.capture": "Tangkap  ({0})",
+  "ps.pre.unsavedFrom": "Tampilan belum disimpan (dari {0})",
+  "ps.pre.errTooLong": "Nama maksimal {0} karakter.",
+  "ps.pre.errBadChars": "Nama tidak boleh berisi / \\ : * ? \" < > | atau diakhiri titik.",
+  "ps.pre.importFailed": "{0} tidak bisa diimpor — apakah ini file preset Studio Foto?",
+  "ps.docked.blurOff": "Mati",
+  "ps.docked.saved": "Tersimpan {0}"
 }
