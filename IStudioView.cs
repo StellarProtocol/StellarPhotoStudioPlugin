@@ -11,11 +11,18 @@ namespace Stellar.PhotoStudio;
 /// </summary>
 internal interface IStudioView
 {
+    /// <summary>Whether the panel is currently shown. The single source of truth for panel-open state — callers
+    /// (<c>Plugin.SetViewOpen</c>) never keep their own bool, and read this back after <see cref="Open"/>/
+    /// <see cref="Close"/> to learn what ACTUALLY happened (a concrete view may no-op <see cref="Close"/> while
+    /// pinned open).</summary>
+    bool IsOpen { get; }
+
     /// <summary>Show the panel — a user hotkey, or the game entering its own photo mode.</summary>
     void Open();
 
     /// <summary>Hide the panel. A concrete implementation may choose to no-op this while the user has pinned the
-    /// panel open — that policy belongs to the panel, not to callers of this seam.</summary>
+    /// panel open — that policy belongs to the panel, not to callers of this seam. Callers read
+    /// <see cref="IsOpen"/> afterward rather than assuming the request succeeded.</summary>
     void Close();
 
     /// <summary>A capture just saved successfully; show its outcome (path, dimensions, "Open folder").</summary>
@@ -25,11 +32,13 @@ internal interface IStudioView
     void ShowError(string message);
 }
 
-/// <summary>Does nothing. Wired in until Task 14 replaces it with the real panel.</summary>
+/// <summary>Renders nothing, but still tracks <see cref="IsOpen"/> honestly (unconditional open/close, never
+/// pins) so callers driven by it behave correctly. Wired in until Task 14 replaces it with the real panel.</summary>
 internal sealed class NoOpStudioView : IStudioView
 {
-    public void Open() { }
-    public void Close() { }
+    public bool IsOpen { get; private set; }
+    public void Open() => IsOpen = true;
+    public void Close() => IsOpen = false;
     public void ShowSavedToast(CaptureResult result) { }
     public void ShowError(string message) { }
 }

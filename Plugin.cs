@@ -26,8 +26,8 @@ public sealed partial class Plugin : IStellarPlugin
     private readonly Action<bool> _onCutsceneChanged;
 
     private int _presetIndex;
-    private bool _panelOpen;
     private IDisposable? _hideAllToken;
+    private readonly string _screenshotFolder;
 
     // No panel yet to drive this (Task 14): a fixed, capture-correctness-only default so a screenshot never
     // includes the plugin's own overlay chrome. Everything else (scale/format/quality/folder/extra hides) is
@@ -40,6 +40,13 @@ public sealed partial class Plugin : IStellarPlugin
         _services = services;
         _loc = services.Localization;
         LogBootDiag(); // Plugin.Diagnostics.cs — gated on StellarDiagnostics.IsEnabled
+
+        var assemblyDir = Path.GetDirectoryName(typeof(Plugin).Assembly.Location) ?? "";
+        var root = GameRootLocator.Resolve(AppContext.BaseDirectory, assemblyDir, Directory.Exists);
+        _screenshotFolder = Path.Combine(root.Path, "stellar", "screenshots");
+        // Not diagnostic spam — a plain, always-on boot line so the resolved path is visible in a normal log.
+        services.Log.Info($"[PhotoStudio] game root resolved: {root.Path} (verified={root.Verified})");
+
         _view = new NoOpStudioView();
 
         _look = new LookController(services.RenderLook);
@@ -50,7 +57,7 @@ public sealed partial class Plugin : IStellarPlugin
 
         DeclareHotkeys();
 
-        _photoModeAttach = new PhotoModeAttach(services.PhotoMode, _look, _view);
+        _photoModeAttach = new PhotoModeAttach(services.PhotoMode, _look, SetViewOpen);
         _onCutsceneChanged = suspended => _look.SetSuspended(suspended);
         services.PhotoMode.CutsceneChanged += _onCutsceneChanged;
 
@@ -72,9 +79,7 @@ public sealed partial class Plugin : IStellarPlugin
         _look.Dispose();
     }
 
-    private CaptureRequest BuildRequest() => CaptureController.BuildRequest(_captureSettings, DateTime.Now, DefaultScreenshotFolder);
-
-    private string DefaultScreenshotFolder => Path.Combine(AppContext.BaseDirectory, "stellar", "screenshots");
+    private CaptureRequest BuildRequest() => CaptureController.BuildRequest(_captureSettings, DateTime.Now, _screenshotFolder);
 
     private void OnCaptureResult(CaptureResult r)
     {
@@ -102,12 +107,19 @@ public sealed partial class Plugin : IStellarPlugin
         }
     }
 
-    private void TogglePanel()
+    private void TogglePanel() => SetViewOpen(!_view.IsOpen);
+
+    /// <summary>The ONE place panel-open state is driven from: <see cref="IStudioView.IsOpen"/> is the single
+    /// source of truth (no separate bool here), and <see cref="LookController.SetPanelOpen"/> is always set from
+    /// the view's ACTUAL resulting state — not from what we asked for — so a concrete view that no-ops
+    /// <see cref="IStudioView.Close"/> (e.g. pinned open by the user) still previews correctly. Both
+    /// <see cref="TogglePanel"/> (the hotkey) and <see cref="PhotoModeAttach"/> (the game's own photo mode) call
+    /// this method; neither touches <see cref="_view"/> or <see cref="_look"/> directly for open/close.</summary>
+    private void SetViewOpen(bool open)
     {
-        _panelOpen = !_panelOpen;
-        _look.SetPanelOpen(_panelOpen);
-        if (_panelOpen) _view.Open();
+        if (open) _view.Open();
         else _view.Close();
+        _look.SetPanelOpen(_view.IsOpen);
     }
 
     private void ToggleHideAll()
