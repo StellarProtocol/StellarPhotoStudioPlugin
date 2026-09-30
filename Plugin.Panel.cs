@@ -1,0 +1,86 @@
+using System;
+using Stellar.Abstractions.Domain;
+using Stellar.Abstractions.Services;
+
+namespace Stellar.PhotoStudio;
+
+// The full panel (approved mockup, docs/superpowers/specs/assets/2026-09-30-photo-studio-panel-layout.md § 2):
+// GlassMenu 440×660 at the top-right, three tabs (CooldownBar tab-strip recipe), each tab in its own scroll
+// area, and a fixed Capture footer on every tab so the player can tune a look and shoot without switching.
+public sealed partial class Plugin
+{
+    private IWindowControl RegisterPanelWindow() => _services.Windows.Register(new WindowRegistration(
+        new WindowSpec(
+            Id: "photostudio.panel",
+            Title: T("ps.title"),
+            DefaultRect: new WindowRect(-20f, 140f, 440f, 660f),
+            Category: WindowCategory.Tools,
+            Style: WindowPanelStyle.GlassMenu)
+        {
+            StartVisible = false, Closable = true, Draggable = true, Resizable = true,
+            Anchor = WindowAnchor.TopRight,
+            MinWidth = 400f, MinHeight = 420f, MaxWidth = 640f, MaxHeight = 1000f,
+            ShouldRender = InWorld,
+        },
+        BuildPanelRoot(),
+        TitleTrailing: new ConditionalElement(() => _settings.Pinned,
+            new PillElement(() => T("ps.pill.pinned"), Color: () => _services.Theme.Colors.Accent)),
+        OnClose: () => _panel.Set(false)));
+
+    private HudElement BuildPanelRoot() => new ColumnElement(new HudElement[]
+    {
+        new RowElement(new HudElement[]
+        {
+            TabButton(0, "ps.tab.capture"),
+            TabButton(1, "ps.tab.look"),
+            TabButton(2, "ps.tab.presets"),
+        }, Gap: 4f),
+        new SeparatorElement(),
+        new ConditionalElement(() => _settings.Tab == 0, new ScrollElement(BuildCaptureTab(), Height: 420f), Fill: true),
+        new ConditionalElement(() => _settings.Tab == 1, new ScrollElement(BuildLookTab(), Height: 420f), Fill: true),
+        new ConditionalElement(() => _settings.Tab == 2, new ScrollElement(BuildPresetsTab(), Height: 420f), Fill: true),
+        new SeparatorElement(),
+        BuildCaptureFooter(),
+    }, Gap: 8f);
+
+    private HudElement TabButton(int tab, string key) => new CellElement(
+        new ButtonElement(() => T(key), OnClick: () => _settings.SetTab(tab), Active: () => _settings.Tab == tab),
+        Weight: 1f);
+
+    private HudElement BuildCaptureFooter() => new ColumnElement(new HudElement[]
+    {
+        new CellElement(new ButtonElement(
+            () => Capturing ? T("ps.capturing") : T("ps.capture"),
+            OnClick: CaptureNow,
+            Enabled: () => !Capturing,
+            Style: MenuButtonStyle.Filled), Weight: 1f),
+        new TextElement(StatusLine, Color: Muted, Align: TextAlign.Center, NoWrap: true),
+        new TextElement(HotkeyHint, Color: Muted, Align: TextAlign.Center, NoWrap: true),
+    }, Gap: 4f);
+
+    private string StatusLine()
+    {
+        if (Capturing)
+            return _settings.Scale == 4 ? T("ps.status.capturing4x") : T("ps.capturing");
+        return $"{_settings.Scale}× · {FormatName()} · {ResolutionText()}";
+    }
+
+    private string FormatName() => _settings.Format == CaptureFormat.Jpg ? "JPG" : "PNG";
+
+    private string ResolutionText()
+    {
+        var w = _services.Framework.ScreenWidth * _settings.Scale;
+        var h = _services.Framework.ScreenHeight * _settings.Scale;
+        return $"{w} × {h}";
+    }
+
+    private string HotkeyHint() => _loc.TFormat("ps.hint.hotkeys",
+        BindingText("photostudio.capture"), BindingText("photostudio.panel"), BindingText("photostudio.hideall"));
+
+    private string BindingText(string id)
+    {
+        foreach (var h in _hotkeys)
+            if (h.Id == id) return h.CurrentBinding?.ToString() ?? "—";
+        return "—";
+    }
+}

@@ -18,7 +18,9 @@ public sealed partial class Plugin : IStellarPlugin
     private readonly IPluginServices _services;
     private readonly ILocalization _loc;
     private readonly LookController _look;
+    private readonly LookEditor _editor = new();
     private readonly PresetStore _presets;
+    private readonly StudioSettings _settings;
     private readonly StudioSession _session;
     private readonly IStudioView _view;
     private readonly PanelOpenState _panel;
@@ -26,15 +28,9 @@ public sealed partial class Plugin : IStellarPlugin
     private readonly Action<float> _onFrameworkUpdate;
     private readonly Action<bool> _onCutsceneChanged;
 
-    private int _presetIndex;
     private IDisposable? _hideAllToken;
     private readonly string _screenshotFolder;
-
-    // No panel yet to drive this (Task 14): a fixed, capture-correctness-only default so a screenshot never
-    // includes the plugin's own overlay chrome. Everything else (scale/format/quality/folder/extra hides) is
-    // left at the framework's own CaptureRequest defaults until the panel can set them.
-    private readonly CaptureSettings _captureSettings = new(
-        Scale: 2, Format: CaptureFormat.Png, JpgQuality: 92, Folder: null, Hide: VisibilityLayers.StellarOverlay);
+    private readonly string _studioFolder;
 
     public Plugin(IPluginServices services)
     {
@@ -45,25 +41,29 @@ public sealed partial class Plugin : IStellarPlugin
         var assemblyDir = Path.GetDirectoryName(typeof(Plugin).Assembly.Location) ?? "";
         var root = GameRootLocator.Resolve(AppContext.BaseDirectory, assemblyDir, Directory.Exists);
         _screenshotFolder = Path.Combine(root.Path, "stellar", "screenshots");
+        _studioFolder = Path.Combine(root.Path, "stellar", "photostudio");
         // Not diagnostic spam — a plain, always-on boot line so the resolved path is visible in a normal log.
         services.Log.Info($"[PhotoStudio] game root resolved: {root.Path} (verified={root.Verified})");
 
-        _view = new NoOpStudioView();
-
+        _settings = new StudioSettings(services.Config.GetSection("photostudio"));
         _look = new LookController(services.RenderLook);
+        _look.SetPinned(_settings.Pinned);
         _presets = new PresetStore(new DataStorePresetFiles(services.Data), m => services.Log.Warning(m));
-        _look.SetDraft(_presets.All[_presetIndex].Look);
+        RestoreWorkingLook();
+        _editor.Changed += OnEditorChanged;
 
         _session = new StudioSession(services.ScreenCapture, BuildRequest, OnCaptureResult, services.Log.Warning);
+        RegisterWindows();                       // Plugin.Studio.cs — panel, docked strip, toast, tip, flash
+        _view = new WindowStudioView(this);
         _panel = new PanelOpenState(_view, _look);
 
         DeclareHotkeys();
 
-        _photoModeAttach = new PhotoModeAttach(services.PhotoMode, _look, _panel);
+        _photoModeAttach = new PhotoModeAttach(services.PhotoMode, _look, SetDockedForGamePhotoMode);
         _onCutsceneChanged = suspended => _look.SetSuspended(suspended);
         services.PhotoMode.CutsceneChanged += _onCutsceneChanged;
 
-        _onFrameworkUpdate = _ => _look.Tick();
+        _onFrameworkUpdate = OnUpdate;
         services.Framework.Update += _onFrameworkUpdate;
     }
 
@@ -78,10 +78,23 @@ public sealed partial class Plugin : IStellarPlugin
         _hotkeys.Clear();
         _hideAllToken?.Dispose();
         _hideAllToken = null;
+        ReleaseLiveHides();
+        RemoveWindows();
         _look.Dispose();
     }
 
-    private CaptureRequest BuildRequest() => CaptureController.BuildRequest(_captureSettings, DateTime.Now, _screenshotFolder);
+    private void OnUpdate(float dt)
+    {
+        _look.Tick();
+        TickStudio(dt);                          // Plugin.Studio.cs — toast timer, flash fade, tip reposition
+    }
+
+    private CaptureRequest BuildRequest()
+    {
+        var folder = EffectiveFolder(out _folderFellBack);
+        var s = new CaptureSettings(_settings.Scale, _settings.Format, _settings.JpgQuality, folder, _settings.Hides);
+        return CaptureController.BuildRequest(s, DateTime.Now, _screenshotFolder);
+    }
 
     private void OnCaptureResult(CaptureResult r)
     {
@@ -99,8 +112,7 @@ public sealed partial class Plugin : IStellarPlugin
         if (r.Path is null) return; // Success is true only when CaptureResult.Ok wrote a path; defensive only.
         try
         {
-            var preset = _presets.All[_presetIndex];
-            var json = CaptureController.SidecarJson(r, preset.Name, _services.ClientState.CurrentSceneName ?? "", _look.Draft);
+            var json = CaptureController.SidecarJson(r, _activePresetName, _services.ClientState.CurrentSceneName ?? "", _look.Draft);
             File.WriteAllText(Path.ChangeExtension(r.Path, ".json"), json);
         }
         catch (Exception ex)
@@ -109,7 +121,18 @@ public sealed partial class Plugin : IStellarPlugin
         }
     }
 
-    private void TogglePanel() => _panel.Toggle();
+    private void TogglePanel()
+    {
+        // The overlay hide also hides this panel — the panel hotkey is the way back, so it releases it first.
+        if (_overlayHidden)
+        {
+            _overlayHidden = false;
+            ApplyLiveHides();
+            _panel.Set(true);
+            return;
+        }
+        _panel.Toggle();
+    }
 
     private void ToggleHideAll()
     {
@@ -124,8 +147,9 @@ public sealed partial class Plugin : IStellarPlugin
 
     private void NextPreset()
     {
-        if (_presets.All.Count == 0) return;
-        _presetIndex = (_presetIndex + 1) % _presets.All.Count;
-        _look.SetDraft(_presets.All[_presetIndex].Look);
+        var all = _presets.All;
+        if (all.Count == 0) return;
+        var i = IndexOfPreset(_activePresetName);
+        ApplyPreset(all[(i + 1) % all.Count]);
     }
 }

@@ -1,0 +1,126 @@
+using System;
+using System.IO;
+using Stellar.Abstractions.Domain;
+using Stellar.Abstractions.Services;
+
+namespace Stellar.PhotoStudio;
+
+// Capture tab: output (scale, format, JPG quality, folder, file name), hide toggles, game-photo-mode option.
+public sealed partial class Plugin
+{
+    private bool _editingFolder;
+    private string _folderDraft = "";
+
+    private HudElement BuildCaptureTab() => new ColumnElement(new HudElement[]
+    {
+        new TextElement(() => T("ps.cap.output"), Emphasis: true),
+        LabeledRow(() => T("ps.cap.resolution"),
+            ScaleButton(1), ScaleButton(2), ScaleButton(4), new SpacerElement(),
+            new TextElement(ResolutionText, Color: Muted, Align: TextAlign.Right)),
+        LabeledRow(() => T("ps.cap.format"),
+            FormatButton(CaptureFormat.Png, "PNG"), FormatButton(CaptureFormat.Jpg, "JPG")),
+        new ConditionalElement(() => _settings.Format == CaptureFormat.Jpg, SliderRow(
+            () => T("ps.cap.jpgQuality"),
+            new SliderElement(() => _settings.JpgQuality, v => _settings.SetJpgQuality((int)MathF.Round(v)), 1f, 100f),
+            () => _settings.JpgQuality.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            () => _settings.SetJpgQuality(92))),
+        LabeledRow(() => T("ps.cap.folder"), new CellElement(new TextElement(FolderDisplay, NoWrap: true), Weight: 1f)),
+        FolderButtons(),
+        new ConditionalElement(() => _editingFolder, FolderEditor()),
+        LabeledRow(() => T("ps.cap.fileName"), new TextElement(NextFileName, Color: Muted, NoWrap: true)),
+        new SpacerElement(Height: 6f),
+        new SeparatorElement(),
+        new RowElement(new HudElement[]
+        {
+            new TextElement(() => T("ps.cap.hide"), Emphasis: true),
+            new SpacerElement(),
+            new ButtonElement(() => T("ps.cap.showAll"), OnClick: ShowAllLayers, Width: 88f),
+        }, Gap: 6f),
+        HideToggle("hide.hud", VisibilityLayers.GameHud, "ps.hide.hud"),
+        HideToggle("hide.overlay", VisibilityLayers.StellarOverlay, "ps.hide.overlay"),
+        HideToggle("hide.names", VisibilityLayers.Nameplates, "ps.hide.names"),
+        HideToggle("hide.others", VisibilityLayers.OtherPlayers, "ps.hide.others"),
+        new RowElement(new HudElement[]
+        {
+            new SpacerElement(Width: 22f),
+            new CellElement(KeepPartyToggle(), Weight: 1f),
+        }),
+        new SpacerElement(Height: 6f),
+        new SeparatorElement(),
+        new TextElement(() => T("ps.cap.gamePhoto"), Emphasis: true),
+        HelpToggle("docked.auto", () => _settings.DockedAuto, _settings.SetDockedAuto,
+            () => T("ps.cap.dockedAuto"), () => T("ps.help.dockedAuto")),
+    }, Gap: 6f);
+
+    private HudElement ScaleButton(int s) => new ButtonElement(() => $"{s}×",
+        OnClick: () => _settings.SetScale(s), Active: () => _settings.Scale == s, Width: 48f);
+
+    private HudElement FormatButton(CaptureFormat f, string label) => new ButtonElement(() => label,
+        OnClick: () => _settings.SetFormat(f), Active: () => _settings.Format == f, Width: 60f);
+
+    private HudElement FolderButtons() => new RowElement(new HudElement[]
+    {
+        new SpacerElement(Width: LabelW),
+        new ButtonElement(() => T("ps.cap.change"), OnClick: BeginFolderEdit, Width: 88f),
+        new ButtonElement(() => T("ps.cap.useDefault"), OnClick: () => { _settings.SetFolder(""); _editingFolder = false; }, Width: 104f),
+        new ButtonElement(() => T("ps.cap.openFolder"), OnClick: OpenScreenshotFolder, Width: 104f),
+    }, Gap: 6f);
+
+    private HudElement FolderEditor() => new ColumnElement(new HudElement[]
+    {
+        new RowElement(new HudElement[]
+        {
+            new SpacerElement(Width: LabelW),
+            new InputElement(() => _folderDraft, CommitFolder, Width: 220f, OnChange: s => _folderDraft = s),
+            new ButtonElement(() => T("ps.ok"), OnClick: () => CommitFolder(_folderDraft), Width: 48f),
+            new ButtonElement(() => T("ps.cancel"), OnClick: () => _editingFolder = false, Width: 72f),
+        }, Gap: 6f),
+        new TextElement(FolderHint, Color: Muted),
+    }, Gap: 4f);
+
+    private string FolderDisplay()
+    {
+        if (string.IsNullOrWhiteSpace(_settings.Folder)) return T("ps.cap.folderDefault");
+        return _folderFellBack ? _settings.Folder + T("ps.cap.folderFallback") : _settings.Folder;
+    }
+
+    private string FolderHint() => FolderOpener.IsRunningUnderWine ? T("ps.cap.folderHint") + T("ps.cap.folderHintWine") : T("ps.cap.folderHint");
+
+    private string NextFileName() => $"BPSR_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.{(_settings.Format == CaptureFormat.Jpg ? "jpg" : "png")}";
+
+    private void BeginFolderEdit()
+    {
+        _folderDraft = _settings.Folder;
+        _editingFolder = true;
+    }
+
+    private void CommitFolder(string path)
+    {
+        _settings.SetFolder(path);
+        _editingFolder = false;
+        EffectiveFolder(out _folderFellBack);
+    }
+
+    private void OpenScreenshotFolder() => OpenFolderSafe(EffectiveFolder(out _folderFellBack));
+
+    private void ShowAllLayers()
+    {
+        _overlayHidden = false;
+        _settings.SetHides(VisibilityLayers.None);
+        ApplyLiveHides();
+    }
+
+    private HudElement HideToggle(string key, VisibilityLayers layer, string labelKey) => HelpToggle(key,
+        get: () => LayerAvailable(layer) && IsHidden(layer),
+        set: on => SetHidden(layer, on),
+        label: () => T(labelKey),
+        help: () => LayerAvailable(layer) ? T("ps.help." + key) : T("ps.help.layerUnavailable"),
+        enabled: () => LayerAvailable(layer));
+
+    private HudElement KeepPartyToggle() => HelpToggle("hide.party",
+        get: () => IsHidden(VisibilityLayers.KeepParty),
+        set: on => SetHidden(VisibilityLayers.KeepParty, on),
+        label: () => T("ps.hide.party"),
+        help: () => T("ps.help.hide.party"),
+        enabled: () => IsHidden(VisibilityLayers.OtherPlayers) && LayerAvailable(VisibilityLayers.KeepParty));
+}

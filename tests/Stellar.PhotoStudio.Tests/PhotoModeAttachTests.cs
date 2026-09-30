@@ -28,46 +28,44 @@ public sealed class PhotoModeAttachTests
         public event Action<PhotoModeKind>? Entered;
         public event Action? Exited;
         public bool InCutscene { get; set; }
-        public event Action<bool>? CutsceneChanged;
+        public event Action<bool>? CutsceneChanged { add { } remove { } }
 
         public void RaiseEntered(PhotoModeKind kind) { IsActive = true; Kind = kind; Entered?.Invoke(kind); }
         public void RaiseExited() { IsActive = false; Kind = PhotoModeKind.None; Exited?.Invoke(); }
-        public void RaiseCutsceneChanged(bool v) { InCutscene = v; CutsceneChanged?.Invoke(v); }
     }
 
-    // Task 15 fix round item 2 (+ follow-up): PhotoModeAttach and the panel hotkey (TogglePanel) must go through
-    // the SAME PanelOpenState so panel-open state has one writer. This test uses the REAL PanelOpenState (not a
-    // hand-mirrored copy of its logic), so a future change to PanelOpenState is exercised by both this test and
-    // Plugin.cs automatically.
     [Fact]
-    public void Game_photo_mode_opens_the_view_then_a_toggle_hotkey_closes_it()
+    public void Game_photo_mode_shows_the_docked_strip_and_previews_the_look_then_hides_it()
     {
-        var view = new NoOpStudioView();
-        var look = new LookController(new FakeLook());
-        var panel = new PanelOpenState(view, look);
+        var fake = new FakeLook();
+        var look = new LookController(fake);
+        look.SetDraft(new LookSettings { Color = new ColorLook() });
+        var docked = new List<bool>();
         var photoMode = new FakePhotoMode();
-        using var attach = new PhotoModeAttach(photoMode, look, panel);
+        using var attach = new PhotoModeAttach(photoMode, look, docked.Add);
 
-        photoMode.RaiseEntered(PhotoModeKind.CameraFrame);
-        Assert.True(view.IsOpen);
+        photoMode.RaiseEntered(PhotoModeKind.Selfie);
+        look.Tick();
+        Assert.Equal(new[] { true }, docked);
+        Assert.False(fake.Log[^1]!.PlayMode); // previewing as in the panel, DoF allowed
 
-        panel.Toggle(); // == Plugin.TogglePanel (Shift+F10)
-        Assert.False(view.IsOpen);
+        photoMode.RaiseExited();
+        look.Tick();
+        Assert.Equal(new[] { true, false }, docked);
+        Assert.Null(fake.Log[^1]); // not pinned → the look goes away with the photo mode
     }
 
     [Fact]
     public void Dispose_unsubscribes_both_events()
     {
-        var view = new NoOpStudioView();
-        var look = new LookController(new FakeLook());
-        var panel = new PanelOpenState(view, look);
+        var docked = new List<bool>();
         var photoMode = new FakePhotoMode();
-        var attach = new PhotoModeAttach(photoMode, look, panel);
+        var attach = new PhotoModeAttach(photoMode, new LookController(new FakeLook()), docked.Add);
         attach.Dispose();
 
         photoMode.RaiseEntered(PhotoModeKind.CameraFrame);
         photoMode.RaiseExited();
 
-        Assert.False(view.IsOpen); // neither handler fired after Dispose, so the view was never touched
+        Assert.Empty(docked);
     }
 }

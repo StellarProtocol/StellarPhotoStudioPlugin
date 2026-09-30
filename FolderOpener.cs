@@ -12,10 +12,22 @@ internal static class FolderOpener
     public static (string File, string Args) Command(string folder, bool isWine) =>
         (isWine ? "winebrowser" : "explorer.exe", "\"" + folder + "\"");
 
-    public static void Open(string folder)
+    /// <summary>True when the game runs under Wine/Proton (Linux) rather than native Windows.</summary>
+    public static bool IsRunningUnderWine => IsWine.Value;
+
+    /// <summary>Opens <paramref name="folder"/> in the host file manager; returns false if that failed.</summary>
+    public static bool Open(string folder)
     {
         var (file, args) = Command(folder, IsWine.Value);
-        Process.Start(new ProcessStartInfo(file, args) { UseShellExecute = false });
+        try
+        {
+            Process.Start(new ProcessStartInfo(file, args) { UseShellExecute = false });
+            return true;
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            return false;
+        }
     }
 
     private static bool DetectWine()
