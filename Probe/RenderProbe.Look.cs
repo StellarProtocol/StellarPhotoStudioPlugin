@@ -42,7 +42,9 @@ public sealed partial class RenderProbe
 
     private IEnumerator StepEnv()
     {
-        Log($"screen={Screen.width}x{Screen.height} fullScreen={Screen.fullScreen} quality={QualitySettings.GetQualityLevel()}");
+        Log($"screen={Screen.width}x{Screen.height} fullScreen={Screen.fullScreen} quality={QualitySettings.GetQualityLevel()} " +
+            $"({QualitySettings.names[QualitySettings.GetQualityLevel()]}) gfx={SystemInfo.graphicsDeviceName} api={SystemInfo.graphicsDeviceVersion}");
+        try { Log($"QualityGradeSetting.QualityGrade={Panda.Utility.Quality.QualityGradeSetting.QualityGrade}"); } catch (Exception ex) { Log($"QualityGrade FAILED {ex.Message}"); }
         foreach (var n in new[] { "UnityEngine.Rendering.Volume", "UnityEngine.Rendering.VolumeProfile",
                      "Bokura.Rendering.ZColorAdjustmentVolume", "Bokura.Rendering.ZDofVolume", "Bokura.Rendering.ZUnityDepthOfField",
                      "Bokura.Rendering.ZUnityVignetteVolume", "Bokura.Rendering.ZVignetteVolume", "Bokura.Rendering.ZBloomVolume",

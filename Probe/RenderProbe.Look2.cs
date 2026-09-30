@@ -76,13 +76,17 @@ public sealed partial class RenderProbe
 
     private IEnumerator StepBloomVariants()
     {
-        foreach (var set in new[] { "plain", "PC", "UE" })
+        yield return Snap("04c_bloom_ref_none");
+        foreach (var set in new[] { "plain", "PC", "UE", "PCgate", "UEgate" })
         {
             var b = AddComp<ZBloomVolume>();
             Set(b.Enabled, true);
+            // *gate variants: keep plain intensity barely non-zero (IsActive keys on it) with an unreachable
+            // threshold so only the named set can contribute.
+            if (set.EndsWith("gate")) { Set(b.intensity, 0.01f); Set(b.threshold, 50f); }
             if (set == "plain") { Set(b.intensity, 5f); Set(b.threshold, 0f); }
-            else if (set == "PC") { Set(b.intensity_PC, 5f); Set(b.threshold_PC, 0f); }
-            else { Set(b.intensity_UE, b.intensity_UE.max); Set(b.threshold_UE, 0f); }
+            else if (set.StartsWith("PC")) { Set(b.intensity_PC, 5f); Set(b.threshold_PC, 0f); }
+            else if (set.StartsWith("UE")) { Set(b.intensity_UE, b.intensity_UE.max); Set(b.threshold_UE, 0f); }
             Log($"ZBloomVolume variant {set}: ours {BloomDesc(b)}");
             yield return Wait(0.3f);
             LogStack<ZBloomVolume>($"bloom {set}", BloomDesc);

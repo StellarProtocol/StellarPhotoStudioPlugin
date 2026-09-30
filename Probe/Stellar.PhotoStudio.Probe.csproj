@@ -40,6 +40,7 @@
     <Reference Include="ZRenderPipeline"><HintPath>$(GameInterop)/ZRenderPipeline.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Panda.Script"><HintPath>$(GameInterop)/Panda.Script.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="ZUtil"><HintPath>$(GameInterop)/ZUtil.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Panda.AOT.Quality"><HintPath>$(GameInterop)/Panda.AOT.Quality.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UniTask"><HintPath>$(GameInterop)/UniTask.dll</HintPath><Private>false</Private></Reference>
   </ItemGroup>
 </Project>
