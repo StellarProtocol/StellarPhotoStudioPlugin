@@ -60,9 +60,12 @@ public sealed partial class Plugin : IStellarPlugin
 
         DeclareHotkeys();
 
-        _photoModeAttach = new PhotoModeAttach(services.PhotoMode, _look, SetDockedForGamePhotoMode);
+        _photoModeAttach = new PhotoModeAttach(services.PhotoMode, SetDockedForGamePhotoMode);
         _onCutsceneChanged = suspended => _look.SetSuspended(suspended);
         services.PhotoMode.CutsceneChanged += _onCutsceneChanged;
+        // A (re)load mid-cutscene or inside the game's photo mode must start in the right state, not wait for a change.
+        _look.SetSuspended(services.PhotoMode.InCutscene);
+        SetDockedForGamePhotoMode(services.PhotoMode.IsActive);
 
         _onFrameworkUpdate = OnUpdate;
         services.Framework.Update += _onFrameworkUpdate;
@@ -97,7 +100,10 @@ public sealed partial class Plugin : IStellarPlugin
     private CaptureRequest BuildRequest()
     {
         var folder = EffectiveFolder(out _folderFellBack);
-        var s = new CaptureSettings(_settings.Scale, _settings.Format, _settings.JpgQuality, folder, _settings.Hides);
+        // Camera-render capture never contains UI or nameplates, so only world layers need hiding for it — hiding
+        // the HUD too would just flicker it for two frames on every capture.
+        var worldLayers = _settings.Hides & (VisibilityLayers.OtherPlayers | VisibilityLayers.KeepParty);
+        var s = new CaptureSettings(EffectiveScale(), _settings.Format, _settings.JpgQuality, folder, worldLayers);
         return CaptureController.BuildRequest(s, DateTime.Now, _screenshotFolder);
     }
 
@@ -158,6 +164,8 @@ public sealed partial class Plugin : IStellarPlugin
 
     /// <summary>The scale the image was ACTUALLY captured at — the framework lowers 4× to 2× on the pixel cap or a
     /// memory fallback, so the requested setting would be wrong in the sidecar.</summary>
+    private int EffectiveScale() => CaptureScale.Effective(_services.Framework.ScreenWidth, _services.Framework.ScreenHeight, _settings.Scale);
+
     private int CapturedScale(CaptureResult r)
     {
         var w = _services.Framework.ScreenWidth;

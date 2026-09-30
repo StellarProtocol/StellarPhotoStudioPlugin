@@ -101,6 +101,17 @@ public sealed partial class Plugin
 
     private void CommitFolder(string path)
     {
+        path = path.Trim().Trim('"');
+        if (path.Length > 0)
+        {
+            if (path.IndexOf('"') >= 0) { _view.ShowError(T("ps.cap.folderInvalid")); return; }
+            try { path = Path.GetFullPath(path); }
+            catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+            {
+                _view.ShowError(T("ps.cap.folderInvalid"));
+                return;
+            }
+        }
         _settings.SetFolder(path);
         _editingFolder = false;
         EffectiveFolder(out _folderFellBack);

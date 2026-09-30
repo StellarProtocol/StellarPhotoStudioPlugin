@@ -135,5 +135,8 @@
   "ps.pre.importFailed": "{0} could not be imported — is it a Photo Studio preset file?",
   "ps.docked.blurOff": "Off",
   "ps.docked.saved": "Saved {0}",
-  "ps.pre.errReserved": "That name is reserved by Windows — pick another."
+  "ps.pre.errReserved": "That name is reserved by Windows — pick another.",
+  "ps.status.capped": "{0}× → {1}× (size limit on this screen) · {2} · {3}",
+  "ps.toast.cappedSize": "4× is over the size limit on this screen — saved at 2×.",
+  "ps.cap.folderInvalid": "That folder path isn't valid."
 }

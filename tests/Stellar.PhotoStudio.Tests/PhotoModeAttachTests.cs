@@ -35,24 +35,16 @@ public sealed class PhotoModeAttachTests
     }
 
     [Fact]
-    public void Game_photo_mode_shows_the_docked_strip_and_previews_the_look_then_hides_it()
+    public void Game_photo_mode_entry_and_exit_are_reported_to_the_strip_owner()
     {
-        var fake = new FakeLook();
-        var look = new LookController(fake);
-        look.SetDraft(new LookSettings { Color = new ColorLook() });
         var docked = new List<bool>();
         var photoMode = new FakePhotoMode();
-        using var attach = new PhotoModeAttach(photoMode, look, docked.Add);
+        using var attach = new PhotoModeAttach(photoMode, docked.Add);
 
         photoMode.RaiseEntered(PhotoModeKind.Selfie);
-        look.Tick();
-        Assert.Equal(new[] { true }, docked);
-        Assert.False(fake.Log[^1]!.PlayMode); // previewing as in the panel, DoF allowed
-
         photoMode.RaiseExited();
-        look.Tick();
+
         Assert.Equal(new[] { true, false }, docked);
-        Assert.Null(fake.Log[^1]); // not pinned → the look goes away with the photo mode
     }
 
     [Fact]
@@ -60,7 +52,7 @@ public sealed class PhotoModeAttachTests
     {
         var docked = new List<bool>();
         var photoMode = new FakePhotoMode();
-        var attach = new PhotoModeAttach(photoMode, new LookController(new FakeLook()), docked.Add);
+        var attach = new PhotoModeAttach(photoMode, docked.Add);
         attach.Dispose();
 
         photoMode.RaiseEntered(PhotoModeKind.CameraFrame);

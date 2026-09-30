@@ -135,5 +135,8 @@
   "ps.pre.importFailed": "{0} tidak bisa diimpor — apakah ini file preset Studio Foto?",
   "ps.docked.blurOff": "Mati",
   "ps.docked.saved": "Tersimpan {0}",
-  "ps.pre.errReserved": "Nama itu dicadangkan oleh Windows — pilih nama lain."
+  "ps.pre.errReserved": "Nama itu dicadangkan oleh Windows — pilih nama lain.",
+  "ps.status.capped": "{0}× → {1}× (batas ukuran layar ini) · {2} · {3}",
+  "ps.toast.cappedSize": "4× melebihi batas ukuran di layar ini — disimpan dalam 2×.",
+  "ps.cap.folderInvalid": "Path folder itu tidak valid."
 }

@@ -135,5 +135,8 @@
   "ps.pre.importFailed": "{0} をインポートできませんでした — フォトスタジオのプリセットファイルですか？",
   "ps.docked.blurOff": "オフ",
   "ps.docked.saved": "保存: {0}",
-  "ps.pre.errReserved": "その名前はWindowsで予約されています。別の名前にしてください。"
+  "ps.pre.errReserved": "その名前はWindowsで予約されています。別の名前にしてください。",
+  "ps.status.capped": "{0}× → {1}×（この画面のサイズ上限） · {2} · {3}",
+  "ps.toast.cappedSize": "この画面では4×がサイズ上限を超えるため、2×で保存しました。",
+  "ps.cap.folderInvalid": "そのフォルダーのパスは無効です。"
 }

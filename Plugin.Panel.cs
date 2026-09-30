@@ -62,15 +62,18 @@ public sealed partial class Plugin
     {
         if (Capturing)
             return _settings.Scale == 4 ? T("ps.status.capturing4x") : T("ps.capturing");
-        return $"{_settings.Scale}× · {FormatName()} · {ResolutionText()}";
+        var scale = EffectiveScale();
+        return scale < _settings.Scale
+            ? _loc.TFormat("ps.status.capped", _settings.Scale, scale, FormatName(), ResolutionText())
+            : $"{scale}× · {FormatName()} · {ResolutionText()}";
     }
 
     private string FormatName() => _settings.Format == CaptureFormat.Jpg ? "JPG" : "PNG";
 
     private string ResolutionText()
     {
-        var w = _services.Framework.ScreenWidth * _settings.Scale;
-        var h = _services.Framework.ScreenHeight * _settings.Scale;
+        var w = _services.Framework.ScreenWidth * EffectiveScale();
+        var h = _services.Framework.ScreenHeight * EffectiveScale();
         return $"{w} × {h}";
     }
 

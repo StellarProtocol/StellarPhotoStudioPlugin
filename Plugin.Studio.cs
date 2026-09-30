@@ -76,6 +76,7 @@ public sealed partial class Plugin
         if (_dockedShown == show) return;
         _dockedShown = show;
         _dockedWin.SetVisible(show);
+        _look.SetGamePhotoActive(show);   // preview the look in the game's photo mode only with our controls on screen
         if (show && _toastWin.IsShown) _toastWin.SetVisible(false);   // the strip shows the saved line itself
         ApplyLiveHides();
     }
@@ -83,8 +84,9 @@ public sealed partial class Plugin
     /// <summary>Called by <see cref="PhotoModeAttach"/> when the game's own photo mode starts / ends.</summary>
     private void SetDockedForGamePhotoMode(bool active)
     {
-        if (!active) { _dockedDismissed = false; ShowDocked(false); return; }
-        if (_settings.DockedAuto && !_panelShown && !_dockedDismissed) ShowDocked(true);
+        if (!active) _dockedDismissed = false;
+        ShowDocked(active && _settings.DockedAuto && !_panelShown && !_dockedDismissed);
+        ApplyLiveHides();   // the Game-HUD hide is masked inside the game's photo mode (see ApplyLiveHides)
     }
 
     private void DismissDocked()
@@ -111,6 +113,9 @@ public sealed partial class Plugin
         {
             var layers = _settings.Hides | (_overlayHidden ? VisibilityLayers.StellarOverlay : VisibilityLayers.None);
             if ((layers & VisibilityLayers.OtherPlayers) == 0) layers &= ~VisibilityLayers.KeepParty;
+            // The game's own photo controls live under the same UI root as its HUD: hiding "Game HUD" there would
+            // take them away too (the game's [F] key hides its own interface in photo mode).
+            if (_services.PhotoMode.IsActive) layers &= ~VisibilityLayers.GameHud;
             if (layers != VisibilityLayers.None) _liveHideToken = _services.SceneVisibility.Hide(layers);
         }
         previous?.Dispose();

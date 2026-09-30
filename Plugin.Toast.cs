@@ -52,8 +52,8 @@ public sealed partial class Plugin
     {
         var size = r.Path is not null && File.Exists(r.Path) ? $" · {FormatBytes(new FileInfo(r.Path).Length)}" : "";
         var warning = _folderFellBack ? T("ps.toast.folderFallback") : "";
-        if (_settings.Scale == 4 && r.Width > 0 && r.Width < _services.Framework.ScreenWidth * 4)
-            warning = T("ps.toast.retried2x");
+        if (r.Width > 0 && r.Width < _services.Framework.ScreenWidth * _settings.Scale)
+            warning = EffectiveScale() < _settings.Scale ? T("ps.toast.cappedSize") : T("ps.toast.retried2x");
         _toastWarning = warning;
         ShowFileToast(T("ps.toast.saved"), r.Path ?? "", $"{r.Width} × {r.Height} · {FormatName()}{size}");
     }
