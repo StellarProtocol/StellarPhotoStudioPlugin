@@ -36,6 +36,7 @@ public sealed partial class Plugin
             () => IsHidden(VisibilityLayers.OtherPlayers), on => SetHidden(VisibilityLayers.OtherPlayers, on))),
         new SpacerElement(Width: 12f),   // separate the two [switch][label] pairs so each label reads as its own
         LabeledToggle(() => T("ps.docked.keepLook"), () => _settings.Pinned, SetPinned),
+        new SpacerElement(Width: 12f),
         new ButtonElement(() => T("ps.docked.fullPanel"), OnClick: DockedToFullPanel, Width: 96f),
         new ButtonElement(() => "✕", OnClick: DismissDocked, Width: 28f),
     }, Gap: 6f);

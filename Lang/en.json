@@ -134,5 +134,6 @@
   "ps.pre.errBadChars": "Names can't contain / \\ : * ? \" < > | or end with a dot.",
   "ps.pre.importFailed": "{0} could not be imported — is it a Photo Studio preset file?",
   "ps.docked.blurOff": "Off",
-  "ps.docked.saved": "Saved {0}"
+  "ps.docked.saved": "Saved {0}",
+  "ps.pre.errReserved": "That name is reserved by Windows — pick another."
 }

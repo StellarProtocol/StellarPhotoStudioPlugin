@@ -26,7 +26,7 @@ internal static class PresetNames
         if (n.Length > MaxLength) return NameProblem.TooLong;
         if (n.IndexOfAny(Extra) >= 0 || n.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) return NameProblem.BadCharacters;
         if (n.EndsWith(".", StringComparison.Ordinal) || n.Contains("..", StringComparison.Ordinal)) return NameProblem.BadCharacters;
-        if (Array.Exists(Reserved, r => string.Equals(r, n, StringComparison.OrdinalIgnoreCase))) return NameProblem.BadCharacters;   // Windows device names
+        if (Array.Exists(Reserved, r => string.Equals(r, n, StringComparison.OrdinalIgnoreCase))) return NameProblem.Reserved;   // Windows device names
         return null;
     }
 
@@ -44,4 +44,4 @@ internal static class PresetNames
     }
 }
 
-internal enum NameProblem { Empty, TooLong, BadCharacters }
+internal enum NameProblem { Empty, TooLong, BadCharacters, Reserved }

@@ -134,5 +134,6 @@
   "ps.pre.errBadChars": "名前に / \\ : * ? \" < > | は使えず、末尾をドットにできません。",
   "ps.pre.importFailed": "{0} をインポートできませんでした — フォトスタジオのプリセットファイルですか？",
   "ps.docked.blurOff": "オフ",
-  "ps.docked.saved": "保存: {0}"
+  "ps.docked.saved": "保存: {0}",
+  "ps.pre.errReserved": "その名前はWindowsで予約されています。別の名前にしてください。"
 }

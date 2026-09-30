@@ -20,9 +20,9 @@ public sealed class PresetNamesTests
     [InlineData("what?", 2)]
     [InlineData("trailing.", 2)]
     [InlineData("a..b", 2)]
-    [InlineData("CON", 2)]
-    [InlineData("nul", 2)]
-    [InlineData("Com3", 2)]
+    [InlineData("CON", 3)]
+    [InlineData("nul", 3)]
+    [InlineData("Com3", 3)]
     public void Rejects_names_the_store_or_windows_cannot_hold(string n, int p) => Assert.Equal((NameProblem)p, PresetNames.Check(n));
 
     [Fact]

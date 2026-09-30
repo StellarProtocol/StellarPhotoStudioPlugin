@@ -134,5 +134,6 @@
   "ps.pre.errBadChars": "Bawal ang / \\ : * ? \" < > | sa pangalan, at hindi puwedeng magtapos sa tuldok.",
   "ps.pre.importFailed": "Hindi ma-import ang {0} — Photo Studio preset file ba ito?",
   "ps.docked.blurOff": "Off",
-  "ps.docked.saved": "Na-save ang {0}"
+  "ps.docked.saved": "Na-save ang {0}",
+  "ps.pre.errReserved": "Nakareserba ang pangalang iyan sa Windows — pumili ng iba."
 }

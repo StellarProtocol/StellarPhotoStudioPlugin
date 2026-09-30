@@ -130,6 +130,7 @@ public sealed partial class Plugin
             case NameProblem.Empty: return T("ps.pre.errEmpty");
             case NameProblem.TooLong: return _loc.TFormat("ps.pre.errTooLong", PresetNames.MaxLength);
             case NameProblem.BadCharacters: return T("ps.pre.errBadChars");
+            case NameProblem.Reserved: return T("ps.pre.errReserved");
         }
         var existing = FindPreset(_nameDraft.Trim());
         if (existing is null) return null;

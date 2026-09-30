@@ -134,5 +134,6 @@
   "ps.pre.errBadChars": "Nama tidak boleh berisi / \\ : * ? \" < > | atau diakhiri titik.",
   "ps.pre.importFailed": "{0} tidak bisa diimpor — apakah ini file preset Studio Foto?",
   "ps.docked.blurOff": "Mati",
-  "ps.docked.saved": "Tersimpan {0}"
+  "ps.docked.saved": "Tersimpan {0}",
+  "ps.pre.errReserved": "Nama itu dicadangkan oleh Windows — pilih nama lain."
 }
