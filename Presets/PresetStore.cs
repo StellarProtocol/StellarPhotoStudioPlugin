@@ -26,19 +26,31 @@ internal sealed class PresetStore
 
     public IReadOnlyList<Preset> All => _allCache ??= BuiltInPresets.All.Concat(_user).ToList();
 
+    /// <summary>Saves a user preset under <paramref name="name"/>. <see cref="IPresetFiles"/> keys
+    /// are exact strings with no case-folding, so if an already-tracked entry matches
+    /// <paramref name="name"/> only case-insensitively (a case-only re-save), its OLD stored key is
+    /// deleted first — otherwise the old and new casings would both persist as separate files. The
+    /// new casing becomes the stored name.</summary>
     public void Save(string name, LookSettings look)
     {
         GuardUser(name);
+        var existing = _user.FirstOrDefault(p => NameEquals(p.Name, name));
+        if (existing is not null && existing.Name != name) _files.Delete(existing.Name);
         _files.Write(name, JsonSerializer.Serialize(PresetDto.From(name, look)));
         _user.RemoveAll(p => NameEquals(p.Name, name));
         _user.Add(new Preset(name, false, look));
         Invalidate();
     }
 
+    /// <summary>Deletes a user preset. Looks up the tracked entry's OWN stored name (which may differ
+    /// in case from <paramref name="name"/>) and deletes THAT key — deleting by the caller's exact
+    /// casing would silently no-op against <see cref="IPresetFiles"/>'s exact-string keys, leaving
+    /// the file (and the preset, after a restart) alive.</summary>
     public void Delete(string name)
     {
         GuardUser(name);
-        _files.Delete(name);
+        var existing = _user.FirstOrDefault(p => NameEquals(p.Name, name));
+        _files.Delete(existing?.Name ?? name);
         _user.RemoveAll(p => NameEquals(p.Name, name));
         Invalidate();
     }
@@ -58,7 +70,14 @@ internal sealed class PresetStore
         Delete(from);
     }
 
-    public string Export(string name) => JsonSerializer.Serialize(PresetDto.From(name, All.Single(p => NameEquals(p.Name, name)).Look));
+    /// <summary>Exports a preset as JSON, keyed on the MATCHED entry's own stored name (not the
+    /// caller's possibly differently-cased <paramref name="name"/>) so a re-import round-trips the
+    /// real identity.</summary>
+    public string Export(string name)
+    {
+        var p = All.Single(x => NameEquals(x.Name, name));
+        return JsonSerializer.Serialize(PresetDto.From(p.Name, p.Look));
+    }
 
     /// <summary>Imports a preset. A name collision (built-in or user, case-insensitive) is resolved
     /// the same way for both: auto-suffix " (imported)", then " (imported 2)", " (imported 3)", ...</summary>
@@ -71,13 +90,22 @@ internal sealed class PresetStore
         return _user.Single(p => NameEquals(p.Name, name));
     }
 
+    /// <summary>Loads user presets from storage, in ordinal name order so that on-disk case
+    /// variants of the same identity (which <see cref="IPresetFiles"/> cannot itself prevent — see
+    /// <see cref="Save"/>/<see cref="Delete"/>) resolve deterministically: the ordinal-first one is
+    /// kept, the rest are skipped and warned about, same as a built-in-name collision.</summary>
     private void Load()
     {
-        foreach (var name in _files.List())
+        foreach (var name in _files.List().OrderBy(n => n, StringComparer.Ordinal))
         {
             if (BuiltInPresets.All.Any(b => NameEquals(b.Name, name)))
             {
                 _warn($"Preset '{name}' has the same name as a built-in look and was skipped.");
+                continue;
+            }
+            if (_user.Any(p => NameEquals(p.Name, name)))
+            {
+                _warn($"Preset '{name}' has the same name as another saved look and was skipped.");
                 continue;
             }
             var dto = Parse(_files.Read(name));

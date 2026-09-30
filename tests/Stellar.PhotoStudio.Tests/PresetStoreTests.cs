@@ -188,4 +188,58 @@ public sealed class PresetStoreTests
         Assert.NotSame(before, after);
         Assert.Contains(after, p => p.Name == "New");
     }
+
+    // Fix round 2: the in-memory identity match is case-insensitive, but Save/Delete must keep the
+    // UNDERLYING STORAGE keyed consistently too — otherwise a case-only re-save leaves a stale file
+    // behind, and a cross-case delete leaves the original file (and preset) alive across a restart.
+    // "Restart" is modeled by opening a second PresetStore over the same backing MemFiles.
+
+    [Fact]
+    public void Case_only_resave_leaves_exactly_one_file_and_one_preset_after_restart()
+    {
+        var files = new MemFiles();
+        var s1 = new PresetStore(files, _ => { });
+        s1.Save("Mine", new LookSettings { Bloom = new BloomLook { Intensity = 1 } });
+        s1.Save("mine", new LookSettings { Bloom = new BloomLook { Intensity = 9 } });
+
+        Assert.Single(files.Files); // no stale "Mine" file left behind alongside "mine"
+
+        var s2 = new PresetStore(files, _ => { }); // restart
+        Assert.Single(s2.All, p => string.Equals(p.Name, "mine", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(9, s2.All.Single(p => string.Equals(p.Name, "mine", StringComparison.OrdinalIgnoreCase)).Look.Bloom!.Intensity);
+    }
+
+    [Fact]
+    public void Cross_case_delete_removes_the_stored_file_and_stays_gone_after_restart()
+    {
+        var files = new MemFiles();
+        var s1 = new PresetStore(files, _ => { });
+        s1.Save("Mine", new LookSettings());
+        s1.Delete("mine"); // different case than the tracked/stored entry
+
+        Assert.Empty(files.Files);
+        Assert.DoesNotContain(s1.All, p => string.Equals(p.Name, "mine", StringComparison.OrdinalIgnoreCase));
+
+        var s2 = new PresetStore(files, _ => { }); // restart — must not resurrect it
+        Assert.DoesNotContain(s2.All, p => string.Equals(p.Name, "mine", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Load_dedupes_ondisk_case_variants_keeping_the_first_in_ordinal_order_and_warns()
+    {
+        var seed = new MemFiles();
+        new PresetStore(seed, _ => { }).Save("Mine", new LookSettings { Bloom = new BloomLook { Intensity = 5 } });
+        var json = seed.Files["Mine"];
+
+        var files = new MemFiles();
+        files.Write("Mine", json);  // ordinal 'M' (77) < 'm' (109) — "Mine" sorts first
+        files.Write("mine", json);
+        var warned = new List<string>();
+
+        var s = new PresetStore(files, warned.Add);
+
+        Assert.Single(s.All, p => string.Equals(p.Name, "Mine", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal("Mine", s.All.Single(p => string.Equals(p.Name, "Mine", StringComparison.OrdinalIgnoreCase)).Name);
+        Assert.Single(warned);
+    }
 }
