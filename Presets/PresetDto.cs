@@ -24,7 +24,9 @@ internal sealed class PresetDto
         Dof = s.Dof is { } d ? new[] { d.FocusDistance, d.Aperture, d.FocalLength, d.FocusOnLocalPlayer ? 1f : 0f } : null,
         Color = s.Color is { } c ? new[] { c.PostExposure, c.Contrast, c.Saturation, c.Filter.R, c.Filter.G, c.Filter.B } : null,
         WhiteBalance = s.WhiteBalance is { } w ? new[] { w.Temperature, w.Tint } : null,
-        LutFile = s.Lut?.FilePath,
+        // An empty FilePath means "no LUT" (same as Lut being absent entirely) — normalize it away
+        // here so a round trip never has to distinguish "no LUT" from "a LUT with no file".
+        LutFile = s.Lut is { FilePath.Length: > 0 } lut ? lut.FilePath : null,
         LutContribution = s.Lut?.Contribution ?? 1f,
         Bloom = s.Bloom is { } b ? new[] { b.Intensity, b.Threshold } : null,
         Vignette = s.Vignette is { } v ? new[] { v.Intensity, v.Smoothness } : null,

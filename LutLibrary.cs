@@ -18,5 +18,10 @@ internal static class LutLibrary
     }
 
     public static IReadOnlyList<string> List(string dir) =>
-        Directory.Exists(dir) ? Directory.GetFiles(dir, "*.png").OrderBy(p => p).ToList() : Array.Empty<string>();
+        Directory.Exists(dir)
+            ? Directory.GetFiles(dir, "*")
+                .Where(p => string.Equals(Path.GetExtension(p), ".png", StringComparison.OrdinalIgnoreCase))
+                .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
+                .ToList()
+            : Array.Empty<string>();
 }

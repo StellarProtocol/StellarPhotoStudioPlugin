@@ -1,3 +1,6 @@
+using System;
+using System.IO;
+using System.Linq;
 using Xunit;
 namespace Stellar.PhotoStudio.Tests;
 
@@ -18,4 +21,29 @@ public sealed class LutLibraryTests
 
     [Fact]
     public void Rejects_non_png() => Assert.False(LutLibrary.Validate(new byte[] { 1, 2, 3 }));
+
+    [Fact]
+    public void List_matches_png_extension_case_insensitively_on_every_os()
+    {
+        var dir = Directory.CreateTempSubdirectory("photostudio-lut-").FullName;
+        try
+        {
+            File.WriteAllBytes(Path.Combine(dir, "a.png"), new byte[] { 0 });
+            File.WriteAllBytes(Path.Combine(dir, "B.PNG"), new byte[] { 0 });
+            File.WriteAllBytes(Path.Combine(dir, "c.txt"), new byte[] { 0 });
+
+            var list = LutLibrary.List(dir);
+
+            Assert.Equal(2, list.Count);
+            Assert.Contains(list, p => Path.GetFileName(p) == "a.png");
+            Assert.Contains(list, p => Path.GetFileName(p) == "B.PNG");
+            Assert.DoesNotContain(list, p => Path.GetFileName(p) == "c.txt");
+            // sorted ordinal-ignore-case
+            Assert.Equal(list.OrderBy(p => p, StringComparer.OrdinalIgnoreCase), list);
+        }
+        finally
+        {
+            Directory.Delete(dir, true);
+        }
+    }
 }

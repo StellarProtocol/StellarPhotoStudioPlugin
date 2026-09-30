@@ -15,18 +15,14 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- Photo Studio: hide layers, supersampled capture, and looks built from the game's own render
-         pipeline volumes (IScreenCapture, ISceneVisibility, IRenderLook, IPhotoModeState — framework 2.13.0). -->
-    <PackageReference Include="Stellar.Abstractions"       Version="2.13.0" />
+         pipeline volumes (IScreenCapture, ISceneVisibility, IRenderLook, IPhotoModeState; framework 2.13.0).
+         Built against the LOCAL dev pack 2.13.0-photostudio-dev (same convention as LoadoutSwitcher's
+         2.10.0-loadoutcopy-dev, commit b3fb738: pack Stellar.Abstractions with -p:Version=<tag>-dev into
+         <devkit>/.localfeed, then restore/build passing that folder plus nuget.org as sources; nuget.config
+         itself is never changed) until framework 2.13.0 is released, then flip this to 2.13.0. -->
+    <PackageReference Include="Stellar.Abstractions"       Version="2.13.0-photostudio-dev" />
     <PackageReference Include="Stellar.PluginContracts"    Version="2.0.0" />
     <PackageReference Include="Stellar.Plugin.InteropRefs" Version="2.0.0" />
-  </ItemGroup>
-
-  <!-- Local framework build: framework 2.13.0 is unreleased. Pass -p:StellarLocalFramework=<path to the
-       framework checkout root> (the directory containing src/Stellar.Abstractions/) to build against a
-       live Abstractions source tree instead of the (not yet published) NuGet package. -->
-  <ItemGroup Condition="'$(StellarLocalFramework)' != ''">
-    <PackageReference Remove="Stellar.Abstractions" />
-    <ProjectReference Include="$(StellarLocalFramework)/src/Stellar.Abstractions/Stellar.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>

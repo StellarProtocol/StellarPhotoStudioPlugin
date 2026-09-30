@@ -13,14 +13,16 @@ internal sealed class StudioSession
     private readonly IScreenCapture _capture;
     private readonly Func<CaptureRequest> _request;
     private readonly Action<CaptureResult> _onResult;
+    private readonly Action<string> _log;
     private bool _closeRequested;
     private bool _wasOpen;
 
-    public StudioSession(IScreenCapture capture, Func<CaptureRequest> request, Action<CaptureResult> onResult)
+    public StudioSession(IScreenCapture capture, Func<CaptureRequest> request, Action<CaptureResult> onResult, Action<string> log)
     {
         _capture = capture;
         _request = request;
         _onResult = onResult;
+        _log = log;
     }
 
     public StudioState State { get; private set; } = StudioState.Closed;
@@ -46,7 +48,10 @@ internal sealed class StudioSession
         try
         {
             var r = await _capture.CaptureAsync(_request());
-            _onResult(r);
+            // The caller (e.g. a hotkey handler) must never see an exception from here — a broken
+            // toast/UI callback must not also wedge the capture state machine.
+            try { _onResult(r); }
+            catch (Exception ex) { _log($"[PhotoStudio] capture result handler threw: {ex}"); }
             return r;
         }
         finally
