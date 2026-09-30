@@ -21,6 +21,9 @@ public sealed partial class Plugin
 
     private ColorRgba? Muted() => _services.Theme.Colors.TextMuted;
     private ColorRgba? MenuMuted() => _services.Theme.Colors.MenuMuted;
+    // Explicit default text colour: a Color func that flips back to null does not restore the chrome default
+    // (measured in-game: a pill kept its warning colour after unpinning), so dynamic colours never return null.
+    private ColorRgba? Normal() => _services.Theme.Colors.MenuText;
     private string T(string key) => _loc.T(key);
 
     private void ToggleTip(string key, WindowRect r)
@@ -81,7 +84,7 @@ public sealed partial class Plugin
         => new RowElement(new HudElement[]
         {
             new ToggleElement(Label: () => "", Get: get, Set: set, Enabled: enabled),
-            new TextElement(label, Color: () => enabled is null || enabled() ? null : MenuMuted()),
+            new TextElement(label, Color: () => enabled is null || enabled() ? Normal() : MenuMuted()),
             new SpacerElement(),
             HelpDot(key, label, help),
         }, Gap: 6f);
@@ -91,7 +94,7 @@ public sealed partial class Plugin
         => new RowElement(new HudElement[]
         {
             new CellElement(new TextElement(label, Color: Muted), Width: LabelW),
-            new CellElement(slider, Weight: 1f),
+            new CellElement(slider with { SquareHandle = true }, Weight: 1f),
             new CellElement(new TextElement(value, Align: TextAlign.Right), Width: ValueW),
             new CellElement(new ButtonElement(Label: () => "↺", OnClick: reset), Width: 28f),
         }, Gap: 6f);

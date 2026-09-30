@@ -32,9 +32,9 @@ public sealed partial class Plugin
         new ButtonElement(() => "▶", OnClick: NextPreset, Width: 28f),
         new ConditionalElement(() => _modified, new PillElement(() => T("ps.pill.modified"), Color: () => _services.Theme.Colors.Accent)),
         new SpacerElement(),
-        new ConditionalElement(() => LayerAvailable(VisibilityLayers.OtherPlayers), new ToggleElement(
-            () => T("ps.hide.others"), () => IsHidden(VisibilityLayers.OtherPlayers), on => SetHidden(VisibilityLayers.OtherPlayers, on))),
-        new ToggleElement(() => T("ps.docked.keepLook"), () => _settings.Pinned, SetPinned),
+        new ConditionalElement(() => LayerAvailable(VisibilityLayers.OtherPlayers), LabeledToggle(() => T("ps.hide.others"),
+            () => IsHidden(VisibilityLayers.OtherPlayers), on => SetHidden(VisibilityLayers.OtherPlayers, on))),
+        LabeledToggle(() => T("ps.docked.keepLook"), () => _settings.Pinned, SetPinned),
         new ButtonElement(() => T("ps.docked.fullPanel"), OnClick: DockedToFullPanel, Width: 96f),
         new ButtonElement(() => "✕", OnClick: DismissDocked, Width: 28f),
     }, Gap: 6f);
@@ -51,17 +51,23 @@ public sealed partial class Plugin
             () => F(_editor.WhiteBalance.Temperature, Signed)),
         Mini(() => T("ps.docked.blur"),
             new SliderElement(BlurAmount, SetBlurAmount, 0f, 1f, Enabled: () => Supported(LookGroups.Dof)),
-            () => "f/" + F(_editor.Dof.Aperture, "0.0")),
+            () => "f/" + F(_editor.Dof.Aperture, "0.0"), labelWidth: 112f),
         new SpacerElement(),
         new ButtonElement(() => _loc.TFormat("ps.docked.capture", BindingText("photostudio.capture")),
             OnClick: CaptureNow, Enabled: () => !Capturing, Style: MenuButtonStyle.Filled, Width: 170f),
     }, Gap: 12f);
 
-    private HudElement Mini(Func<string> label, SliderElement slider, Func<string> value) => new RowElement(new HudElement[]
+    private HudElement Mini(Func<string> label, SliderElement slider, Func<string> value, float labelWidth = 76f) => new RowElement(new HudElement[]
     {
-        new TextElement(label, Color: Muted, Width: 76f),
-        new CellElement(slider with { Width = 120f }, Width: 120f),
+        new TextElement(label, Color: Muted, Width: labelWidth, NoWrap: true),
+        new CellElement(slider with { Width = 120f, SquareHandle = true }, Width: 120f),
         new TextElement(value, Width: 48f, Align: TextAlign.Right),
+    }, Gap: 6f);
+
+    private static HudElement LabeledToggle(Func<string> label, Func<bool> get, Action<bool> set) => new RowElement(new HudElement[]
+    {
+        new ToggleElement(() => "", get, set),
+        new TextElement(label, NoWrap: true),
     }, Gap: 6f);
 
     // "Background blur" = depth of field focused on the player; more blur = a wider aperture (lower f-number).

@@ -25,13 +25,13 @@ public sealed partial class Plugin
     {
         new ConditionalElement(() => !LooksAvailable(),
             new TextElement(() => T("ps.look.unavailable"), Color: () => _services.Theme.Colors.Warning)),
+        HelpToggle("look.pin", () => _settings.Pinned, SetPinned, () => T("ps.look.pin"), () => T("ps.help.look.pin")),
+        new ConditionalElement(() => _settings.Pinned, new TextElement(() => T("ps.look.pinHint"), Color: Muted)),
         new RowElement(new HudElement[]
         {
-            new CellElement(HelpToggle("look.pin", () => _settings.Pinned, SetPinned,
-                () => T("ps.look.pin"), () => T("ps.help.look.pin")), Weight: 1f),
+            new SpacerElement(),
             new ButtonElement(() => T("ps.look.resetAll"), OnClick: ResetAllToPreset, Width: 88f),
         }, Gap: 6f),
-        new ConditionalElement(() => _settings.Pinned, new TextElement(() => T("ps.look.pinHint"), Color: Muted)),
         new SeparatorElement(),
         DofGroup(),
         ColorGroup(),
@@ -62,12 +62,12 @@ public sealed partial class Plugin
             new SelectableElement(new RowElement(new HudElement[]
             {
                 new TextElement(() => IsGroupOpen(g) ? "▾" : "▸", Width: 14f),
-                new TextElement(() => T("ps.look." + key), Emphasis: true, Color: () => Supported(g) ? null : MenuMuted()),
+                new TextElement(() => T("ps.look." + key), Emphasis: true, Color: () => Supported(g) ? Normal() : MenuMuted()),
             }, Gap: 4f), OnClick: () => _settings.SetGroupOpen(g, !IsGroupOpen(g))),
         };
         if (photoOnly)
             header.Add(new PillElement(() => T("ps.pill.photoOnly"),
-                Color: () => _settings.Pinned ? _services.Theme.Colors.Warning : null));
+                Color: () => _settings.Pinned ? _services.Theme.Colors.Warning : _services.Theme.Colors.MenuText));
         header.Add(new ConditionalElement(() => !Supported(g), new TextElement(() => T("ps.look.na"), Color: MenuMuted)));
         header.Add(new SpacerElement());
         header.Add(new ToggleElement(() => "", () => Supported(g) && _editor.IsOn(g), on => _editor.SetOn(g, on),

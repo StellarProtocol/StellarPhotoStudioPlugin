@@ -62,7 +62,7 @@ public sealed partial class Plugin
 
     private HudElement PresetSlot(int i) => new SelectableElement(new RowElement(new HudElement[]
     {
-        new CellElement(new TextElement(() => RowName(i), NoWrap: true, Color: () => IsUnsavedRow(i) ? Muted() : null), Weight: 1f),
+        new CellElement(new TextElement(() => RowName(i), NoWrap: true, Color: () => IsUnsavedRow(i) ? Muted() : Normal()), Weight: 1f),
         new ConditionalElement(() => RowBuiltIn(i), new PillElement(() => T("ps.pill.builtIn"))),
         new ConditionalElement(() => IsUnsavedRow(i) || (RowIsActive(i) && _modified),
             new PillElement(() => T("ps.pill.modified"), Color: () => _services.Theme.Colors.Accent)),

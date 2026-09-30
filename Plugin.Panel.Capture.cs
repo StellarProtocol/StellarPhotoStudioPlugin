@@ -61,9 +61,9 @@ public sealed partial class Plugin
     private HudElement FolderButtons() => new RowElement(new HudElement[]
     {
         new SpacerElement(Width: LabelW),
-        new ButtonElement(() => T("ps.cap.change"), OnClick: BeginFolderEdit, Width: 88f),
-        new ButtonElement(() => T("ps.cap.useDefault"), OnClick: () => { _settings.SetFolder(""); _editingFolder = false; }, Width: 104f),
-        new ButtonElement(() => T("ps.cap.openFolder"), OnClick: OpenScreenshotFolder, Width: 104f),
+        new ButtonElement(() => T("ps.cap.change"), OnClick: BeginFolderEdit, Width: 80f),
+        new ButtonElement(() => T("ps.cap.useDefault"), OnClick: () => { _settings.SetFolder(""); _editingFolder = false; }, Width: 96f),
+        new ButtonElement(() => T("ps.cap.openFolder"), OnClick: OpenScreenshotFolder, Width: 96f),
     }, Gap: 6f);
 
     private HudElement FolderEditor() => new ColumnElement(new HudElement[]
