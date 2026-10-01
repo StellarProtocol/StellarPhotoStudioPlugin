@@ -27,8 +27,9 @@ public sealed partial class Plugin
         new RowElement(new HudElement[]
         {
             new CellElement(new TextElement(FreeCamStatus, Color: Muted), Weight: 1f),
-            new ButtonElement(() => _freeCam.Active ? T("fc.exit") : T("fc.enter"),
-                OnClick: () => ToggleFreeCamera(), Style: MenuButtonStyle.Filled),
+            // Fixed 150-px cell: the fil "Exit" label touched the border at content width (sandbox S6).
+            new CellElement(new ButtonElement(() => _freeCam.Active ? T("fc.exit") : T("fc.enter"),
+                OnClick: () => ToggleFreeCamera(), Style: MenuButtonStyle.Filled), Width: 150f),
         }, Gap: 8f),
         new SeparatorElement(),
         MovementGroup(),

@@ -17,9 +17,10 @@ public sealed partial class Plugin
     private int _tipRepositionTicks;
 
     private const float LabelW = 96f;
-    private const float ValueW = 52f;
+    private const float ValueW = 72f;   // 72: "20.0 m/dtk" (id) needs 71 px (sandbox S8)
 
-    private ColorRgba? Muted() => _services.Theme.Colors.TextMuted;
+    // MenuMuted, not TextMuted: the panels are menu surfaces; TextMuted measured 1.82:1 in the Light theme (sandbox S11).
+    private ColorRgba? Muted() => _services.Theme.Colors.MenuMuted;
     private ColorRgba? MenuMuted() => _services.Theme.Colors.MenuMuted;
     // Explicit default text colour: a Color func that flips back to null does not restore the chrome default
     // (measured in-game: a pill kept its warning colour after unpinning), so dynamic colours never return null.

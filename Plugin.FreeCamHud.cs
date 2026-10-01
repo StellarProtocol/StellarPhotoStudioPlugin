@@ -15,7 +15,7 @@ public sealed partial class Plugin
         new WindowSpec(
             Id: "photostudio.freecam.hud",
             Title: T("fc.title.hud"),
-            DefaultRect: new WindowRect(0f, 16f, 760f, 0f),
+            DefaultRect: new WindowRect(0f, 16f, 800f, 0f),   // 800: the id fly hint with Ctrl+Shift+F10 needs 752 px of chip (sandbox S3)
             Category: WindowCategory.HUD,
             Style: WindowPanelStyle.Borderless)
         {
@@ -30,7 +30,7 @@ public sealed partial class Plugin
             {
                 new PillElement(HudLine, Color: () => _services.Theme.Colors.HudText),
                 new ConditionalElement(() => _freeCam.Frozen,
-                    new PillElement(() => T("fc.badge.frozen"), Color: () => _services.Theme.Colors.HudAccent)),
+                    new PillElement(() => T("fc.badge.frozen"), Color: () => _services.Theme.Colors.HudText)),   // ❄ carries the meaning; HudAccent was unreadable / same red as combat in Crimson (sandbox S2)
                 new ConditionalElement(() => _services.CombatState.LocalPlayerInCombat,
                     new PillElement(() => T("fc.badge.combat"), Color: () => _services.Theme.Colors.HpFill)),
             }, Gap: 6f, Justify: RowJustify.Center),
