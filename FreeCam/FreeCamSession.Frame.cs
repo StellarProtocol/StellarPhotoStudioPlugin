@@ -101,9 +101,12 @@ internal sealed partial class FreeCamSession
         if (_p.Picker.TryPickEntity(at.X, at.Y, out var picked)) SetSubject(picked);
     }
 
-    /// <summary>The subject's position now; a picked character who left hands the subject back to the local player.</summary>
+    /// <summary>The subject's position now: the posed copy / NPC stand-in's own position while there is one (the real
+    /// person is hidden and may walk off — controller decision Q5), else the entity's. A picked character who left hands
+    /// the subject back to the local player. Called every frame: <c>TryGetVisiblePosition</c> does not allocate.</summary>
     private Vector3 SubjectPosition(Vector3 fallback)
     {
+        if (_p.Posing is { } posing && posing.TryGetVisiblePosition(Subject, out var posed)) return CameraMath.ToVec(posed);
         if (_p.Transforms.TryGetTransform(Subject, out var p, out _)) return CameraMath.ToVec(p);
         var self = _p.Snapshot.LocalEntityId;
         if (Subject == self || !_p.Transforms.TryGetTransform(self, out var s, out _)) return fallback;

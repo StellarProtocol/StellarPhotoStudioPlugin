@@ -1,0 +1,103 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using Stellar.Abstractions.Domain;
+using Stellar.Abstractions.Services;
+using Stellar.PhotoStudio.Posing;
+
+namespace Stellar.PhotoStudio.Tests.Posing;
+
+internal sealed class FakePoseTarget : IPoseTarget
+{
+    public readonly List<string> Calls = new();
+    public PoseTargetState State { get; set; } = PoseTargetState.Idle;
+    public PoseResult PlayResult = PoseResult.Applied;
+    public float LiveMoment = 0.37f;
+    private float _moment = -1f, _yaw;
+    private static string N(float v) => v.ToString("0.00", CultureInfo.InvariantCulture);
+
+    public PoseResult PlayAction(int actionId)
+    {
+        Calls.Add($"play {actionId}");
+        _moment = -1f;
+        State = PlayResult == PoseResult.Full ? PoseTargetState.Full : PoseTargetState.Ready;
+        return PlayResult;
+    }
+
+    public float Moment
+    {
+        get => _moment >= 0f ? _moment : LiveMoment;
+        set { _moment = value; Calls.Add($"moment {N(value)}"); }
+    }
+
+    public void SetExpression(int expressionId, bool hold) => Calls.Add($"face {expressionId} hold={hold}");
+    public void SetLook(LookPart part, LookMode mode, bool locked) => Calls.Add($"look {part} {mode} lock={locked}");
+    public void Aim(LookPart part, float x, float y) => Calls.Add($"aim {part} {N(x)},{N(y)}");
+
+    public float Yaw
+    {
+        get => _yaw;
+        set { _yaw = value; Calls.Add($"yaw {value.ToString("0", CultureInfo.InvariantCulture)}"); }
+    }
+
+    public void Reset() { Calls.Add("reset"); State = PoseTargetState.Idle; }
+}
+
+internal sealed class FakePosing : IPosing
+{
+    public bool IsAvailable { get; set; } = true;
+    public List<PersonInfo> People = new()
+    {
+        new(new EntityId(1), "Revette", PersonKind.Self, 0f),
+        new(new EntityId(2), "Celia", PersonKind.Player, 3f),
+        new(new EntityId(3), "Mira", PersonKind.Npc, 6f),
+    };
+    public List<ExpressionInfo> Faces = new() { new(1003, "Angry", 303, 403), new(1015, "Startled", 315, 415) };
+    public readonly Dictionary<long, FakePoseTarget> Targets = new();
+    public readonly Dictionary<long, Position3D> Visible = new();
+    public int Selects, PeopleReads;
+    public event Action? Changed;
+
+    public bool TryGetVisiblePosition(EntityId person, out Position3D position) => Visible.TryGetValue(person.Value, out position);
+
+    public IReadOnlyList<PersonInfo> NearbyPeople(float radius) { PeopleReads++; return People; }
+    public IReadOnlyList<ExpressionInfo> Expressions => Faces;
+
+    public IPoseTarget? Select(EntityId person)
+    {
+        Selects++;
+        if (!IsAvailable || person.IsNone) return null;
+        if (!Targets.TryGetValue(person.Value, out var t) || t.State == PoseTargetState.Released)
+            Targets[person.Value] = t = new FakePoseTarget();
+        return t;
+    }
+
+    public void ResetAll()
+    {
+        foreach (var t in Targets.Values) t.State = PoseTargetState.Released;
+        Changed?.Invoke();
+    }
+}
+
+internal sealed class PosingRig
+{
+    public readonly FakePosing Posing = new();
+    public readonly List<PoseResult> Refusals = new();
+    public readonly PosingController Ctl;
+    public EntityId Subject = new(1);
+    public static readonly EmoteInfo Dance = new(9020, "Dance I", "", false);
+
+    public PosingRig()
+    {
+        Ctl = new PosingController(Posing, new PosingHost(() => Subject, id => { Subject = id; Ctl!.SyncSubject(); }, Refusals.Add));
+        Ctl.SyncSubject();
+    }
+
+    public void Select(long id)
+    {
+        Subject = new EntityId(id);
+        Ctl.SyncSubject();
+    }
+
+    public FakePoseTarget Target(long id) => Posing.Targets[id];
+}

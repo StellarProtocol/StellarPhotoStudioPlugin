@@ -5,9 +5,10 @@ StellarResonance plugin for screenshots: hide the HUD, nameplates and other play
 LUT, bloom, vignette, film grain); raise render quality (supersampling, high shadows) and pin the time of day; keep
 presets. A compact strip appears beside the game's own photo/selfie mode.
 
-Requires **Stellar framework ≥ 2.14.0** (capture, scene-visibility, look, photo-mode, render-quality and time-of-day
+Requires **Stellar framework ≥ 2.15.0** (capture, scene-visibility, look, photo-mode, render-quality and time-of-day
 services; 2.14.0 adds the free-camera services — camera override, input shield, scene freeze, emotes, entity picker —
-and `IHotkeys.MigrateSavedBinding` for the hide-all key move).
+and `IHotkeys.MigrateSavedBinding` for the hide-all key move; 2.15.0 adds `IPosing`, posing a person inside the free
+camera — you live, other players as a local copy, NPCs as a stand-in model).
 
 ```bash
 dotnet build -c Release

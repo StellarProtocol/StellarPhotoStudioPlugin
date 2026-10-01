@@ -179,13 +179,13 @@ internal sealed class SessionRig
     public FreeCamSettings Settings;
     public FreeCamSession Session;
 
-    public SessionRig(float smoothing = 0f)
+    public SessionRig(float smoothing = 0f, IPosing? posing = null)
     {
         Transforms.Positions[1] = new Position3D(0, 0, 0);        // the local player stands at the origin
         Config.Values["freecam.smoothing"] = smoothing;
         Settings = new FreeCamSettings(Config);
         Session = new FreeCamSession(
-            new FreeCamPorts(Camera, Shield, Freeze, Combat, Visibility, Transforms, Snapshot, Picker),
+            new FreeCamPorts(Camera, Shield, Freeze, Combat, Visibility, Transforms, Snapshot, Picker, posing),
             Settings, new FreeCamHost((n, r) => Notices.Add((n, r)), (_, _) => { HitTests++; return OverUi; }, Dismiss, Warnings.Add));
     }
 
