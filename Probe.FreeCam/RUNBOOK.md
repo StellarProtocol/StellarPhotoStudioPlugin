@@ -148,3 +148,18 @@ Owner decision: freeze covers "everything on screen" — monsters, NPCs, summons
 
 Pixel numbers in R3F are confounded by wind-animated foliage and scene shaders; the verdicts in the recon were read off
 crop strips of the `fcp_R3F_<Kind>_{U,A,P}_t{1,2}.png` captures (region from the `CAPTURE` line; PNG y = 1080 − y − h).
+
+## Run 4 steps (posing by person, 2026-10-01/02; earlier steps stay on F8, off in auto except `env` + `5_combat_flag`)
+
+Prereq changed: the probe now builds against `Stellar.Abstractions 2.14.0-freecam-dev` (the TEST prefix runs framework
+2.14.0) and references `ZRpc.dll`. The Photo Studio 1.1.0 slot was moved to `stellar-backups/` for the run and restored
+after. Scenario timeout: keep it under the 600 s tool ceiling (`TIMEOUT_S=570` in the copied file).
+
+| Step | Verdict lines |
+|---|---|
+| `R4_setup` | `R4 SENDS since boot` (hook liveness: login traffic), `R4 SENDS idle baseline` (noise: `103198054:5` = ReqServerTime ≈ 1 / 5 s), `R4 action chosen`, `R4 nearest other player` (bounded wait for a passer-by) |
+| `R4_self` (off in auto after 4b) / `R4_self_clone` / `R4_other_live` / `R4_other_clone` / `R4_npc` (off after 4b) | per target: `(a)` play / pause / scrub / scrub back / resume / reset with `actionInfo[id total passed]` readback and per-phase `SENDS`; `(e)` yaw readback +3 f / +0.5 s / +2 s; `(d)` head LENS / FREE right,left,up / LOCK (+ camera moved 1 m); `(c)` eyes LENS / FREE / LOCK; `(b)` face emotes + hold +1/+3/+6 s + persist test; `(f)` end vs idle, clone Refresh |
+| `R4_summary` | `R4 SENDS timeline` (every non-ReqServerTime send with its clock ms; compare with `R4 MARK` lines) |
+
+Send ids seen (World service 103198054): 131077 = NewMove, 5 = ReqServerTime, 21 = PlayAction notify, 8 = PlayEmote
+notify, 278533 = SyncProjectList (periodic). Results: devkit `docs/recon/photo-posing-recon.md`.

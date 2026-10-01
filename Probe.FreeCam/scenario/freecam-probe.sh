@@ -9,7 +9,7 @@
 source "$SCENARIO_DIR/in-world.sh"
 export STELLAR_FREECAMPROBE_AUTO=1
 # 15 s settle + ~60-90 s of steps after the ~60-90 s login; generous ceiling.
-TIMEOUT_S=420
+TIMEOUT_S=720
 MUST_SEE+=(
     '\[FreeCamProbe\] loaded; auto=True'
     '\[FreeCamProbe\] SEQUENCE START'

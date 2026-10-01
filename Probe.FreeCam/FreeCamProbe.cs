@@ -62,6 +62,7 @@ public sealed partial class FreeCamProbe : IStellarPlugin
         _services.ClientState.SceneChanged += _onScene;
         _services.Framework.Update += OnUpdate;
         ArmCombatWatch();   // FreeCamProbe.Combat.cs — framework attr stream + game combat-setter hooks
+        ArmSendCounter();   // FreeCamProbe.Run4.cs — outgoing RPC counter (armed before login so login traffic proves it fires)
     }
 
     public void Dispose()
@@ -69,6 +70,7 @@ public sealed partial class FreeCamProbe : IStellarPlugin
         _services.Framework.Update -= OnUpdate;
         _services.ClientState.SceneChanged -= _onScene;
         DisarmCombatWatch();
+        DisarmSendCounter();
         ReleaseAll("dispose");
         ProbeTicks.FrameTick = null;
         ProbeTicks.LateTick = null;
@@ -77,8 +79,8 @@ public sealed partial class FreeCamProbe : IStellarPlugin
         if (_runner != null) UnityEngine.Object.Destroy(_runner.gameObject);
     }
 
-    // Run 3 (2026-10-01): run-1 and run-2 steps stay available on F8 but are off in auto except env + the cheap combat
-    // read; the R3 steps (non-player entities: enumeration, anim freeze, position hold, appear-during-freeze) run in auto.
+    // Run 4 (2026-10-01): earlier steps stay available on F8 but are off in auto except env + the cheap combat read;
+    // the R4 steps (posing by person: self / other player live / other player photo clone / NPC) run in auto.
     private List<(string, Func<IEnumerator>, bool)> BuildSteps() => new()
     {
         ("env", StepEnv, true),
@@ -98,11 +100,18 @@ public sealed partial class FreeCamProbe : IStellarPlugin
         ("D_character_lights", StepLights2, false),
         ("F_lookat_restore", StepLookRestore2, false),
         ("E_input_mask_source", StepInputSource2, false),
-        ("R3_entities", StepEntities3, true),
-        ("R3_freeze_kinds", StepFreezeKinds3, true),
-        ("R3_hold_kinds", StepHoldKinds3, true),
-        ("R3_appear_freeze", StepAppear3, true),
-        ("R3_entities_end", StepEntities3, true),
+        ("R3_entities", StepEntities3, false),
+        ("R3_freeze_kinds", StepFreezeKinds3, false),
+        ("R3_hold_kinds", StepHoldKinds3, false),
+        ("R3_appear_freeze", StepAppear3, false),
+        ("R3_entities_end", StepEntities3, false),
+        ("R4_setup", StepSetup4, true),
+        ("R4_self", StepSelf4, false),          // run 4a/4b
+        ("R4_self_clone", StepSelfClone4, true), // run 4c: player-storage photo clone (proxy for another player's clone)
+        ("R4_other_live", StepOtherLive4, true),
+        ("R4_other_clone", StepOtherClone4, true),
+        ("R4_npc", StepNpc4, false),            // run 4a/4b
+        ("R4_summary", StepSummary4, true),
     };
 
     internal void Log(string msg)
