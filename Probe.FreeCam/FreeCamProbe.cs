@@ -77,8 +77,8 @@ public sealed partial class FreeCamProbe : IStellarPlugin
         if (_runner != null) UnityEngine.Object.Destroy(_runner.gameObject);
     }
 
-    // Run 2 (2026-10-01): run-1 steps stay available on F8 but are off in auto except env + the cheap combat read;
-    // the A-F follow-ups run in auto (E last — it probes an out-of-enum ignore source).
+    // Run 3 (2026-10-01): run-1 and run-2 steps stay available on F8 but are off in auto except env + the cheap combat
+    // read; the R3 steps (non-player entities: enumeration, anim freeze, position hold, appear-during-freeze) run in auto.
     private List<(string, Func<IEnumerator>, bool)> BuildSteps() => new()
     {
         ("env", StepEnv, true),
@@ -92,12 +92,17 @@ public sealed partial class FreeCamProbe : IStellarPlugin
         ("5_combat_flag", StepCombatFlag, true),
         ("6a_point_light", StepPointLight, false),
         ("6b_head_look_at", StepLookAt, false),
-        ("A_anim_freeze_isolated", StepAnimFreeze2, true),
-        ("B_effect_freeze_visual", StepEffects2, true),
-        ("C_hold_write_cost", StepHold2, true),
-        ("D_character_lights", StepLights2, true),
-        ("F_lookat_restore", StepLookRestore2, true),
-        ("E_input_mask_source", StepInputSource2, true),
+        ("A_anim_freeze_isolated", StepAnimFreeze2, false),
+        ("B_effect_freeze_visual", StepEffects2, false),
+        ("C_hold_write_cost", StepHold2, false),
+        ("D_character_lights", StepLights2, false),
+        ("F_lookat_restore", StepLookRestore2, false),
+        ("E_input_mask_source", StepInputSource2, false),
+        ("R3_entities", StepEntities3, true),
+        ("R3_freeze_kinds", StepFreezeKinds3, true),
+        ("R3_hold_kinds", StepHoldKinds3, true),
+        ("R3_appear_freeze", StepAppear3, true),
+        ("R3_entities_end", StepEntities3, true),
     };
 
     internal void Log(string msg)
@@ -142,6 +147,7 @@ public sealed partial class FreeCamProbe : IStellarPlugin
 
     private IEnumerator RunAll()
     {
+        _mainThreadId = Environment.CurrentManagedThreadId;
         Log("SEQUENCE START");
         var total = Stopwatch.StartNew();
         for (var i = 0; i < _steps.Count; i++)

@@ -133,3 +133,18 @@ plugin dispose; a `pendingReleases=0` in the `TIMING total` line confirms nothin
 | `D_character_lights` | `D1/D1b/D2/D2b/D3 … ON: lum … delta=`; `after game-off: restoredExactly=`; `after snapshot write-back: restoredExactly=` |
 | `F_lookat_restore` | `F after game-recipe release: equalsPre=… diff[…]`; `F after snapshot restore […]: equalsPre=` |
 | `E_input_mask_source` | `E source 28/40/17: …`; `E coexist: …` |
+
+## Run 3 steps (auto since 2026-10-01 run 3; run-1 and run-2 steps stay on F8, off in auto except `env` + `5_combat_flag`)
+
+Owner decision: freeze covers "everything on screen" — monsters, NPCs, summons/pets too. Timeout: use
+`--timeout=480` (the appear window alone is 120 s).
+
+| Step | Verdict lines |
+|---|---|
+| `R3_entities` / `R3_entities_end` | `R3 collections:` (every `ZEntityMgr` dict); `R3 kind <Class> … withModel within40m summons nearestModel[…] anim[…]`; `R3 near …` |
+| `R3_freeze_kinds` | `R3 F-<Kind>-background freeze-all:` (everything else + effects frozen; attr pass, then P1 = `AnimComp.Speed=0` for entities whose drawn speed stayed > 0); `R3F <Kind> VERDICT attr=… attr+p1=…` with `gameRewroteSpeed=n/30`; `restore audit` lines (drawn speed before vs after) |
+| `R3_hold_kinds` | `R3H W2 ModelGoComp.Position … perEnt=…us … END-OF-FRAME visual off-hold a/b`; `R3H released: visual-vs-attr gap` at +3 frames / +1 s / +3 s |
+| `R3_appear_freeze` | `R3A caught <Kind> … via AddEntity: FROZEN(… reapplied=n)` / `MOVING(…)`; `R3A window=… appearEvents=… caught=… verdicts[…]`; `R3A appear hooks total:` (per hook and class; `onAddEntity` / `OnModelLoadFinish` are armed too) |
+
+Pixel numbers in R3F are confounded by wind-animated foliage and scene shaders; the verdicts in the recon were read off
+crop strips of the `fcp_R3F_<Kind>_{U,A,P}_t{1,2}.png` captures (region from the `CAPTURE` line; PNG y = 1080 − y − h).
