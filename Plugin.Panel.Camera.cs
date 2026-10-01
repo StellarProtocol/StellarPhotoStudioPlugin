@@ -7,7 +7,7 @@ using Stellar.PhotoStudio.FreeCam;
 namespace Stellar.PhotoStudio;
 
 // Camera tab (spec § 5, mockup 2026-10-01-free-camera-mockup.html): Free camera button + status line; Movement group
-// (speed, sensitivity, smoothing, leash, invert Y, entry hide layers); Pose group (search, ★ favourites, list, look at camera).
+// (speed, sensitivity, smoothing, leash, invert Y, entry hide layers); Pose group replaced in 1.2.0 by the Person group (Plugin.Panel.Person.cs; spec 2026-10-02).
 public sealed partial class Plugin
 {
     private const int EmotePoolSize = 10;
@@ -34,7 +34,7 @@ public sealed partial class Plugin
         new SeparatorElement(),
         MovementGroup(),
         new SeparatorElement(),
-        PoseGroup(),
+        PersonGroup(),
     }, Gap: 8f);
 
     private string FreeCamStatus() =>
@@ -70,18 +70,6 @@ public sealed partial class Plugin
     private HudElement EntryHideToggle(string key, VisibilityLayers layer) => HelpToggle(key,
         () => _fcSettings.EntryHidesLayer(layer), on => _fcSettings.SetEntryHide(layer, on),
         new HelpText(() => T(key), () => T("fc.help.entryHides")));
-
-    private HudElement PoseGroup() => FoldGroup("fc.group.pose", "fc.help.pose",
-        () => _fcSettings.PoseOpen, open => _fcSettings.SetPoseOpen(open), new HudElement[]
-        {
-            LabeledRow(() => T("fc.search"), new InputElement(() => _emoteQuery, SetEmoteQuery, Width: 220f, OnChange: SetEmoteQuery)),
-            new ConditionalElement(() => EmoteView().Count > 0,
-                new VirtualListElement(() => EmoteView().Count, EmoteRowHeight, BuildEmotePool(), first => _emoteFirst = first, Height: 220f)
-                    { ResetScroll = TakeEmoteScrollReset },
-                new TextElement(() => _services.Emotes.Unlocked.Count == 0 ? T("fc.pose.none") : T("fc.pose.empty"), Color: Muted)),
-            HelpToggle("fc.lookAt", () => _fcSettings.LookAt, on => _freeCam.SetLookAt(on),
-                new HelpText(() => T("fc.lookAt"), () => T("fc.help.lookAt"))),
-        });
 
     /// <summary>The foldable group header QualityGroup uses: ▾/▸ title … "?".</summary>
     private HudElement FoldGroup(string titleKey, string helpKey, Func<bool> open, Action<bool> setOpen, HudElement[] rows) =>
@@ -164,13 +152,12 @@ public sealed partial class Plugin
         _emoteListDirty = true;
     }
 
+    /// <summary>An emote row poses the selected person (spec 2026-10-02 § 3); refusals are reported by the controller.</summary>
     private void PlayEmoteAt(int slot)
     {
         if (EmoteAt(slot) is not { } e) return;
-        var result = _services.Emotes.PlayAsync(e.Id).Result;   // synchronous Lua call (Task.FromResult)
-        // Refused = the game already showed its own message (spec § 4); only our own failures get a toast.
-        if (result is EmoteResult.Failed or EmoteResult.Unavailable)
-            _services.Notifications.Notify(T("fc.toast.emoteFailed"), NotificationKind.Warning);
+        _posingCtl.Play(e);
+        _poseListOpen = false;
     }
 
     private void TickFreeCamUi(float dt)
