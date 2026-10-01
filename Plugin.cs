@@ -48,6 +48,7 @@ public sealed partial class Plugin : IStellarPlugin
 
         _settings = new StudioSettings(services.Config.GetSection("photostudio"));
         StartFreeCamera();                       // Plugin.FreeCam.cs
+        StartPosing();                           // Plugin.Posing.cs — needs the free camera session + settings
         _look = new LookController(services.RenderLook);
         _look.SetPinned(_settings.Pinned);
         _presets = new PresetStore(new DataStorePresetFiles(services.Data), m => services.Log.Warning(m));
@@ -76,6 +77,7 @@ public sealed partial class Plugin : IStellarPlugin
         _onLanguageChanged = () => { _lutOptionsCache = null; _importOptionsCache = null; };
         _loc.LanguageChanged += _onLanguageChanged;
         ArmSelfTest();                           // Plugin.SelfTest.cs — inert unless the env var is set
+        ArmPosingSelfTest();                     // Plugin.SelfTest.Posing.cs — inert unless the env var is set
     }
 
     public string Name => "Photo Studio";
@@ -83,6 +85,7 @@ public sealed partial class Plugin : IStellarPlugin
     public void Dispose()
     {
         StopFreeCamera();   // camera, shield, freeze, look-at and hides go first (spec § 7)
+        StopPosing();       // the framework already reset every posed person when the camera was handed back
         _services.Framework.Update -= _onFrameworkUpdate;
         _loc.LanguageChanged -= _onLanguageChanged;
         _services.PhotoMode.CutsceneChanged -= _onCutsceneChanged;
@@ -106,6 +109,7 @@ public sealed partial class Plugin : IStellarPlugin
         TickStudio(dt);                          // Plugin.Studio.cs — toast timer, flash fade, tip reposition
         TickFreeCamUi(dt);
         TickSelfTest(dt);
+        TickPosingSelfTest(dt);
         TickHideAllNotice();
     }
 
@@ -122,6 +126,7 @@ public sealed partial class Plugin : IStellarPlugin
     private void OnCaptureResult(CaptureResult r)
     {
         SelfTestCaptured(r);
+        PosingSelfTestCaptured(r);
         _quality.SetCapturing(false);   // the capture-only shadow boost ends with the capture
         if (!r.Success)
         {

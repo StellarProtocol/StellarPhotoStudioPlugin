@@ -18,7 +18,7 @@ public sealed partial class Plugin
     {
         _fcSettings = new FreeCamSettings(_services.Config.GetSection("photostudio"));
         var ports = new FreeCamPorts(_services.CameraOverride, _services.InputShield, _services.SceneFreeze, _services.CombatState,
-            _services.SceneVisibility, _services.EntityTransforms, _services.CombatSnapshot, _services.EntityPicker);
+            _services.SceneVisibility, _services.EntityTransforms, _services.CombatSnapshot, _services.EntityPicker, _services.Posing);
         var host = new FreeCamHost(OnFreeCamNotice, PointerOverOwnWindow, DismissHelpTip, msg => _services.Log.Warning(msg));
         _freeCam = new FreeCamSession(ports, _fcSettings, host);
         _freeCam.StateChanged += OnFreeCamStateChanged;
@@ -45,6 +45,7 @@ public sealed partial class Plugin
 
     private void OnFreeCamStateChanged()
     {
+        SyncPosing();   // Plugin.Posing.cs — selection follows the orbit subject; cleared when the free camera ends
         _freeCamHudWin.SetVisible(_freeCam.Active);
         _freeCamHudWin.MarkDirty();
         _panelWin.MarkDirty();
@@ -99,6 +100,7 @@ public sealed partial class Plugin
     {
         var id = _freeCam.Subject;
         if (id == _services.CombatSnapshot.LocalEntityId) return _services.PlayerState.Name ?? T("fc.you");
+        if (_posingCtl.Person is { Name.Length: > 0 } p && p.Id == id) return p.Name;
         return _services.CombatLookup.GetEntityName(id) ?? "—";
     }
 
