@@ -80,12 +80,17 @@ public sealed partial class Plugin
         _ => T("fc.reason.disconnect"),
     };
 
-    /// <summary>Click-to-orbit never picks through Photo Studio's own windows.</summary>
+    private IWindowControl[]? _interactiveWins;
+
+    /// <summary>Click-to-orbit, wheel and right-drag never act through Photo Studio's own INTERACTIVE windows. The HUD
+    /// pill is a non-interactive overlay (edit-mode drag only), so it is left out: otherwise a 760-px band across the
+    /// top of the screen would swallow camera input while the free camera is on (review finding).</summary>
     private bool PointerOverOwnWindow(float x, float y)
     {
         var fw = _services.Framework;
         var scale = fw.CanvasWidth > 0 ? (float)fw.ScreenWidth / fw.CanvasWidth : 1f;
-        foreach (var w in new[] { _panelWin, _freeCamHudWin, _tipWindow, _dockedWin, _toastWin })
+        _interactiveWins ??= new[] { _panelWin, _tipWindow, _dockedWin, _toastWin };
+        foreach (var w in _interactiveWins)
             if (w.IsShown && UiHitTest.Contains(w.Rect, x, y, scale)) return true;
         return false;
     }

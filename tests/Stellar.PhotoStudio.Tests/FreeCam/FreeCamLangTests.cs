@@ -18,7 +18,7 @@ public sealed class FreeCamLangTests
         "fc.hint.orbit", "fc.hint.fly", "fc.group.movement", "fc.group.pose", "fc.speed", "fc.sensitivity", "fc.smoothing",
         "fc.leash", "fc.invertY", "fc.entryHide.hud", "fc.entryHide.names", "fc.entryHide.others", "fc.lookAt", "fc.search", "fc.pose.empty", "fc.pose.none",
         "fc.help.movement", "fc.help.speed", "fc.help.sensitivity", "fc.help.smoothing", "fc.help.leash", "fc.help.pose",
-        "fc.help.lookAt", "fc.help.entryHides", "fc.toast.busy", "fc.toast.unavailable", "fc.toast.released", "fc.toast.error",
+        "fc.help.lookAt", "fc.help.entryHides", "fc.help.invertY", "fc.toast.busy", "fc.toast.unavailable", "fc.toast.released", "fc.toast.error",
         "fc.toast.emoteFailed", "fc.toast.hideallMoved", "fc.toast.hideallCleared",
         "fc.reason.scene", "fc.reason.cutscene", "fc.reason.photo", "fc.reason.disconnect",
         "fc.unit.speed", "fc.unit.metres",
