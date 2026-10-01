@@ -161,14 +161,26 @@ internal sealed partial class FreeCamSession : IDisposable
         StateChanged?.Invoke();
     }
 
-    private void EndFreeze()
+    /// <summary>Null the field before disposing: the real SceneFreezeService is ref-counted and raises
+    /// <see cref="ISceneFreeze.Changed"/>(false) synchronously when the last token is disposed, re-entering
+    /// <see cref="OnFreezeChanged"/> while this method is still on the stack — with the field already null, that
+    /// re-entry sees nothing to end and just forwards the one state-changed notification, instead of disposing the
+    /// same token a second time. Internal (not private) so the reentrancy can be pinned directly, without the
+    /// public callers' own trailing <see cref="StateChanged"/> notify muddying the count.</summary>
+    internal void EndFreeze()
     {
-        _freeze?.Dispose();
+        var freeze = _freeze;
         _freeze = null;
         _freezeCentre = null;
+        freeze?.Dispose();
     }
 
-    /// <summary>The one release path. Unsubscribes first, so our own dispose never re-enters through Released.</summary>
+    /// <summary>The one release path. Unsubscribes first, so our own dispose never re-enters through Released.
+    /// Each disposal step is isolated (spec § 7): an exception from one — e.g. the camera control's own
+    /// <c>Dispose()</c> re-raises <c>Released</c> to every other holder of that event, and another plugin's
+    /// throwing handler propagates straight back out of that call — must never stop the rest from running. The
+    /// shield is disposed FIRST because it blocks every game key; it must never stay held just because a later
+    /// step threw.</summary>
     private void Release(CameraReleaseReason reason, bool frameworkEnded)
     {
         if (_control is not { } c) return;
@@ -177,17 +189,26 @@ internal sealed partial class FreeCamSession : IDisposable
         _p.Camera.Released -= _onReleased;
         _p.Freeze.Changed -= _onFreezeChanged;
         _p.Combat.Changed -= _onCombatChanged;
-        if (!frameworkEnded) c.Dispose();
-        EndFreeze();
-        _look?.Dispose();
-        _look = null;
-        _hide?.Dispose();
-        _hide = null;
-        _shield?.Dispose();
-        _shield = null;
+
+        ReleaseStep(() => { _shield?.Dispose(); _shield = null; });
+        ReleaseStep(() => { if (!frameworkEnded) c.Dispose(); });
+        ReleaseStep(EndFreeze);
+        ReleaseStep(() => { _look?.Dispose(); _look = null; });
+        ReleaseStep(() => { _hide?.Dispose(); _hide = null; });
+
         ScriptedIntent = null;
         StateChanged?.Invoke();
         if (reason is CameraReleaseReason.Disposed or CameraReleaseReason.PluginUnloaded) return;
         _notify(reason == CameraReleaseReason.Error ? FreeCamNotice.Error : FreeCamNotice.Released, reason);
+    }
+
+    /// <summary>Runs one release step and swallows any exception so the remaining steps still run. There is no
+    /// logging sink reachable from here and no <see cref="FreeCamNotice"/> case for "a release step failed" — the
+    /// existing toast path already reports the release itself (Released/Error) right after every step has had its
+    /// turn, which is the only outward report this method can give.</summary>
+    private static void ReleaseStep(Action step)
+    {
+        try { step(); }
+        catch (Exception) { /* isolated — see Release's doc comment (spec § 7) */ }
     }
 }

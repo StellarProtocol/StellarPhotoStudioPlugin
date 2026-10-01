@@ -273,4 +273,59 @@ public sealed class FreeCamSessionTests
         Assert.Equal(1, r.Visibility.Hides[0].Handle.Disposed);
         Assert.Empty(r.Notices);
     }
+
+    // Hardening round 1 (2026-10-01): Release isolates every disposal step, and EndFreeze survives the real
+    // SceneFreezeService's synchronous reentrant Changed(false) on last-token dispose.
+
+    [Fact]
+    public void A_throwing_control_dispose_does_not_block_the_rest_of_release()
+    {
+        var r = new SessionRig();
+        r.Settings.SetLookAt(true);
+        r.Session.Enter();
+        r.Press(Stellar.Abstractions.Domain.StellarKeyCode.Space);   // freeze on, so Release also has a freeze token to end
+        r.Camera.Control.ThrowOnDispose = true;
+        r.Session.Exit();
+        Assert.False(r.Session.Active);
+        Assert.Equal(1, r.Camera.Control.Disposed);
+        Assert.Equal(1, r.Shield.Handle.Disposed);
+        Assert.Equal(1, r.Freeze.Tokens[0].Disposed);
+        Assert.Equal(1, r.Camera.LookAts[0].Disposed);
+        Assert.Equal(1, r.Visibility.Hides[0].Handle.Disposed);
+        Assert.Empty(r.Notices);   // Exit keeps the existing toast semantics: none, throw or not
+    }
+
+    [Fact]
+    public void EndFreeze_disposes_its_token_once_despite_a_reentrant_Changed()
+    {
+        var r = new SessionRig();
+        r.Session.Enter();
+        r.Session.ToggleFreeze();                  // freeze on
+        var raises = 0;
+        r.Session.StateChanged += () => raises++;
+        r.Session.EndFreeze();                      // the fake's token raises Changed(false) synchronously from
+                                                       // inside its own Dispose(), re-entering OnFreezeChanged while
+                                                       // the session's own _freeze field still references it — the
+                                                       // real, ref-counted SceneFreezeService does the same.
+        Assert.False(r.Session.Frozen);
+        Assert.Equal(1, r.Freeze.Tokens[0].Disposed);
+        Assert.Equal(1, raises);
+    }
+
+    [Fact]
+    public void Dispose_releases_everything_and_shows_no_toast()
+    {
+        var r = new SessionRig();
+        r.Settings.SetLookAt(true);
+        r.Session.Enter();
+        r.Press(Stellar.Abstractions.Domain.StellarKeyCode.Space);   // freeze on
+        r.Session.Dispose();
+        Assert.False(r.Session.Active);
+        Assert.Equal(1, r.Camera.Control.Disposed);
+        Assert.Equal(1, r.Shield.Handle.Disposed);
+        Assert.Equal(1, r.Freeze.Tokens[0].Disposed);
+        Assert.Equal(1, r.Camera.LookAts[0].Disposed);
+        Assert.Equal(1, r.Visibility.Hides[0].Handle.Disposed);
+        Assert.Empty(r.Notices);
+    }
 }

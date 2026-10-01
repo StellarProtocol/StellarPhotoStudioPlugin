@@ -21,10 +21,19 @@ internal sealed class FakeControl : ICameraControl
     public Position3D LastPosition;
     public float LastYaw, LastPitch, LastRoll;
     public int Disposed;
+    /// <summary>Simulates another plugin's throwing <c>ICameraOverride.Released</c> handler propagating out of
+    /// this control's own <c>Dispose()</c> (the real framework re-raises <c>Released</c> to every holder of that
+    /// event from inside <c>Dispose()</c>).</summary>
+    public bool ThrowOnDispose;
     public event Action<float>? Frame;
     public void SetPose(Position3D position, float yaw, float pitch, float roll) { LastPosition = position; LastYaw = yaw; LastPitch = pitch; LastRoll = roll; }
     public void RaiseFrame(float dt) => Frame?.Invoke(dt);
-    public void Dispose() { Disposed++; IsActive = false; }
+    public void Dispose()
+    {
+        Disposed++;
+        IsActive = false;
+        if (ThrowOnDispose) throw new InvalidOperationException("another plugin's Released handler threw");
+    }
 }
 
 internal sealed class FakeCamera : ICameraOverride
@@ -72,12 +81,32 @@ internal sealed class FakeShield : IInputShield
 
 internal sealed class FakeFreeze : ISceneFreeze
 {
-    public readonly List<FakeHandle> Tokens = new();
+    public readonly List<FreezeToken> Tokens = new();
     public bool IsFrozen => Tokens.Exists(t => t.Disposed == 0);
     public bool HoldsPositions => IsFrozen;
     public event Action<bool>? Changed;
-    public IDisposable Freeze() { var t = new FakeHandle(); Tokens.Add(t); Changed?.Invoke(true); return t; }
+    public IDisposable Freeze() { var t = new FreezeToken(this); Tokens.Add(t); Changed?.Invoke(true); return t; }
     public void FrameworkReleaseAll() { foreach (var t in Tokens) t.Disposed++; Changed?.Invoke(false); }
+
+    /// <summary>A real-service-shaped token: like the real ref-counted <c>SceneFreezeService</c>, disposing the
+    /// LAST live token raises <see cref="Changed"/>(false) synchronously, from inside <c>Dispose()</c> — the
+    /// reentrancy <c>FreeCamSession.EndFreeze</c> must survive. Guarded with <see cref="_raised"/> so a repeat
+    /// <c>Dispose()</c> of the same (already-disposed) token never re-raises — only <see cref="Disposed"/> keeps
+    /// counting, so a test can tell a single dispose from a double one.</summary>
+    internal sealed class FreezeToken : IDisposable
+    {
+        private readonly FakeFreeze _owner;
+        private bool _raised;
+        public int Disposed;
+        internal FreezeToken(FakeFreeze owner) => _owner = owner;
+        public void Dispose()
+        {
+            Disposed++;
+            if (_raised || _owner.IsFrozen) return;
+            _raised = true;
+            _owner.Changed?.Invoke(false);
+        }
+    }
 }
 
 internal sealed class FakeCombatState : ICombatState
