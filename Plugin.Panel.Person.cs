@@ -47,7 +47,7 @@ public sealed partial class Plugin
         new CellElement(new RowElement(new HudElement[]
         {
             new TextElement(PersonName, Emphasis: true, NoWrap: true),
-            new TextElement(PersonKindText, Color: Muted, NoWrap: true),
+            new TextElement(PersonKindText, Color: Muted, NoWrap: true, FontSize: 15),   // same size as the name: baselines matched (sandbox D3)
         }, Gap: 6f, Justify: RowJustify.Center), Weight: 1f),
         new CellElement(new ButtonElement(() => "›", () => _posingCtl.Cycle(1)), Width: PersonArrowW),
     }, Gap: 8f);
@@ -89,7 +89,7 @@ public sealed partial class Plugin
         {
             new CellElement(SliderRow(() => T("pz.moment"),
                 new SliderElement(() => _posingCtl.State.Moment, v => _posingCtl.SetMoment(v), 0f, 1f, Enabled: HasPose),
-                () => _loc.TFormat("pz.unit.percent", F(_posingCtl.State.Moment * 100f, "0")), () => _posingCtl.SetMoment(0f)), Weight: 1f),
+                () => _loc.TFormat("pz.unit.percent", F(_posingCtl.State.Moment * 100f, "0")), () => _posingCtl.SetMoment(0f), HasPose), Weight: 1f),
             HelpDot("pz.moment", () => T("pz.moment"), () => T("pz.help.moment")),
         }, Gap: 6f),
         new ConditionalElement(() => _posingCtl.ShowClothHint, new TextElement(() => T("pz.hint.cloth"), Color: Muted)),
@@ -136,9 +136,11 @@ public sealed partial class Plugin
         new ConditionalElement(() => _posingCtl.State.Mode(part) == LookMode.Free, AimPad(part)),
     }, Gap: 4f);
 
+    private const float LookSegW = 92f;   // equal segments (sandbox D4: widths followed the labels, 103/89/88 in en)
+
     private HudElement LookModeButton(LookPart part, LookMode mode, string key) => new CellElement(new ButtonElement(
         () => T(key), () => _posingCtl.SetLook(part, mode), Enabled: PoseEnabled,
-        Active: () => _posingCtl.State.Mode(part) == mode), Weight: 1f);
+        Active: () => _posingCtl.State.Mode(part) == mode), Width: LookSegW);
 
     private HudElement AimPad(LookPart part) => new ColumnElement(new HudElement[]
     {
@@ -156,7 +158,7 @@ public sealed partial class Plugin
     {
         new CellElement(SliderRow(() => T("pz.rotate"),
             new SliderElement(() => _posingCtl.State.Yaw, v => _posingCtl.SetYaw(v), -PosingController.MaxYaw, PosingController.MaxYaw, Enabled: PoseEnabled),
-            YawText, () => _posingCtl.SetYaw(0f)), Weight: 1f),
+            YawText, () => _posingCtl.SetYaw(0f), PoseEnabled), Weight: 1f),
         HelpDot("pz.rotate", () => T("pz.rotate"), () => T("pz.help.rotate")),
     }, Gap: 6f);
 

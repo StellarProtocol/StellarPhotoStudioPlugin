@@ -103,13 +103,14 @@ public sealed partial class Plugin
         }, Gap: 6f);
 
     /// <summary>[label] [slider] [value] [↺] — Maestro's slider row without the "?" (the group header carries it).</summary>
-    private HudElement SliderRow(Func<string> label, SliderElement slider, Func<string> value, Action reset)
+    /// <param name="enabled">Optional: also gates the ↺ reset (a disabled slider must not be resettable — sandbox D1).</param>
+    private HudElement SliderRow(Func<string> label, SliderElement slider, Func<string> value, Action reset, Func<bool>? enabled = null)
         => new RowElement(new HudElement[]
         {
             new CellElement(new TextElement(label, Color: Muted), Width: LabelW),
             new CellElement(slider with { SquareHandle = true }, Weight: 1f),
             new CellElement(new TextElement(value, Align: TextAlign.Right), Width: ValueW),
-            new CellElement(new ButtonElement(Label: () => "↺", OnClick: reset), Width: 28f),
+            new CellElement(new ButtonElement(Label: () => "↺", OnClick: reset, Enabled: enabled), Width: 28f),
         }, Gap: 6f);
 
     /// <summary>[label] [control…] — a fixed-width muted label followed by the given controls.</summary>
