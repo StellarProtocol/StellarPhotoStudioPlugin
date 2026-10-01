@@ -4,7 +4,6 @@ using Stellar.Abstractions.Services;
 
 namespace Stellar.PhotoStudio.FreeCam;
 
-/// <summary>The framework services the free camera drives (one record keeps the session's constructor small).</summary>
 /// <summary>The framework services the free camera drives (one record keeps the session's constructor small).
 /// <c>Posing</c> (1.2.0, optional) gives the visible position of a posed copy / NPC stand-in — the orbit centre while the
 /// real person is hidden (controller decision Q5).</summary>
