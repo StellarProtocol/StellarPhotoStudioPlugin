@@ -44,6 +44,10 @@
     <Reference Include="ZUtil"><HintPath>$(GameInterop)/ZUtil.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Cinemachine"><HintPath>$(GameInterop)/Cinemachine.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UniTask"><HintPath>$(GameInterop)/UniTask.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.ParticleSystemModule"><HintPath>$(GameInterop)/UnityEngine.ParticleSystemModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Unity.RenderPipelines.Core.Runtime"><HintPath>$(GameInterop)/Unity.RenderPipelines.Core.Runtime.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="ZRenderPipeline"><HintPath>$(GameInterop)/ZRenderPipeline.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Panda.BlueprotocolEnv"><HintPath>$(GameInterop)/Panda.BlueprotocolEnv.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Rewired_Core"><HintPath>$(GameInterop)/Rewired_Core.dll</HintPath><Private>false</Private></Reference>
   </ItemGroup>
 </Project>

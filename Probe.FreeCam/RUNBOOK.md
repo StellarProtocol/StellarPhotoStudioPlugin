@@ -122,3 +122,14 @@ grep -E '\[FreeCamProbe\] (TIMING|DONE)' "$GM/BepInEx/LogOutput.log"
 
 Every override is released in the step's `finally` and again by `RELEASE ALL` on scene change, sequence end and
 plugin dispose; a `pendingReleases=0` in the `TIMING total` line confirms nothing leaked.
+
+## Run 2 steps (auto since 2026-10-01 run 2; run-1 steps stay on F8, off in auto except `env` + `5_combat_flag`)
+
+| Step | Verdict lines |
+|---|---|
+| `A_anim_freeze_isolated` | `A <path> VERDICT FROZEN/MOVING self … changed=…% \| other …` vs `A0_static` (noise) and `A0_emote_unfrozen` (moving); paths P1 AnimComp.Speed, P3 SetEModelAnimTimeSwitch, P4 Animator.speed, P5a SkillStageTimeFactor, P5b AnimResFactor; `A model …` lines give ECS vs GameObject model kind |
+| `B_effect_freeze_visual` | `B_U_unfrozen` / `B_F_frozen` particle `particleTimeAdvanced`; `B createdWhileFrozen mode1/mode2 … contextIsFreeze=a/b particlesStillAdvancing=c/d`; `B hooks: addHits displayHits` |
+| `C_hold_write_cost` | `C W1/W2/W3 … perChar=…us … END-OF-FRAME visual off-hold a/b`; self proxy (`C self …`) when nobody is within 30 m |
+| `D_character_lights` | `D1/D1b/D2/D2b/D3 … ON: lum … delta=`; `after game-off: restoredExactly=`; `after snapshot write-back: restoredExactly=` |
+| `F_lookat_restore` | `F after game-recipe release: equalsPre=… diff[…]`; `F after snapshot restore […]: equalsPre=` |
+| `E_input_mask_source` | `E source 28/40/17: …`; `E coexist: …` |

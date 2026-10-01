@@ -34,7 +34,10 @@ public sealed partial class FreeCamProbe
     }
 
     /// <summary>Renders the main camera once and keeps <paramref name="region"/>; writes a PNG of the full frame.</summary>
-    private Shot? Capture(string name, RectInt region)
+    private Shot? Capture(string name, RectInt region) => CaptureMany(name, region)?[0];
+
+    /// <summary>One render, several kept regions (index-aligned with <paramref name="regions"/>); null on failure.</summary>
+    private Shot[]? CaptureMany(string name, params RectInt[] regions)
     {
         var cam = MainCam();
         if (cam == null) { Log($"CAPTURE {name}: no camera"); return null; }
@@ -53,11 +56,16 @@ public sealed partial class FreeCamProbe
             tex = new Texture2D(w, h, TextureFormat.RGB24, false);
             tex.ReadPixels(new Rect(0, 0, w, h), 0, 0);
             tex.Apply();
-            var shot = new Shot { Name = name, Region = region, Px = CopyRegion(tex, region) };
+            var src = tex.GetPixels32();
+            var shots = new Shot[regions.Length];
+            for (var i = 0; i < regions.Length; i++)
+                shots[i] = new Shot { Name = regions.Length == 1 ? name : $"{name}#{i}", Region = regions[i], Px = CopyRegion(src, w, regions[i]) };
             var path = Path.Combine(_outDir, $"fcp_{name}.png");
             File.WriteAllBytes(path, ImageConversion.EncodeToPNG(tex));
-            Log($"CAPTURE {name} {w}x{h} region=({region.x},{region.y},{region.width}x{region.height}) lum={MeanLum(shot):F2} ms={sw.Elapsed.TotalMilliseconds:F0} -> {path}");
-            return shot;
+            var parts = new System.Text.StringBuilder();
+            foreach (var s in shots) parts.Append($" region=({s.Region.x},{s.Region.y},{s.Region.width}x{s.Region.height}) lum={MeanLum(s):F2}");
+            Log($"CAPTURE {name} {w}x{h}{parts} ms={sw.Elapsed.TotalMilliseconds:F0} -> {path}");
+            return shots;
         }
         catch (Exception ex) { Log($"CAPTURE {name} FAILED {ex.GetType().Name}: {ex.Message}"); return null; }
         finally
@@ -70,11 +78,10 @@ public sealed partial class FreeCamProbe
         }
     }
 
-    private static Color32[] CopyRegion(Texture2D tex, RectInt r)
+    private static Color32[] CopyRegion(Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppStructArray<Color32> src, int w, RectInt r)
     {
-        var src = tex.GetPixels32();   // whole frame, row-major from the bottom-left
+        // src = whole frame, row-major from the bottom-left
         var dst = new Color32[r.width * r.height];
-        var w = tex.width;
         for (var y = 0; y < r.height; y++)
         {
             var row = (r.y + y) * w + r.x;

@@ -77,19 +77,27 @@ public sealed partial class FreeCamProbe : IStellarPlugin
         if (_runner != null) UnityEngine.Object.Destroy(_runner.gameObject);
     }
 
+    // Run 2 (2026-10-01): run-1 steps stay available on F8 but are off in auto except env + the cheap combat read;
+    // the A-F follow-ups run in auto (E last — it probes an out-of-enum ignore source).
     private List<(string, Func<IEnumerator>, bool)> BuildSteps() => new()
     {
         ("env", StepEnv, true),
-        ("1_camera_takeover_vcam", StepCameraTakeover, true),
-        ("1b_camera_fallback_brain_off", StepCameraFallback, false),   // auto runs it only if the vcam failed
-        ("2_input_shield", StepInputShield, true),
-        ("3a_freeze_effects", StepFreezeEffects, true),
-        ("3b_freeze_animation", StepFreezeAnimation, true),
-        ("3c_freeze_position_hold", StepPositionHold, true),
-        ("4_emote", StepEmote, true),
+        ("1_camera_takeover_vcam", StepCameraTakeover, false),
+        ("1b_camera_fallback_brain_off", StepCameraFallback, false),
+        ("2_input_shield", StepInputShield, false),
+        ("3a_freeze_effects", StepFreezeEffects, false),
+        ("3b_freeze_animation", StepFreezeAnimation, false),
+        ("3c_freeze_position_hold", StepPositionHold, false),
+        ("4_emote", StepEmote, false),
         ("5_combat_flag", StepCombatFlag, true),
-        ("6a_point_light", StepPointLight, true),
-        ("6b_head_look_at", StepLookAt, true),
+        ("6a_point_light", StepPointLight, false),
+        ("6b_head_look_at", StepLookAt, false),
+        ("A_anim_freeze_isolated", StepAnimFreeze2, true),
+        ("B_effect_freeze_visual", StepEffects2, true),
+        ("C_hold_write_cost", StepHold2, true),
+        ("D_character_lights", StepLights2, true),
+        ("F_lookat_restore", StepLookRestore2, true),
+        ("E_input_mask_source", StepInputSource2, true),
     };
 
     internal void Log(string msg)
