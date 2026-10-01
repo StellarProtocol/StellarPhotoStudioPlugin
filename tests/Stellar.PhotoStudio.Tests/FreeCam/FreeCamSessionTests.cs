@@ -189,12 +189,59 @@ public sealed class FreeCamSessionTests
         var r = new SessionRig();
         r.Session.Enter();
         for (var i = 0; i < 60; i++) r.Frame();
+        // Zoom all the way in first, so "before" is a camera genuinely already inside FrameDistance (the old
+        // assertion's `Max(before, FrameDistance) + 1.5` passed even when a 2 m camera got pushed out to ~5.5 m —
+        // it never actually proved the camera stayed close).
+        r.Session.ScriptedIntent = new CamIntent { Wheel = 1f };
+        for (var i = 0; i < 300; i++) r.Frame();
+        r.Session.ScriptedIntent = null;
+        for (var i = 0; i < 60; i++) r.Frame();
         var before = r.Session.Distance;
-        r.Transforms.Positions[7] = new Position3D(0.5f, 0, 0.5f);
+        Assert.True(before < FreeCamSession.FrameDistance, $"setup: before ({before}) should already be inside FrameDistance");
+        r.Transforms.Positions[7] = new Position3D(0.05f, 0, 0.05f);   // right where you're already standing
         r.Session.SetSubject(new EntityId(7));
         for (var i = 0; i < 600; i++) r.Frame();
-        // A camera already closer than FrameDistance is not pushed out to it.
-        Assert.True(r.Session.Distance <= MathF.Max(before, FreeCamSession.FrameDistance) + 1.5f, $"before {before} after {r.Session.Distance}");
+        // Like-for-like: both readings are the same orbit Distance. A camera already closer than FrameDistance must
+        // not be pushed further away by picking a nearby person.
+        Assert.True(r.Session.Distance <= before + 0.25f, $"before {before} after {r.Session.Distance}");
+    }
+
+    // P3 (review 2026-10-02): re-picking the subject you're already orbiting (clicking them again, or Backspace
+    // while already on yourself) must not reframe the camera — SetSubject now early-returns on id == Subject.
+    [Fact]
+    public void Resubmitting_the_current_subject_does_not_reframe_a_distant_camera()
+    {
+        var r = new SessionRig();
+        r.Transforms.Positions[7] = new Position3D(3, 0, 3);
+        r.Session.Enter();
+        r.Session.SetSubject(new EntityId(7));
+        for (var i = 0; i < 60; i++) r.Frame();
+        r.Session.ScriptedIntent = new CamIntent { Wheel = -1f };   // zoom back out past FrameDistance
+        for (var i = 0; i < 300; i++) r.Frame();
+        r.Session.ScriptedIntent = null;
+        for (var i = 0; i < 60; i++) r.Frame();
+        var before = r.Session.Distance;
+        Assert.True(before > FreeCamSession.FrameDistance, $"setup: before ({before}) should be zoomed out");
+        r.Session.SetSubject(new EntityId(7));   // re-pick the same subject, e.g. clicking them again
+        for (var i = 0; i < 60; i++) r.Frame();
+        Assert.True(MathF.Abs(r.Session.Distance - before) < 0.1f, $"before {before} after {r.Session.Distance}");
+    }
+
+    [Fact]
+    public void Backspace_on_yourself_does_not_reframe_the_camera()
+    {
+        var r = new SessionRig();
+        r.Session.Enter();
+        for (var i = 0; i < 60; i++) r.Frame();
+        r.Session.ScriptedIntent = new CamIntent { Wheel = -1f };   // zoom out past FrameDistance
+        for (var i = 0; i < 300; i++) r.Frame();
+        r.Session.ScriptedIntent = null;
+        for (var i = 0; i < 60; i++) r.Frame();
+        var before = r.Session.Distance;
+        Assert.True(before > FreeCamSession.FrameDistance, $"setup: before ({before}) should be zoomed out");
+        r.Press(Stellar.Abstractions.Domain.StellarKeyCode.Backspace);   // BackToSelf while already the subject
+        for (var i = 0; i < 60; i++) r.Frame();
+        Assert.True(MathF.Abs(r.Session.Distance - before) < 0.1f, $"before {before} after {r.Session.Distance}");
     }
 
     [Fact]

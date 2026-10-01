@@ -16,7 +16,7 @@ public sealed partial class Plugin
     private void StartPosing()
     {
         _posingCtl = new PosingController(_services.Posing,
-            new PosingHost(() => _freeCam.Subject, id => _freeCam.SetSubject(id), OnPoseResult));
+            new PosingHost(() => _freeCam.Subject, id => _freeCam.SetSubject(id), OnPoseResult, () => _services.CombatSnapshot.LocalEntityId));
         _onPosingChanged = OnPosingChanged;
         _services.Posing.Changed += _onPosingChanged;
         RetireLookAtToggle();

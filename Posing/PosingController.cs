@@ -9,7 +9,10 @@ namespace Stellar.PhotoStudio.Posing;
 /// <param name="Subject">The free camera's orbit subject now.</param>
 /// <param name="SetSubject">Makes a person the orbit subject — selecting a person IS orbiting them (spec § 3).</param>
 /// <param name="Refused">A pose could not be played (Refused: the game showed its own message; Unavailable: ours).</param>
-internal sealed record PosingHost(Func<EntityId> Subject, Action<EntityId> SetSubject, Action<PoseResult> Refused);
+/// <param name="LocalEntityId">The local player's entity id — used only to tell whether the subject is you
+/// (<see cref="PosingController.SubjectIsSelf"/>), independent of whether a <see cref="PersonInfo"/> was ever
+/// resolved for them.</param>
+internal sealed record PosingHost(Func<EntityId> Subject, Action<EntityId> SetSubject, Action<PoseResult> Refused, Func<EntityId> LocalEntityId);
 
 /// <summary>
 /// The Person group's logic (spec 2026-10-02 §§ 3–4). One selection: the free camera's orbit subject. Per person, the
@@ -20,6 +23,9 @@ internal sealed record PosingHost(Func<EntityId> Subject, Action<EntityId> SetSu
 internal sealed class PosingController
 {
     public const float PeopleRadius = 40f;
+    /// <summary>Fallback search radius when the orbit subject (picked by the camera, which can reach ~60 m) is not
+    /// among the people <see cref="PeopleRadius"/> already found — queried once per subject, never every frame.</summary>
+    public const float SubjectSearchRadius = 100f;
     public const float AimStep = 0.25f;
     public const float MaxYaw = 180f;
 
@@ -28,6 +34,7 @@ internal sealed class PosingController
     private readonly Dictionary<long, PersonUiState> _states = new();
     private readonly Dictionary<long, IPoseTarget> _targets = new();
     private readonly Dictionary<long, PersonInfo> _known = new();
+    private readonly List<long> _releasedScratch = new();
 
     public PosingController(IPosing posing, PosingHost host)
     {
@@ -48,25 +55,34 @@ internal sealed class PosingController
     public bool Full => TargetState == PoseTargetState.Full;
     public bool ShowClothHint => State.Action is not null && !State.Playing;
     public IReadOnlyList<ExpressionInfo> Expressions => _posing.Expressions;
+    /// <summary>Whether the orbit subject is the local player — true even when no <see cref="PersonInfo"/> was ever
+    /// resolved for them (a person beyond even <see cref="SubjectSearchRadius"/>), so the UI never falls back to
+    /// "you" just because <see cref="Person"/> is null.</summary>
+    public bool SubjectIsSelf => !Subject.IsNone && Subject == _host.LocalEntityId();
 
     public string ExpressionName
     {
         get
         {
             var i = State.ExpressionIndex;
+            if (i < 0) return "";
             var list = Expressions;
-            return i >= 0 && i < list.Count ? list[i].Name : "";
+            return i < list.Count ? list[i].Name : "";
         }
     }
 
     /// <summary>Follows the orbit subject (called when the free camera's state changes — event-driven). A person not seen
-    /// yet costs one people read.</summary>
+    /// yet costs one people read at <see cref="PeopleRadius"/>; one picked beyond that (the camera can reach ~60 m) costs
+    /// one more at <see cref="SubjectSearchRadius"/>, so a far pick still resolves a name/kind instead of showing "you"
+    /// with no copy note.</summary>
     public void SyncSubject()
     {
         var s = _host.Subject();
         if (s == Subject) return;
         Subject = s;
-        if (!s.IsNone && !_known.ContainsKey(s.Value)) Remember(_posing.NearbyPeople(PeopleRadius));
+        if (s.IsNone || _known.ContainsKey(s.Value)) return;
+        Remember(_posing.NearbyPeople(PeopleRadius));
+        if (!_known.ContainsKey(s.Value)) Remember(_posing.NearbyPeople(SubjectSearchRadius));
     }
 
     public void Cycle(int direction)
@@ -173,10 +189,15 @@ internal sealed class PosingController
         t.Yaw = s.Yaw;
     }
 
+    /// <summary>Returns the subject to normal and forgets them — including from a <see cref="PoseTargetState.Failed"/> or
+    /// stuck <see cref="PoseTargetState.Loading"/> state, the only way out of either (the framework holds Failed until
+    /// <c>Reset()</c>). The next control re-selects fresh, so a Loading target's pending callback (already cancelled by
+    /// the framework's own generation check) never lands on a reused object.</summary>
     public void ResetPerson()
     {
         var key = Subject.Value;
         if (_targets.TryGetValue(key, out var t)) t.Reset();
+        _targets.Remove(key);
         _states.Remove(key);
     }
 
@@ -184,10 +205,10 @@ internal sealed class PosingController
     /// forgotten; the next control selects them again.</summary>
     public void OnPosingChanged()
     {
-        var gone = new List<long>();
+        _releasedScratch.Clear();
         foreach (var kv in _targets)
-            if (kv.Value.State == PoseTargetState.Released) gone.Add(kv.Key);
-        foreach (var key in gone)
+            if (kv.Value.State == PoseTargetState.Released) _releasedScratch.Add(kv.Key);
+        foreach (var key in _releasedScratch)
         {
             _targets.Remove(key);
             _states.Remove(key);

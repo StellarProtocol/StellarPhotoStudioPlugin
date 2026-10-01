@@ -122,7 +122,10 @@ internal sealed partial class FreeCamSession : IDisposable
 
     public void SetSubject(EntityId id)
     {
-        if (!Active || id.IsNone || !_p.Transforms.TryGetTransform(id, out var p, out _)) return;
+        // Re-picking the subject you're already orbiting (clicking them again, or Backspace while already on
+        // yourself) must be a no-op: without this, re-framing recomputed the orbit from the camera's CURRENT
+        // position and clamped it to FrameDistance, yanking a deliberately zoomed-out camera in to ≤4 m.
+        if (!Active || id.IsNone || id == Subject || !_p.Transforms.TryGetTransform(id, out var p, out _)) return;
         Subject = id;
         _subjectPos = CameraMath.ToVec(p);
         if (_freezeCentre is not null) _freezeCentre = _subjectPos;

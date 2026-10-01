@@ -51,6 +51,9 @@ internal sealed class FakePosing : IPosing
         new(new EntityId(1), "Revette", PersonKind.Self, 0f),
         new(new EntityId(2), "Celia", PersonKind.Player, 3f),
         new(new EntityId(3), "Mira", PersonKind.Npc, 6f),
+        // A camera-picked subject beyond the normal 40 m scan (the camera can reach ~60 m out): only the wider
+        // PosingController.SubjectSearchRadius fallback query finds them.
+        new(new EntityId(4), "Dax", PersonKind.Player, 60f),
     };
     public List<ExpressionInfo> Faces = new() { new(1003, "Angry", 303, 403), new(1015, "Startled", 315, 415) };
     public readonly Dictionary<long, FakePoseTarget> Targets = new();
@@ -60,7 +63,12 @@ internal sealed class FakePosing : IPosing
 
     public bool TryGetVisiblePosition(EntityId person, out Position3D position) => Visible.TryGetValue(person.Value, out position);
 
-    public IReadOnlyList<PersonInfo> NearbyPeople(float radius) { PeopleReads++; return People; }
+    /// <summary>Distance-filtered like the real game read, so a test can tell a 40 m scan from a wider fallback one.</summary>
+    public IReadOnlyList<PersonInfo> NearbyPeople(float radius)
+    {
+        PeopleReads++;
+        return People.FindAll(p => p.Distance <= radius);
+    }
     public IReadOnlyList<ExpressionInfo> Expressions => Faces;
 
     public IPoseTarget? Select(EntityId person)
@@ -85,11 +93,12 @@ internal sealed class PosingRig
     public readonly List<PoseResult> Refusals = new();
     public readonly PosingController Ctl;
     public EntityId Subject = new(1);
+    public EntityId LocalId = new(1);
     public static readonly EmoteInfo Dance = new(9020, "Dance I", "", false);
 
     public PosingRig()
     {
-        Ctl = new PosingController(Posing, new PosingHost(() => Subject, id => { Subject = id; Ctl!.SyncSubject(); }, Refusals.Add));
+        Ctl = new PosingController(Posing, new PosingHost(() => Subject, id => { Subject = id; Ctl!.SyncSubject(); }, Refusals.Add, () => LocalId));
         Ctl.SyncSubject();
     }
 

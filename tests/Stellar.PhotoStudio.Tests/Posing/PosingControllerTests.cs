@@ -252,4 +252,75 @@ public sealed class PosingControllerTests
         Assert.True(r.Ctl.Failed);
         Assert.False(r.Ctl.Loading);
     }
+
+    // P1 (review 2026-10-02, plugin 1.2.0): a Failed or stuck-Loading person had no way out — the framework holds
+    // Failed until Reset(). ResetPerson must recover both, forgetting the target so the next control starts fresh.
+    [Fact]
+    public void ResetPerson_recovers_a_failed_target_for_a_fresh_attempt()
+    {
+        var r = new PosingRig();
+        r.Ctl.Play(PosingRig.Dance);
+        r.Target(1).State = PoseTargetState.Failed;
+        Assert.True(r.Ctl.Failed);
+        var selectsBefore = r.Posing.Selects;
+        r.Ctl.ResetPerson();
+        Assert.False(r.Ctl.Failed);
+        Assert.Equal("reset", r.Target(1).Calls[^1]);
+        r.Ctl.Play(PosingRig.Dance);
+        Assert.True(r.Posing.Selects > selectsBefore);   // forgotten: the next control re-selects, not reuses
+        Assert.Equal(new[] { "play 9020", "reset", "play 9020" }, r.Target(1).Calls);
+    }
+
+    [Fact]
+    public void ResetPerson_recovers_a_stuck_loading_target_for_a_fresh_attempt()
+    {
+        var r = new PosingRig();
+        r.Ctl.Play(PosingRig.Dance);
+        r.Target(1).State = PoseTargetState.Loading;
+        Assert.True(r.Ctl.Loading);
+        var selectsBefore = r.Posing.Selects;
+        r.Ctl.ResetPerson();
+        Assert.False(r.Ctl.Loading);
+        Assert.Equal("reset", r.Target(1).Calls[^1]);
+        r.Ctl.Play(PosingRig.Dance);
+        Assert.True(r.Posing.Selects > selectsBefore);
+        Assert.Equal(new[] { "play 9020", "reset", "play 9020" }, r.Target(1).Calls);
+    }
+
+    // P2 (review 2026-10-02): the camera can pick someone beyond PeopleRadius (40 m; it reaches ~60 m) — a picked
+    // subject not in the known list must be looked up at the wider SubjectSearchRadius once, not left as "you".
+    [Fact]
+    public void A_subject_beyond_the_normal_radius_is_found_by_the_wider_search()
+    {
+        var r = new PosingRig();
+        r.Select(4);   // "Dax", 60 m out — beyond PeopleRadius but inside SubjectSearchRadius
+        Assert.NotNull(r.Ctl.Person);
+        Assert.Equal("Dax", r.Ctl.Person!.Name);
+        Assert.Equal(PersonKind.Player, r.Ctl.Person.Kind);
+        Assert.False(r.Ctl.SubjectIsSelf);
+    }
+
+    [Fact]
+    public void SubjectIsSelf_is_true_only_for_the_local_player_even_when_unresolved()
+    {
+        var r = new PosingRig();
+        Assert.True(r.Ctl.SubjectIsSelf);   // starts on the local player (id 1)
+        r.Select(999);                      // nobody known at any radius
+        Assert.Null(r.Ctl.Person);
+        Assert.False(r.Ctl.SubjectIsSelf);  // must not default to "you" just because Person is unresolved
+        r.Select(1);
+        Assert.True(r.Ctl.SubjectIsSelf);
+    }
+
+    [Fact]
+    public void The_wider_search_runs_once_per_subject_not_every_sync()
+    {
+        var r = new PosingRig();
+        var before = r.Posing.PeopleReads;
+        r.Select(4);
+        var afterFirstSync = r.Posing.PeopleReads;
+        Assert.Equal(before + 2, afterFirstSync);   // the 40 m scan, then the 100 m fallback
+        r.Ctl.SyncSubject();                        // same subject again: no further reads
+        Assert.Equal(afterFirstSync, r.Posing.PeopleReads);
+    }
 }
