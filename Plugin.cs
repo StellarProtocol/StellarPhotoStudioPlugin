@@ -51,6 +51,7 @@ public sealed partial class Plugin : IStellarPlugin
         _look.SetPinned(_settings.Pinned);
         _presets = new PresetStore(new DataStorePresetFiles(services.Data), m => services.Log.Warning(m));
         StartPresetSession();                    // Plugin.Studio.cs
+        StartRenderQuality();                    // Plugin.Panel.Quality.cs
         _editor.Changed += OnEditorChanged;
 
         _session = new StudioSession(services.ScreenCapture, BuildRequest, OnCaptureResult, services.Log.Warning);
@@ -86,6 +87,8 @@ public sealed partial class Plugin : IStellarPlugin
         _hideAllToken?.Dispose();
         _hideAllToken = null;
         FlushWorkingLook();
+        FlushHour();
+        _quality.Dispose();
         ReleaseLiveHides();
         RemoveWindows();
         _look.Dispose();
@@ -109,6 +112,7 @@ public sealed partial class Plugin : IStellarPlugin
 
     private void OnCaptureResult(CaptureResult r)
     {
+        _quality.SetCapturing(false);   // the capture-only shadow boost ends with the capture
         if (!r.Success)
         {
             _services.Notifications.Notify(_loc.TFormat("toast.failed", r.Error ?? ""), NotificationKind.Error);

@@ -29,7 +29,36 @@ internal sealed class StudioSettings
         Tab = Math.Clamp(cfg.Get("ui.tab", 0), 0, 2);
         OpenGroups = (LookGroups)cfg.Get("ui.openGroups", (int)LookGroups.Color);
         DockedAuto = cfg.Get("docked.auto", true);
+        Supersample = Mode(cfg.Get("quality.supersample", 0));
+        Shadows = Mode(cfg.Get("quality.shadows", 0));
+        BoostForCapture = cfg.Get("quality.boostCapture", true);
+        TimeMode = Mode(cfg.Get("time.mode", 0));
+        TimeHour = Math.Clamp(cfg.Get("time.hour", 12f), 0f, 24f);
+        QualityOpen = cfg.Get("ui.qualityOpen", true);
     }
+
+    public QualityMode Supersample { get; private set; }
+    public QualityMode Shadows { get; private set; }
+    public bool BoostForCapture { get; private set; }
+    public QualityMode TimeMode { get; private set; }
+    public float TimeHour { get; private set; }
+    public bool QualityOpen { get; private set; }
+
+    public void SetSupersample(QualityMode m) { Supersample = m; Store("quality.supersample", (int)m); }
+    public void SetShadows(QualityMode m) { Shadows = m; Store("quality.shadows", (int)m); }
+    public void SetBoostForCapture(bool on) { BoostForCapture = on; Store("quality.boostCapture", on); }
+    public void SetTimeMode(QualityMode m) { TimeMode = m; Store("time.mode", (int)m); }
+    public void SetQualityOpen(bool open) { QualityOpen = open; Store("ui.qualityOpen", open); }
+
+    /// <summary>The hour slider fires every frame while dragged: <paramref name="save"/> false keeps it in memory
+    /// only, and the owner saves once the drag settles (a config save is a main-thread file write).</summary>
+    public void SetTimeHour(float h, bool save)
+    {
+        TimeHour = Math.Clamp(h, 0f, 24f);
+        if (save) Store("time.hour", TimeHour);
+    }
+
+    private static QualityMode Mode(int v) => v is >= 0 and <= 2 ? (QualityMode)v : QualityMode.Off;
 
     public int Scale { get; private set; }
     public CaptureFormat Format { get; private set; }

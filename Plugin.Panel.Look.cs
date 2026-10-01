@@ -37,6 +37,8 @@ public sealed partial class Plugin
             new ButtonElement(() => T("ps.look.resetAll"), OnClick: ResetAllToPreset, Width: 88f),
         }, Gap: 6f),
         new SeparatorElement(),
+        QualityGroup(),             // Plugin.Panel.Quality.cs
+        new SeparatorElement(),
         DofGroup(),
         ColorGroup(),
         WhiteBalanceGroup(),

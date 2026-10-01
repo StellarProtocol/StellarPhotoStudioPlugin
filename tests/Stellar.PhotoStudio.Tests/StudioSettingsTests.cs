@@ -65,4 +65,41 @@ public sealed class StudioSettingsTests
         Assert.Equal(LookGroups.Dof, again.OpenGroups);
         Assert.True(cfg.Saves >= 6);
     }
+
+    [Fact]
+    public void Render_quality_choices_round_trip_and_default_off_with_capture_boost_on()
+    {
+        var cfg = new MemSection();
+        var s = new StudioSettings(cfg);
+        Assert.Equal(QualityMode.Off, s.Supersample);
+        Assert.True(s.BoostForCapture);
+        Assert.Equal(12f, s.TimeHour);
+        s.SetSupersample(QualityMode.WhileComposing); s.SetShadows(QualityMode.Always); s.SetTimeMode(QualityMode.Always);
+        s.SetTimeHour(18.5f, save: true); s.SetBoostForCapture(false);
+        var again = new StudioSettings(cfg);
+        Assert.Equal(QualityMode.WhileComposing, again.Supersample);
+        Assert.Equal(QualityMode.Always, again.Shadows);
+        Assert.Equal(QualityMode.Always, again.TimeMode);
+        Assert.Equal(18.5f, again.TimeHour);
+        Assert.False(again.BoostForCapture);
+    }
+
+    [Fact]
+    public void An_unsaved_hour_change_does_not_hit_the_config()
+    {
+        var cfg = new MemSection();
+        var s = new StudioSettings(cfg);
+        var saves = cfg.Saves;
+        s.SetTimeHour(7f, save: false);
+        Assert.Equal(saves, cfg.Saves);
+        Assert.Equal(7f, s.TimeHour);
+    }
+
+    [Fact]
+    public void Invalid_mode_values_fall_back_to_off()
+    {
+        var cfg = new MemSection();
+        cfg.Values["quality.supersample"] = 9;
+        Assert.Equal(QualityMode.Off, new StudioSettings(cfg).Supersample);
+    }
 }

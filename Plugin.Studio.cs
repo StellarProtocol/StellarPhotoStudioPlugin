@@ -62,6 +62,7 @@ public sealed partial class Plugin
         if (_panelShown == show) return;
         _panelShown = show;
         _panelWin.SetVisible(show);
+        _quality.SetComposing(_panelShown || _dockedShown);
         if (show) RescanLuts();
         if (show && _dockedShown) ShowDocked(false);    // never both sets of controls at once
         if (!show && _tipWindow.IsShown) { _tipKey = ""; _tipWindow.SetVisible(false); }
@@ -76,7 +77,8 @@ public sealed partial class Plugin
         if (_dockedShown == show) return;
         _dockedShown = show;
         _dockedWin.SetVisible(show);
-        _look.SetGamePhotoActive(show);   // preview the look in the game's photo mode only with our controls on screen
+        _look.SetGamePhotoActive(show);
+        _quality.SetComposing(_panelShown || _dockedShown);   // preview the look in the game's photo mode only with our controls on screen
         if (show && _toastWin.IsShown) _toastWin.SetVisible(false);   // the strip shows the saved line itself
         ApplyLiveHides();
     }
@@ -203,12 +205,26 @@ public sealed partial class Plugin
 
     // ── capture ──────────────────────────────────────────────────────────────────────────────────────────────
 
+    // A capture-only shadow boost reallocates the shadow map; give it a couple of frames before the grab.
+    private const int BoostSettleTicks = 2;
+    private int _captureInTicks = -1;
+
     private void CaptureNow()
     {
-        if (Capturing) return;
+        if (Capturing || _captureInTicks >= 0) return;
         _flash = 0.6f;
         _flashWin.SetRect(new WindowRect(0f, 0f, _services.Framework.ScreenWidth, _services.Framework.ScreenHeight));
         _flashWin.SetVisible(true);
+        _quality.SetCapturing(true);
+        if (_quality.BoostingForCapture) { _captureInTicks = BoostSettleTicks; return; }
+        _ = _session.CaptureAsync();
+    }
+
+    private void TickPendingCapture()
+    {
+        if (_captureInTicks < 0) return;
+        if (_captureInTicks-- > 0) return;
+        _captureInTicks = -1;
         _ = _session.CaptureAsync();
     }
 
@@ -254,6 +270,8 @@ public sealed partial class Plugin
             _workingSaveIn -= dt;
             if (_workingSaveIn <= 0f) { _workingSaveIn = 0f; FlushWorkingLook(); }
         }
+        TickHourSave(dt);
+        TickPendingCapture();
         TipRepositionTick();
     }
 
