@@ -170,6 +170,33 @@ public sealed class FreeCamSessionTests
         Assert.Equal(r.Snapshot.LocalEntityId, r.Session.Subject);
     }
 
+    // Owner-run smoke 2026-10-02: selecting a far NPC kept the camera 20 m away (pivot only), so the posed person was tiny.
+    [Fact]
+    public void Selecting_a_far_person_frames_them_at_most_FrameDistance_away()
+    {
+        var r = new SessionRig();
+        r.Transforms.Positions[7] = new Position3D(20, 0, 20);
+        r.Session.Enter();
+        r.Session.SetSubject(new EntityId(7));
+        for (var i = 0; i < 600; i++) r.Frame();   // let the smoothing settle
+        // Distance is to the subject's feet; the orbit distance is to the pivot ~1.4 m above them.
+        Assert.True(r.Session.Distance <= FreeCamSession.FrameDistance + 1.5f, $"distance {r.Session.Distance}");
+    }
+
+    [Fact]
+    public void Selecting_a_close_person_keeps_the_current_distance()
+    {
+        var r = new SessionRig();
+        r.Session.Enter();
+        for (var i = 0; i < 60; i++) r.Frame();
+        var before = r.Session.Distance;
+        r.Transforms.Positions[7] = new Position3D(0.5f, 0, 0.5f);
+        r.Session.SetSubject(new EntityId(7));
+        for (var i = 0; i < 600; i++) r.Frame();
+        // A camera already closer than FrameDistance is not pushed out to it.
+        Assert.True(r.Session.Distance <= MathF.Max(before, FreeCamSession.FrameDistance) + 1.5f, $"before {before} after {r.Session.Distance}");
+    }
+
     [Fact]
     public void A_picked_character_who_leaves_hands_the_subject_back_to_you()
     {

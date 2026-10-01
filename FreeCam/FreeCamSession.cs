@@ -45,6 +45,9 @@ internal sealed partial class FreeCamSession : IDisposable
     public FreeCamMode Mode { get; private set; }
     public bool Frozen => _freeze is not null;
     public EntityId Subject { get; private set; }
+    /// <summary>The farthest the orbit camera sits from a newly selected subject (closer cameras keep their distance).</summary>
+    internal const float FrameDistance = 4f;
+
     public float Distance { get; private set; }
     public float Fov { get; private set; }
     public float Roll { get; private set; }
@@ -123,7 +126,13 @@ internal sealed partial class FreeCamSession : IDisposable
         Subject = id;
         _subjectPos = CameraMath.ToVec(p);
         if (_freezeCentre is not null) _freezeCentre = _subjectPos;
-        if (Mode == FreeCamMode.Orbit) _orbit = OrbitRig.FromPose(_shownPos, _subjectPos);
+        if (Mode == FreeCamMode.Orbit)
+        {
+            // Frame the new subject: keep the viewing angle but come no further than FrameDistance (a far pick stayed tiny —
+            // owner-run smoke 2026-10-02). A closer camera keeps its own distance.
+            var o = OrbitRig.FromPose(_shownPos, _subjectPos);
+            _orbit = o with { Distance = MathF.Min(o.Distance, FrameDistance) };
+        }
         StateChanged?.Invoke();
     }
 
