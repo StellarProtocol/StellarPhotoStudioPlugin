@@ -9,18 +9,16 @@
     <NoWarn>CS8632;CS8765</NoWarn>
     <RootNamespace>Stellar.PhotoStudio</RootNamespace>
     <AssemblyName>Stellar.PhotoStudio</AssemblyName>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <Deterministic>true</Deterministic>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
   <ItemGroup>
-    <!-- Photo Studio: hide layers, supersampled capture, and looks built from the game's own render
-         pipeline volumes (IScreenCapture, ISceneVisibility, IRenderLook, IPhotoModeState; framework 2.13.0).
-         Built against the LOCAL dev pack 2.13.0-photostudio-dev (same convention as LoadoutSwitcher's
-         2.10.0-loadoutcopy-dev, commit b3fb738: pack Stellar.Abstractions with -p:Version=<tag>-dev into
-         <devkit>/.localfeed, then restore/build passing that folder plus nuget.org as sources; nuget.config
-         itself is never changed) until framework 2.13.0 is released, then flip this to 2.13.0. -->
-    <PackageReference Include="Stellar.Abstractions"       Version="2.13.0-photostudio-dev" />
+    <!-- Photo Studio 1.1.0 adds the free camera (ICameraOverride, IInputShield, ISceneFreeze, IEmotes, ICombatState,
+         IEntityPicker; framework 2.14.0). Built against the LOCAL dev pack 2.14.0-freecam-dev (pack Stellar.Abstractions
+         with -p:Version=2.14.0-freecam-dev into <devkit>/.localfeed, restore with that folder plus nuget.org as sources;
+         nuget.config is never changed) until framework 2.14.0 is released, then flip this to 2.14.0. -->
+    <PackageReference Include="Stellar.Abstractions"       Version="2.14.0-freecam-dev" />
     <PackageReference Include="Stellar.PluginContracts"    Version="2.0.0" />
     <PackageReference Include="Stellar.Plugin.InteropRefs" Version="2.0.0" />
   </ItemGroup>
