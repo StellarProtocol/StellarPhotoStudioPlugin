@@ -47,6 +47,7 @@ public sealed partial class Plugin : IStellarPlugin
         services.Log.Info($"[PhotoStudio] game root resolved: {root.Path} (verified={root.Verified})");
 
         _settings = new StudioSettings(services.Config.GetSection("photostudio"));
+        StartFreeCamera();                       // Plugin.FreeCam.cs
         _look = new LookController(services.RenderLook);
         _look.SetPinned(_settings.Pinned);
         _presets = new PresetStore(new DataStorePresetFiles(services.Data), m => services.Log.Warning(m));
@@ -59,6 +60,7 @@ public sealed partial class Plugin : IStellarPlugin
         _view = new WindowStudioView(this);
         _panel = new PanelOpenState(_view, _look);
 
+        RunHideAllMigration();                   // Plugin.Hotkeys.cs — spec D7, once per install, before any declare
         DeclareHotkeys();
         RegisterLauncherTile();                  // Plugin.Launcher.cs
 
@@ -73,12 +75,14 @@ public sealed partial class Plugin : IStellarPlugin
         services.Framework.Update += _onFrameworkUpdate;
         _onLanguageChanged = () => { _lutOptionsCache = null; _importOptionsCache = null; };
         _loc.LanguageChanged += _onLanguageChanged;
+        ArmSelfTest();                           // Plugin.SelfTest.cs — inert unless the env var is set
     }
 
     public string Name => "Photo Studio";
 
     public void Dispose()
     {
+        StopFreeCamera();   // camera, shield, freeze, look-at and hides go first (spec § 7)
         _services.Framework.Update -= _onFrameworkUpdate;
         _loc.LanguageChanged -= _onLanguageChanged;
         _services.PhotoMode.CutsceneChanged -= _onCutsceneChanged;
@@ -100,6 +104,9 @@ public sealed partial class Plugin : IStellarPlugin
     {
         _look.Tick();
         TickStudio(dt);                          // Plugin.Studio.cs — toast timer, flash fade, tip reposition
+        TickFreeCamUi(dt);
+        TickSelfTest(dt);
+        TickHideAllNotice();
     }
 
     private CaptureRequest BuildRequest()
@@ -114,6 +121,7 @@ public sealed partial class Plugin : IStellarPlugin
 
     private void OnCaptureResult(CaptureResult r)
     {
+        SelfTestCaptured(r);
         _quality.SetCapturing(false);   // the capture-only shadow boost ends with the capture
         if (!r.Success)
         {

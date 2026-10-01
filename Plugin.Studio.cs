@@ -47,11 +47,12 @@ public sealed partial class Plugin
         _toastWin = RegisterToastWindow();      // Plugin.Toast.cs
         _tipWindow = RegisterTipWindow();       // Plugin.Help.cs
         _flashWin = RegisterFlashWindow();      // Plugin.Toast.cs
+        _freeCamHudWin = RegisterFreeCamHud();   // Plugin.FreeCamHud.cs
     }
 
     private void RemoveWindows()
     {
-        foreach (var w in new[] { _panelWin, _dockedWin, _toastWin, _tipWindow, _flashWin })
+        foreach (var w in new[] { _panelWin, _dockedWin, _toastWin, _tipWindow, _flashWin, _freeCamHudWin })
             w?.Remove();
     }
 

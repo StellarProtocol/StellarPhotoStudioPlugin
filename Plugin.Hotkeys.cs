@@ -9,18 +9,41 @@ public sealed partial class Plugin
 {
     private readonly List<IHotkeyAction> _hotkeys = new();
 
-    // photostudio.capture = F10, photostudio.panel = Shift+F10, photostudio.hideall = Alt+F10 — three F10 chords
-    // that never collide because the framework matches on the FULL (key, modifiers) pair. nextpreset ships unbound
-    // (no default chord free on F10-4); the player can bind it in Settings.
+    // Defaults live in StudioHotkeys (tested). nextpreset ships unbound; the player can bind it in Settings.
     private void DeclareHotkeys()
     {
-        Declare("photostudio.capture", "hotkey.capture", new KeyBinding(StellarKeyCode.F10), CaptureNow);
-        Declare("photostudio.panel", "hotkey.panel", new KeyBinding(StellarKeyCode.F10, ModifierKeys.Shift), TogglePanel);
-        Declare("photostudio.hideall", "hotkey.hideall", new KeyBinding(StellarKeyCode.F10, ModifierKeys.Alt), ToggleHideAll);
-        Declare("photostudio.nextpreset", "hotkey.nextpreset", null, NextPreset);
+        foreach (var (id, locKey, key) in StudioHotkeys.Defaults) Declare(id, locKey, key, CallbackFor(id));
     }
+
+    private Action CallbackFor(string id) => id switch
+    {
+        StudioHotkeys.Capture => CaptureNow,
+        StudioHotkeys.Panel => TogglePanel,
+        StudioHotkeys.FreeCam => ToggleFreeCamera,
+        StudioHotkeys.HideAll => ToggleHideAll,
+        _ => NextPreset,
+    };
 
     private void Declare(string id, string locKey, KeyBinding? key, Action cb) =>
         _hotkeys.Add(_services.Hotkeys.DeclareAction(
             new HotkeyAction(Id: id, Description: _loc.T(locKey), SuggestedDefault: key), cb));
+
+    private bool _hideAllNoticeDone;
+
+    // Spec D7: once per install, before DeclareHotkeys, so the hide-all declare already sees the migrated binding.
+    private void RunHideAllMigration() =>
+        HideAllMigration.Run(_services.Hotkeys, _services.Config.GetSection("photostudio"));
+
+    // The one-time toast, on the first frame in the world after the update (a toast before the world is never seen).
+    private void TickHideAllNotice()
+    {
+        if (_hideAllNoticeDone || !InWorld()) return;
+        _hideAllNoticeDone = true;
+        var cfg = _services.Config.GetSection("photostudio");
+        var notice = HideAllMigration.Pending(cfg);
+        if (notice == HideAllNotice.None) return;
+        _services.Notifications.Notify(
+            T(notice == HideAllNotice.Moved ? "fc.toast.hideallMoved" : "fc.toast.hideallCleared"), NotificationKind.Info);
+        HideAllMigration.MarkShown(cfg);
+    }
 }
