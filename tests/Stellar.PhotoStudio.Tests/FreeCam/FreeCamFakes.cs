@@ -68,6 +68,8 @@ internal sealed class FakeShieldHandle : IInputShieldHandle
     public (float X, float Y) MouseDelta => Delta;
     public float Wheel => WheelValue;
     public (float X, float Y) Pointer => PointerAt;
+    public bool Focused;
+    public bool TextFieldFocused => Focused && Disposed == 0;
     public void Dispose() => Disposed++;
 }
 
@@ -167,7 +169,13 @@ internal sealed class SessionRig
     public readonly FakePicker Picker = new();
     public readonly MemConfigSection Config = new();
     public readonly List<(FreeCamNotice Notice, CameraReleaseReason Reason)> Notices = new();
+    public readonly List<string> Warnings = new();
+    /// <summary>Whether the pointer is over one of Photo Studio's own windows (every hit test asks this).</summary>
     public bool OverUi;
+    public int HitTests;
+    /// <summary>Simulates the "?" popover: open until the session dismisses it.</summary>
+    public bool ModalOpen;
+    public int Dismissed;
     public FreeCamSettings Settings;
     public FreeCamSession Session;
 
@@ -178,7 +186,15 @@ internal sealed class SessionRig
         Settings = new FreeCamSettings(Config);
         Session = new FreeCamSession(
             new FreeCamPorts(Camera, Shield, Freeze, Combat, Visibility, Transforms, Snapshot, Picker),
-            Settings, (n, r) => Notices.Add((n, r)), (_, _) => OverUi);
+            Settings, new FreeCamHost((n, r) => Notices.Add((n, r)), (_, _) => { HitTests++; return OverUi; }, Dismiss, Warnings.Add));
+    }
+
+    private bool Dismiss()
+    {
+        if (!ModalOpen) return false;
+        ModalOpen = false;
+        Dismissed++;
+        return true;
     }
 
     public void Frame(float dt = 0.016f) => Camera.Control.RaiseFrame(dt);

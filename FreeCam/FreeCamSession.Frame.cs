@@ -1,6 +1,7 @@
 using System;
 using System.Numerics;
 using Stellar.Abstractions.Domain;
+using Stellar.Abstractions.Services;
 
 namespace Stellar.PhotoStudio.FreeCam;
 
@@ -13,6 +14,7 @@ internal sealed partial class FreeCamSession
     private float _shownYaw, _shownPitch;
     private Vector3 _subjectPos;
     private Vector3? _freezeCentre;
+    private bool _rmbDown, _lookFromOwnWindow;
 
     private Vector3 LeashCentre => _freezeCentre ?? _subjectPos;
 
@@ -21,14 +23,34 @@ internal sealed partial class FreeCamSession
         if (_shield is null) return;
         try
         {
-            var (intent, edges) = ScriptedIntent is { } scripted ? (scripted, default(FreeCamEdges)) : _input.Read(_shield);
+            var (intent, edges) = ScriptedIntent is { } scripted ? (scripted, default(FreeCamEdges)) : ReadInput(_shield);
             HandleEdges(edges);
             if (_control is not null) Step(dt, intent);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            Release(CameraReleaseReason.Error, frameworkEnded: false);   // spec § 7: any exception → release + toast
+            // spec § 7: any exception → release + toast; the toast says "Details are in the log", so log it here.
+            _host.Warn("[PhotoStudio] free camera turned off after an error: " + ex);
+            Release(CameraReleaseReason.Error, frameworkEnded: false);
         }
+    }
+
+    private (CamIntent, FreeCamEdges) ReadInput(IInputShieldHandle h)
+    {
+        var (intent, edges) = _input.Read(h);
+        return (GateOwnWindows(intent, h.Pointer), edges);
+    }
+
+    /// <summary>A wheel turn over Photo Studio's own windows, or a right-button drag that STARTED over them, belongs to
+    /// the window, not the camera. The hit test runs only on a wheel turn or a right-button press, never every frame.</summary>
+    private CamIntent GateOwnWindows(CamIntent intent, (float X, float Y) pointer)
+    {
+        if (intent.Looking && !_rmbDown) _lookFromOwnWindow = _host.PointerOverOwnWindow(pointer.X, pointer.Y);
+        _rmbDown = intent.Looking;
+        if (!intent.Looking) _lookFromOwnWindow = false;
+        if (_lookFromOwnWindow) intent = intent with { Looking = false, LookX = 0f, LookY = 0f };
+        if (intent.Wheel != 0f && _host.PointerOverOwnWindow(pointer.X, pointer.Y)) intent = intent with { Wheel = 0f };
+        return intent;
     }
 
     internal void Step(float dt, in CamIntent intent)
@@ -65,7 +87,9 @@ internal sealed partial class FreeCamSession
     {
         if (e.Exit)
         {
-            Exit();   // spec D8: Esc leaves the free camera; the keyboard gate keeps it from opening the game menu
+            // An open "?" popover takes the Esc first; otherwise spec D8: Esc leaves the free camera (the keyboard gate
+            // keeps it from opening the game menu).
+            if (!_host.DismissModalUi()) Exit();
             return;
         }
         if (e.ToggleMode) ToggleMode();
@@ -73,7 +97,7 @@ internal sealed partial class FreeCamSession
         if (e.Reset) ResetPose();
         if (e.ToggleHint) _settings.SetHintHidden(!_settings.HintHidden);
         if (e.BackToSelf) SetSubject(_p.Snapshot.LocalEntityId);
-        if (e.Click is not { } at || Mode != FreeCamMode.Orbit || _pointerOverUi(at.X, at.Y)) return;
+        if (e.Click is not { } at || Mode != FreeCamMode.Orbit || _host.PointerOverOwnWindow(at.X, at.Y)) return;
         if (_p.Picker.TryPickEntity(at.X, at.Y, out var picked)) SetSubject(picked);
     }
 

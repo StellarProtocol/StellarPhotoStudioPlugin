@@ -14,12 +14,9 @@ namespace Stellar.PhotoStudio.FreeCam;
 /// </summary>
 internal sealed partial class FreeCamSession : IDisposable
 {
-    private const VisibilityLayers EntryHideLayers = VisibilityLayers.GameHud | VisibilityLayers.Nameplates;
-
     private readonly FreeCamPorts _p;
     private readonly FreeCamSettings _settings;
-    private readonly Action<FreeCamNotice, CameraReleaseReason> _notify;
-    private readonly Func<float, float, bool> _pointerOverUi;
+    private readonly FreeCamHost _host;
     private readonly FreeCamInput _input = new();
     private readonly Action<float> _onFrame;
     private readonly Action<CameraReleaseReason> _onReleased;
@@ -30,13 +27,11 @@ internal sealed partial class FreeCamSession : IDisposable
     private IDisposable? _freeze, _look, _hide;
     private CameraPose _entry;
 
-    public FreeCamSession(FreeCamPorts ports, FreeCamSettings settings, Action<FreeCamNotice, CameraReleaseReason> notify,
-        Func<float, float, bool> pointerOverUi)
+    public FreeCamSession(FreeCamPorts ports, FreeCamSettings settings, FreeCamHost host)
     {
         _p = ports;
         _settings = settings;
-        _notify = notify;
-        _pointerOverUi = pointerOverUi;
+        _host = host;
         _onFrame = OnFrame;
         _onReleased = OnReleased;
         _onFreezeChanged = OnFreezeChanged;
@@ -62,18 +57,20 @@ internal sealed partial class FreeCamSession : IDisposable
         if (Active) return true;
         if (!_p.Camera.TryAcquire(out var control))
         {
-            _notify(_p.Camera.IsOverridden ? FreeCamNotice.Busy : FreeCamNotice.Unavailable, CameraReleaseReason.Disposed);
+            _host.Notify(_p.Camera.IsOverridden ? FreeCamNotice.Busy : FreeCamNotice.Unavailable, CameraReleaseReason.Disposed);
             return false;
         }
         _control = control;
         _shield = _p.Shield.Shield();
         _input.Prime(_shield);
+        _rmbDown = false;
+        _lookFromOwnWindow = false;
         _entry = control.GamePose;
         Subject = _p.Snapshot.LocalEntityId;
         _subjectPos = SubjectPosition(CameraMath.ToVec(_entry.Position));
         PlaceAtEntry();
         Mode = FreeCamMode.Orbit;
-        if (_settings.EntryHides) _hide = _p.Visibility.Hide(EntryHideLayers);
+        if (_settings.EntryHides != VisibilityLayers.None) _hide = _p.Visibility.Hide(_settings.EntryHides);
         if (_settings.LookAt) _look = _p.Camera.LookAtCamera();
         control.Frame += _onFrame;
         _p.Camera.Released += _onReleased;
@@ -199,16 +196,15 @@ internal sealed partial class FreeCamSession : IDisposable
         ScriptedIntent = null;
         StateChanged?.Invoke();
         if (reason is CameraReleaseReason.Disposed or CameraReleaseReason.PluginUnloaded) return;
-        _notify(reason == CameraReleaseReason.Error ? FreeCamNotice.Error : FreeCamNotice.Released, reason);
+        _host.Notify(reason == CameraReleaseReason.Error ? FreeCamNotice.Error : FreeCamNotice.Released, reason);
     }
 
-    /// <summary>Runs one release step and swallows any exception so the remaining steps still run. There is no
-    /// logging sink reachable from here and no <see cref="FreeCamNotice"/> case for "a release step failed" — the
-    /// existing toast path already reports the release itself (Released/Error) right after every step has had its
-    /// turn, which is the only outward report this method can give.</summary>
-    private static void ReleaseStep(Action step)
+    /// <summary>Runs one release step; an exception is logged and swallowed so the remaining steps still run (isolated
+    /// — see Release's doc comment, spec § 7). There is no <see cref="FreeCamNotice"/> case for "a release step failed":
+    /// the toast path already reports the release itself (Released/Error) once every step has had its turn.</summary>
+    private void ReleaseStep(Action step)
     {
         try { step(); }
-        catch (Exception) { /* isolated — see Release's doc comment (spec § 7) */ }
+        catch (Exception ex) { _host.Warn("[PhotoStudio] free camera: a release step failed: " + ex); }
     }
 }

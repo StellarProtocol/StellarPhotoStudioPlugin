@@ -28,7 +28,8 @@ public sealed class FreeCamSessionTests
     public void Entry_hides_are_optional()
     {
         var r = new SessionRig();
-        r.Settings.SetEntryHides(false);
+        r.Settings.SetEntryHide(VisibilityLayers.GameHud, false);
+        r.Settings.SetEntryHide(VisibilityLayers.Nameplates, false);
         r.Session.Enter();
         Assert.Empty(r.Visibility.Hides);
     }
@@ -86,6 +87,18 @@ public sealed class FreeCamSessionTests
         Assert.Equal(1, r.Camera.Control.Disposed);
         Assert.Equal(1, r.Shield.Handle.Disposed);
         Assert.Equal(FreeCamNotice.Error, r.Notices[0].Notice);
+    }
+
+    [Fact]
+    public void A_frame_exception_reaches_the_log_because_the_toast_points_there()   // review P4
+    {
+        var r = new SessionRig();
+        r.Session.Enter();
+        r.Transforms.Throw = true;
+        r.Frame();
+        Assert.Single(r.Warnings);
+        Assert.Contains("game read failed", r.Warnings[0]);
+        Assert.Contains(nameof(InvalidOperationException), r.Warnings[0]);
     }
 
     [Fact]

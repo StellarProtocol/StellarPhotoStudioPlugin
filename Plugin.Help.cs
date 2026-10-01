@@ -41,6 +41,15 @@ public sealed partial class Plugin
         _tipRepositionTicks = 4;   // the first mount applies DefaultRect after SetRect — re-assert for a few frames
     }
 
+    /// <summary>Closes the open "?" popover; true when one was open (Esc in the free camera closes it first).</summary>
+    private bool DismissHelpTip()
+    {
+        if (_tipWindow is not { IsShown: true }) return false;
+        _tipKey = "";
+        _tipWindow.SetVisible(false);
+        return true;
+    }
+
     private void TipRepositionTick()
     {
         if (_tipRepositionTicks <= 0) return;

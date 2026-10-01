@@ -7,7 +7,7 @@ using Stellar.PhotoStudio.FreeCam;
 namespace Stellar.PhotoStudio;
 
 // Camera tab (spec § 5, mockup 2026-10-01-free-camera-mockup.html): Free camera button + status line; Movement group
-// (speed, sensitivity, smoothing, leash, invert Y, entry hides); Pose group (search, ★ favourites, list, look at camera).
+// (speed, sensitivity, smoothing, leash, invert Y, entry hide layers); Pose group (search, ★ favourites, list, look at camera).
 public sealed partial class Plugin
 {
     private const int EmotePoolSize = 10;
@@ -60,9 +60,15 @@ public sealed partial class Plugin
                 FreeCamSettings.MinLeash, FreeCamSettings.MaxLeash, () => _loc.TFormat("fc.unit.metres", F(_fcSettings.Leash, "0")), FreeCamSettings.DefaultLeash)),
             HelpToggle("fc.invertY", () => _fcSettings.InvertY, on => _fcSettings.SetInvertY(on),
                 new HelpText(() => T("fc.invertY"), () => T("fc.help.invertY"))),
-            HelpToggle("fc.entryHides", () => _fcSettings.EntryHides, on => _fcSettings.SetEntryHides(on),
-                new HelpText(() => T("fc.entryHides"), () => T("fc.entryHides"))),
+            EntryHideToggle("fc.entryHide.hud", VisibilityLayers.GameHud),
+            EntryHideToggle("fc.entryHide.names", VisibilityLayers.Nameplates),
+            EntryHideToggle("fc.entryHide.others", VisibilityLayers.OtherPlayers),
         });
+
+    /// <summary>One entry-hide layer (spec §§ 3/5: which hide layers entry applies), the HelpToggle recipe.</summary>
+    private HudElement EntryHideToggle(string key, VisibilityLayers layer) => HelpToggle(key,
+        () => _fcSettings.EntryHidesLayer(layer), on => _fcSettings.SetEntryHide(layer, on),
+        new HelpText(() => T(key), () => T("fc.help.entryHides")));
 
     private HudElement PoseGroup() => FoldGroup("fc.group.pose", "fc.help.pose",
         () => _fcSettings.PoseOpen, open => _fcSettings.SetPoseOpen(open), new HudElement[]

@@ -19,7 +19,8 @@ public sealed partial class Plugin
         _fcSettings = new FreeCamSettings(_services.Config.GetSection("photostudio"));
         var ports = new FreeCamPorts(_services.CameraOverride, _services.InputShield, _services.SceneFreeze, _services.CombatState,
             _services.SceneVisibility, _services.EntityTransforms, _services.CombatSnapshot, _services.EntityPicker);
-        _freeCam = new FreeCamSession(ports, _fcSettings, OnFreeCamNotice, PointerOverOwnWindow);
+        var host = new FreeCamHost(OnFreeCamNotice, PointerOverOwnWindow, DismissHelpTip, msg => _services.Log.Warning(msg));
+        _freeCam = new FreeCamSession(ports, _fcSettings, host);
         _freeCam.StateChanged += OnFreeCamStateChanged;
         _onFreeCamCombatEvent = OnFreeCamCombatEvent;
         _services.CombatEvents.CombatEventOccurred += _onFreeCamCombatEvent;
@@ -49,10 +50,12 @@ public sealed partial class Plugin
         _panelWin.MarkDirty();
     }
 
-    // The event may arrive off the main thread: compare ids only after posting to the main thread.
+    // The event may arrive off the main thread: compare ids only after posting to the main thread. Death only matters
+    // while frozen (spec § 7: the freeze ends), so any other Dead event — every mob in a fight — posts nothing. Reading
+    // Frozen off the main thread is a benign race: the posted callback re-checks through OnLocalDeath.
     private void OnFreeCamCombatEvent(CombatEvent ev)
     {
-        if (ev is not CombatEvent.EntityStateChanged { State: ActorState.Dead } dead) return;
+        if (ev is not CombatEvent.EntityStateChanged { State: ActorState.Dead } dead || !_freeCam.Frozen) return;
         var target = dead.TargetId;
         _services.Framework.Post(() => { if (target == _services.CombatSnapshot.LocalEntityId) _freeCam.OnLocalDeath(); });
     }

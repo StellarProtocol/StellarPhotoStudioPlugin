@@ -11,7 +11,9 @@ internal readonly record struct FreeCamEdges(
 
 /// <summary>Maps the shield handle's raw input to a <see cref="CamIntent"/> plus press edges (spec § 3 key map:
 /// WASD/QE move, RMB look, wheel zoom, Shift+wheel FOV, Z/C roll, Shift fast, Ctrl slow, Tab mode, Space freeze,
-/// R reset, H hint, Backspace back to you, left click pick, Esc exit — spec D8).</summary>
+/// R reset, H hint, Backspace back to you, left click pick, Esc exit — spec D8). While a Stellar text field has focus
+/// (<see cref="IInputShieldHandle.TextFieldFocused"/>) the keys and the wheel belong to that field: movement, roll,
+/// wheel and every key edge (Esc included) read as nothing; mouse-look and the left-click pick carry on.</summary>
 internal sealed class FreeCamInput
 {
     private static readonly StellarKeyCode[] EdgeKeys =
@@ -37,10 +39,13 @@ internal sealed class FreeCamInput
             Ctrl = (mods & ModifierKeys.Ctrl) != 0,
         };
         var alt = (mods & ModifierKeys.Alt) != 0;
+        // Every Edge() runs even while typing, so a key still held when the field loses focus never fires late.
         var tab = Edge(h, StellarKeyCode.Tab);
         var edges = new FreeCamEdges(tab && !alt, Edge(h, StellarKeyCode.Space), Edge(h, StellarKeyCode.R),
             Edge(h, StellarKeyCode.H), Edge(h, StellarKeyCode.Backspace), Click(h), Edge(h, StellarKeyCode.Escape));
-        return (intent, edges);
+        if (!h.TextFieldFocused) return (intent, edges);
+        return (intent with { Move = Vector3.Zero, Wheel = 0f, RollAxis = 0f },
+                new FreeCamEdges(false, false, false, false, false, edges.Click, false));
     }
 
     /// <summary>Marks keys already held at entry as "down" so they do not fire on the first frame.</summary>
