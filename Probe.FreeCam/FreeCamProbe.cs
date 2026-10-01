@@ -71,6 +71,7 @@ public sealed partial class FreeCamProbe : IStellarPlugin
         _services.ClientState.SceneChanged -= _onScene;
         DisarmCombatWatch();
         DisarmSendCounter();
+        DisarmEmoteHooks();
         ReleaseAll("dispose");
         ProbeTicks.FrameTick = null;
         ProbeTicks.LateTick = null;
@@ -91,7 +92,7 @@ public sealed partial class FreeCamProbe : IStellarPlugin
         ("3b_freeze_animation", StepFreezeAnimation, false),
         ("3c_freeze_position_hold", StepPositionHold, false),
         ("4_emote", StepEmote, false),
-        ("5_combat_flag", StepCombatFlag, true),
+        ("5_combat_flag", StepCombatFlag, false),
         ("6a_point_light", StepPointLight, false),
         ("6b_head_look_at", StepLookAt, false),
         ("A_anim_freeze_isolated", StepAnimFreeze2, false),
@@ -105,12 +106,19 @@ public sealed partial class FreeCamProbe : IStellarPlugin
         ("R3_hold_kinds", StepHoldKinds3, false),
         ("R3_appear_freeze", StepAppear3, false),
         ("R3_entities_end", StepEntities3, false),
-        ("R4_setup", StepSetup4, true),
+        ("R4_setup", StepSetup4, false),
         ("R4_self", StepSelf4, false),          // run 4a/4b
-        ("R4_self_clone", StepSelfClone4, true), // run 4c: player-storage photo clone (proxy for another player's clone)
-        ("R4_other_live", StepOtherLive4, true),
-        ("R4_other_clone", StepOtherClone4, true),
+        ("R4_self_clone", StepSelfClone4, false), // run 4c/4d: player-storage photo clone (proxy for another player's clone)
+        ("R4_other_live", StepOtherLive4, false),
+        ("R4_other_clone", StepOtherClone4, false),
         ("R4_npc", StepNpc4, false),            // run 4a/4b
+        ("R5_setup", StepSetup5, true),          // run 5 (2026-10-02): expression hold, NPC Partner-path model, opportunistic other clone
+        ("R5_face_selfclone", StepFaceSelfClone5, true),
+        ("R5_face_self", StepFaceSelf5, false), // done in run 5a,
+        ("R5_npc_generate", StepNpcClone5, true),
+        ("R5_npc_live_reset", StepNpcLiveReset5, true),
+        ("R5_other_clone", StepOtherClone5, true),
+        ("R5_end", StepEnd5, true),
         ("R4_summary", StepSummary4, true),
     };
 

@@ -163,3 +163,15 @@ after. Scenario timeout: keep it under the 600 s tool ceiling (`TIMEOUT_S=570` i
 
 Send ids seen (World service 103198054): 131077 = NewMove, 5 = ReqServerTime, 21 = PlayAction notify, 8 = PlayEmote
 notify, 278533 = SyncProjectList (periodic). Results: devkit `docs/recon/photo-posing-recon.md`.
+
+## Run 5 steps (2026-10-02: expression hold, NPC Partner-path model, opportunistic other-player clone)
+
+Earlier steps stay on F8, off in auto. `R5_face_self` ran in 5a only. Results: devkit `docs/recon/photo-posing-recon.md` § Run 5.
+
+| Step | Verdict lines |
+|---|---|
+| `R5_setup` | `R5 EMOHOOK armed …` (passive prefixes on `EntityAttrExtensions.SetAttrEmoteInfo/…PersistTime`, `ModelActionEmoteSystem.clipEnd/onEmoteChanged`; stay armed until `R5_end`); `R5 still other player within 15 m` |
+| `R5_face_selfclone` / `R5_face_self` | `H0` PlayEmote (expires) / `H1` `SetLuaAttrEmoteInfo(id,-1,true)` hold series / switch / reset / `H2` isFixed / `H3` persist 3600 / `H4` re-apply boundary; `hooks:` show the arguments PlayEmote writes |
+| `R5_npc_generate` | `R5 npc generate` (`LuaAsyncBridge.GenerateNormalModelAsyncByLua` + `ApplyModelBaseIdleByLua`), `gen visibility`, the R4 pose suite on `npcgen`, `R5 npc REAL after` |
+| `R5_npc_live_reset` | `R5 npclive keeper` + `r0` / `r3` reset attempts vs idle |
+| `R5_other_clone` | bounded 25 s wait for a still player ≤ 15 m, then clone + action + face + refresh |
