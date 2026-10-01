@@ -49,10 +49,18 @@ internal static class OrbitRig
         return new OrbitState(offset, distance, yaw, pitch);
     }
 
-    internal static RigOutput Place(OrbitState s, Vector3 centre)
+    /// <summary>Composes the final camera pose. The per-component clamps in <see cref="Step"/> (pivot offset vs. the
+    /// leash sphere, distance vs. [<see cref="MinDistance"/>, leash]) bound each piece independently but not their
+    /// sum — slide-to-the-edge then rotate then zoom out can otherwise place the camera up to ~2x the leash from the
+    /// subject. Spec § 3 requires the CAMERA itself to stay within the leash radius around the subject and slide
+    /// along the boundary, so the composed position gets one final <see cref="CameraMath.ProjectIntoSphere"/> pass
+    /// centred on <paramref name="centre"/> (bug: camera reached 60 m from a 30 m leash without this).</summary>
+    internal static RigOutput Place(OrbitState s, Vector3 centre, float leash)
     {
         var pivot = centre + Vector3.UnitY * PivotHeight + s.PivotOffset;
-        return new RigOutput(pivot - CameraMath.Forward(s.Yaw, s.Pitch) * s.Distance, s.Yaw, s.Pitch);
+        var position = pivot - CameraMath.Forward(s.Yaw, s.Pitch) * s.Distance;
+        position = CameraMath.ProjectIntoSphere(position, centre, leash);
+        return new RigOutput(position, s.Yaw, s.Pitch);
     }
 
     /// <summary>Mouse-look while RMB is held; mouse down = look down unless Y is inverted.</summary>

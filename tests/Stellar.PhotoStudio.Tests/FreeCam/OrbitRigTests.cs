@@ -14,7 +14,7 @@ public sealed class OrbitRigTests
         var cam = new Vector3(3, 4, -6);
         var subject = new Vector3(0, 0, 0);
         var s = OrbitRig.FromCamera(cam, 20f, 15f, subject);
-        var o = OrbitRig.Place(s, subject);
+        var o = OrbitRig.Place(s, subject, Tune.Leash);
         Assert.True(Vector3.Distance(cam, o.Position) < 1e-3f);
         Assert.Equal(20f, o.Yaw);
         Assert.Equal(15f, o.Pitch);
@@ -73,5 +73,33 @@ public sealed class OrbitRigTests
         var s = new OrbitState(Vector3.Zero, 5f, 0f, 0f);
         for (var i = 0; i < 1000; i++) s = OrbitRig.Step(s, new CamIntent { Move = new Vector3(0, 0, 1) }, Tune, 0.1f);
         Assert.InRange(s.PivotOffset.Length(), 29.99f, 30.001f);
+    }
+
+    // Regression (review finding, feat/free-camera task 11 fix round 1): Step clamps PivotOffset to the leash
+    // sphere and Distance to [MinDistance, leash] independently; Place composed pivot + offset - forward*distance
+    // with no final clamp, so slide-pivot-to-boundary -> rotate -> zoom-out could put the camera ~2x the leash from
+    // the subject (measured: 60 m camera at a 30 m leash). Spec § 3: the CAMERA stays within the leash radius
+    // around the subject and slides along the boundary. Mutation-check: dropping Place's final
+    // CameraMath.ProjectIntoSphere call must turn this red again.
+    [Theory]
+    [InlineData(30f)]
+    [InlineData(50f)]
+    public void Place_keeps_the_camera_inside_the_leash_after_slide_rotate_zoomout(float leash)
+    {
+        var tune = Tune with { Leash = leash };
+        var centre = Vector3.Zero;
+        var s = new OrbitState(Vector3.Zero, 5f, 0f, 0f);
+
+        // Slide the pivot out to the leash boundary.
+        for (var i = 0; i < 1000; i++) s = OrbitRig.Step(s, new CamIntent { Move = new Vector3(0, 0, 1) }, tune, 0.1f);
+
+        // Rotate yaw 90 degrees.
+        s = OrbitRig.Step(s, new CamIntent { Looking = true, LookX = 600f }, tune, 0.016f);
+
+        // Zoom all the way out.
+        s = OrbitRig.Step(s, new CamIntent { Wheel = -100f }, tune, 0.016f);
+
+        var o = OrbitRig.Place(s, centre, leash);
+        Assert.InRange(Vector3.Distance(o.Position, centre), 0f, leash + 1e-3f);
     }
 }
