@@ -7,7 +7,8 @@ namespace Stellar.PhotoStudio;
 
 // The compact strip shown beside the game's own photo / selfie mode. Measured from the game's photo UI at
 // 1920×1080, the only free band is y 944–1057, so the strip is 1100×96, bottom-anchored 30 px up (screen
-// x 410–1510, y 954–1050) — clear of the pose panel, the key-hint strip and the [G] icon.
+// x 410–1510, y 954–1050) — clear of the pose panel, the key-hint strip and the [G] icon. Moves only in layout
+// edit mode: with no title bar, free-drag made the whole strip a drag handle and swallowed slider drags (owner report).
 public sealed partial class Plugin
 {
     private const float MaxAperture = 22f;
@@ -20,7 +21,7 @@ public sealed partial class Plugin
             DefaultRect: new WindowRect(0f, -30f, 1100f, 96f),
             Category: WindowCategory.Tools,
             Style: WindowPanelStyle.GlassMenu)
-        { ShowTitleBar = false, Draggable = true, StartVisible = false, Anchor = WindowAnchor.Bottom, ShouldRender = InWorld },
+        { ShowTitleBar = false, Draggable = true, EditModeDragOnly = true, StartVisible = false, Anchor = WindowAnchor.Bottom, ShouldRender = InWorld },
         new ColumnElement(new HudElement[] { DockedTopRow(), DockedSliderRow() }, Gap: 8f)));
 
     private HudElement DockedTopRow() => new RowElement(new HudElement[]
