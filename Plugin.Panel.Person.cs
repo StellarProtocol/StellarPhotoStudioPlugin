@@ -37,7 +37,7 @@ public sealed partial class Plugin
         RotateRow(),
         new RowElement(new HudElement[]
         {
-            new CellElement(new ButtonElement(() => T("pz.reset"), () => _posingCtl.ResetPerson(), Enabled: PoseEnabled), Weight: 1f),
+            new CellElement(new ButtonElement(() => T("pz.reset"), () => _posingCtl.ResetPerson(), Enabled: () => _posingCtl.Available), Weight: 1f),   // also the way out of Failed/Loading
         }),
     }, Gap: 6f);
 
@@ -56,16 +56,13 @@ public sealed partial class Plugin
 
     private string PersonKindText()
     {
-        var kind = _posingCtl.Person?.Kind switch
-        {
-            PersonKind.Player => T("pz.kind.player"),
-            PersonKind.Npc => T("pz.kind.npc"),
-            _ => T("pz.kind.you"),
-        };
+        // "you" only for the real local player — an unknown (far-picked) person is never "you" (review).
+        var kind = _posingCtl.SubjectIsSelf ? T("pz.kind.you")
+            : _posingCtl.Person?.Kind == PersonKind.Npc ? T("pz.kind.npc") : T("pz.kind.player");
         return _posingCtl.Loading ? kind + " · " + T("pz.loading") : kind;
     }
 
-    private bool PoseEnabled() => _posingCtl.Available && !_posingCtl.Loading && !_posingCtl.Failed;
+    private bool PoseEnabled() => _posingCtl.Available && !_posingCtl.Loading && !_posingCtl.Failed && !_posingCtl.Full;
     private bool HasPose() => _posingCtl.State.Action is not null && PoseEnabled();
 
     private HudElement SubHeader(string key, string helpKey) => new RowElement(new HudElement[]
@@ -80,11 +77,14 @@ public sealed partial class Plugin
         SubHeader("fc.group.pose", "fc.help.pose"),
         new RowElement(new HudElement[]
         {
-            new CellElement(new SelectableElement(new TextElement(PoseLabel, NoWrap: true), () => _poseListOpen = !_poseListOpen), Weight: 1f),
+            // Field look (mockup .search); off — muted, not clickable — while the person can't be posed (review).
+            new CellElement(new PanelElement(new SelectableElement(
+                new TextElement(PoseLabel, NoWrap: true, Color: () => PoseEnabled() ? Normal() : MenuMuted()),
+                () => { if (PoseEnabled()) _poseListOpen = !_poseListOpen; }), Padding: 4f), Weight: 1f),
             new CellElement(new ButtonElement(() => _posingCtl.State.Playing ? "❚❚" : "▶", () => _posingCtl.TogglePlay(), Enabled: HasPose), Width: 34f),
             new CellElement(new ButtonElement(() => "↺", () => _posingCtl.Restart(), Enabled: HasPose), Width: 28f),
         }, Gap: 6f),
-        new ConditionalElement(() => _poseListOpen, PoseList()),
+        new ConditionalElement(() => _poseListOpen && PoseEnabled(), PoseList()),
         new RowElement(new HudElement[]
         {
             new CellElement(SliderRow(() => T("pz.moment"),
@@ -92,7 +92,7 @@ public sealed partial class Plugin
                 () => _loc.TFormat("pz.unit.percent", F(_posingCtl.State.Moment * 100f, "0")), () => _posingCtl.SetMoment(0f), HasPose), Weight: 1f),
             HelpDot("pz.moment", () => T("pz.moment"), () => T("pz.help.moment")),
         }, Gap: 6f),
-        new ConditionalElement(() => _posingCtl.ShowClothHint, new TextElement(() => T("pz.hint.cloth"), Color: Muted)),
+        new ConditionalElement(() => _posingCtl.ShowClothHint && !_freeCam.Frozen, new TextElement(() => T("pz.hint.cloth"), Color: Muted)),
     }, Gap: 4f);
 
     private string PoseLabel() => (_posingCtl.State.Action?.Name ?? T("pz.pose.pick")) + (_poseListOpen ? "  ▾" : "  ▸");
@@ -113,7 +113,7 @@ public sealed partial class Plugin
         new RowElement(new HudElement[]
         {
             new CellElement(new ButtonElement(() => "‹", () => _posingCtl.CycleExpression(-1), Enabled: PoseEnabled), Width: PersonArrowW),
-            new CellElement(new TextElement(ExpressionLabel, Align: TextAlign.Center, NoWrap: true), Weight: 1f),
+            new CellElement(new PanelElement(new TextElement(ExpressionLabel, Align: TextAlign.Center, NoWrap: true), Padding: 4f), Weight: 1f),
             new CellElement(new ButtonElement(() => "›", () => _posingCtl.CycleExpression(1), Enabled: PoseEnabled), Width: PersonArrowW),
             new CellElement(new ButtonElement(() => T("pz.hold"), () => _posingCtl.ToggleHold(), Enabled: PoseEnabled,
                 Active: () => _posingCtl.State.Hold), Width: LockW),
@@ -130,13 +130,14 @@ public sealed partial class Plugin
             LookModeButton(part, LookMode.Default, "pz.look.default"),
             LookModeButton(part, LookMode.Lens, "pz.look.lens"),
             LookModeButton(part, LookMode.Free, "pz.look.free"),
+            new SpacerElement(Width: 4f),   // 12 px before Lock (4 + 4 + 4) so it reads as a toggle, not a fourth mode
             new CellElement(new ButtonElement(() => T("pz.lock"), () => _posingCtl.ToggleLock(part), Enabled: PoseEnabled,
-                Active: () => _posingCtl.State.Locked(part)), Weight: 1f),   // fills the row's last 95 px (sandbox: fixed 90 left a 5 px gap)
+                Active: () => _posingCtl.State.Locked(part)), Width: LockW),   // same 90 px column as Hold above
         }, Gap: 4f),
         new ConditionalElement(() => _posingCtl.State.Mode(part) == LookMode.Free, AimPad(part)),
     }, Gap: 4f);
 
-    private const float LookSegW = 92f;   // equal segments (sandbox D4: widths followed the labels, 103/89/88 in en)
+    private const float LookSegW = 91f;   // equal segments (sandbox D4: widths followed the labels, 103/89/88 in en)
 
     private HudElement LookModeButton(LookPart part, LookMode mode, string key) => new CellElement(new ButtonElement(
         () => T(key), () => _posingCtl.SetLook(part, mode), Enabled: PoseEnabled,

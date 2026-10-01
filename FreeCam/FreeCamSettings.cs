@@ -36,7 +36,7 @@ internal sealed class FreeCamSettings
         EntryHides = LoadEntryHides(cfg);
         LookAt = cfg.Get("freecam.lookAt", false);
         HintHidden = cfg.Get("freecam.hintHidden", false);
-        MovementOpen = cfg.Get("ui.freecam.movementOpen", true);
+        MovementOpen = cfg.Get("ui.freecam.movementOpen", false);   // 1.2: collapsed by default so Person is above the fold (review)
         PoseOpen = cfg.Get("ui.freecam.poseOpen", true);
         _favourites = ParseIds(cfg.Get("freecam.favourites", "") ?? "");
     }
