@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- THROWAWAY recon probe for Photo Studio sub-project 2 (free camera), spec
+       docs/superpowers/specs/2026-10-01-photo-studio-free-camera-design.md § 9 (devkit branch docs/free-camera-spec).
+       Branch probe/free-camera — never merged. Like the render-recon probe it references the game interop assemblies
+       DIRECTLY because its job is to find which members work; Infrastructure owns these paths later.
+       Plugin id = lowercased assembly name = stellar.photostudio.freecamprobe (PluginHost.cs). -->
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <NoWarn>CS8632;CS8765;CS8600;CS8602;CS8604;CS8618;CS8625;CS0618</NoWarn>
+    <RootNamespace>Stellar.PhotoStudio.FreeCamProbe</RootNamespace>
+    <AssemblyName>Stellar.PhotoStudio.FreeCamProbe</AssemblyName>
+    <Version>0.0.1</Version>
+    <Deterministic>true</Deterministic>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GameMini Condition="'$(GameMini)' == ''">/opt/game/BlueProtocol2/drive_c/Star/StarLauncher/game/release_3.7/game_mini</GameMini>
+    <GameInterop>$(GameMini)/BepInEx/interop</GameInterop>
+    <BepInExCore>$(GameMini)/BepInEx/core</BepInExCore>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Local dev pack of framework feat/photo-studio-services (2.13.0); restore with
+         -s <devkit>/.localfeed -s https://api.nuget.org/v3/index.json (see RUNBOOK.md). -->
+    <PackageReference Include="Stellar.Abstractions" Version="2.13.0-photostudio-dev" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="BepInEx.Core"><HintPath>$(BepInExCore)/BepInEx.Core.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="BepInEx.Unity.IL2CPP"><HintPath>$(BepInExCore)/BepInEx.Unity.IL2CPP.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="0Harmony"><HintPath>$(BepInExCore)/0Harmony.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2CppInterop.Runtime"><HintPath>$(BepInExCore)/Il2CppInterop.Runtime.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2CppInterop.Common"><HintPath>$(BepInExCore)/Il2CppInterop.Common.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2Cppmscorlib"><HintPath>$(GameInterop)/Il2Cppmscorlib.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2CppSystem"><HintPath>$(GameInterop)/Il2CppSystem.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2CppSystem.Core"><HintPath>$(GameInterop)/Il2CppSystem.Core.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine"><HintPath>$(GameInterop)/UnityEngine.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(GameInterop)/UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.AnimationModule"><HintPath>$(GameInterop)/UnityEngine.AnimationModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.ImageConversionModule"><HintPath>$(GameInterop)/UnityEngine.ImageConversionModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Panda.Script"><HintPath>$(GameInterop)/Panda.Script.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Panda.Table"><HintPath>$(GameInterop)/Panda.Table.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Panda.ZShowData"><HintPath>$(GameInterop)/Panda.ZShowData.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="ZUtil"><HintPath>$(GameInterop)/ZUtil.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Cinemachine"><HintPath>$(GameInterop)/Cinemachine.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UniTask"><HintPath>$(GameInterop)/UniTask.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Rewired_Core"><HintPath>$(GameInterop)/Rewired_Core.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+</Project>
