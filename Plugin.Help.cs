@@ -17,10 +17,11 @@ public sealed partial class Plugin
     private int _tipRepositionTicks;
 
     private const float LabelW = 96f;
-    private const float ValueW = 72f;   // 72: "20.0 m/dtk" (id) needs 71 px (sandbox S8)
+    private const float ValueW = 76f;   // 76: "20.0 m/dtk" (id, max speed) measured 74 px of ink (sandbox S8)
 
-    // MenuMuted, not TextMuted: the panels are menu surfaces; TextMuted measured 1.82:1 in the Light theme (sandbox S11).
-    private ColorRgba? Muted() => _services.Theme.Colors.MenuMuted;
+    // TextMuted (not MenuMuted): MenuMuted is darker in every preset and failed the three dark themes (sandbox re-measure).
+    // Light-theme muted contrast (1.82:1) is a theme-token issue, not fixed here.
+    private ColorRgba? Muted() => _services.Theme.Colors.TextMuted;
     private ColorRgba? MenuMuted() => _services.Theme.Colors.MenuMuted;
     // Explicit default text colour: a Color func that flips back to null does not restore the chrome default
     // (measured in-game: a pill kept its warning colour after unpinning), so dynamic colours never return null.
