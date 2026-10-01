@@ -31,6 +31,8 @@
     <EmbeddedResource Include="Lang/th.json" LogicalName="Stellar.PhotoStudio.Lang.th.json" />
     <EmbeddedResource Include="Lang/id.json" LogicalName="Stellar.PhotoStudio.Lang.id.json" />
     <EmbeddedResource Include="Lang/fil.json" LogicalName="Stellar.PhotoStudio.Lang.fil.json" />
+    <!-- Launcher-tile icon (camera + sparkles, owner-supplied 2026-10-01). -->
+    <EmbeddedResource Include="Resources/photostudio-icon.png" LogicalName="Stellar.PhotoStudio.photostudio-icon.png" />
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="tests/**/*.cs" />

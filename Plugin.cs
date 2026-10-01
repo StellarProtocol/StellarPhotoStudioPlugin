@@ -60,6 +60,7 @@ public sealed partial class Plugin : IStellarPlugin
         _panel = new PanelOpenState(_view, _look);
 
         DeclareHotkeys();
+        RegisterLauncherTile();                  // Plugin.Launcher.cs
 
         _photoModeAttach = new PhotoModeAttach(services.PhotoMode, SetDockedForGamePhotoMode);
         _onCutsceneChanged = suspended => _look.SetSuspended(suspended);
@@ -81,6 +82,7 @@ public sealed partial class Plugin : IStellarPlugin
         _services.Framework.Update -= _onFrameworkUpdate;
         _loc.LanguageChanged -= _onLanguageChanged;
         _services.PhotoMode.CutsceneChanged -= _onCutsceneChanged;
+        RemoveLauncherTile();
         _photoModeAttach.Dispose();
         foreach (var h in _hotkeys) h.Dispose();
         _hotkeys.Clear();
