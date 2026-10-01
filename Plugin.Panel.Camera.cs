@@ -59,7 +59,7 @@ public sealed partial class Plugin
             HelpSliderRow(new SliderSpec("fc.leash", "fc.help.leash", () => _fcSettings.Leash, v => _fcSettings.SetLeash(v, false),
                 FreeCamSettings.MinLeash, FreeCamSettings.MaxLeash, () => _loc.TFormat("fc.unit.metres", F(_fcSettings.Leash, "0")), FreeCamSettings.DefaultLeash)),
             HelpToggle("fc.invertY", () => _fcSettings.InvertY, on => _fcSettings.SetInvertY(on),
-                new HelpText(() => T("fc.invertY"), () => T("fc.help.sensitivity"))),
+                new HelpText(() => T("fc.invertY"), () => T("fc.help.invertY"))),
             HelpToggle("fc.entryHides", () => _fcSettings.EntryHides, on => _fcSettings.SetEntryHides(on),
                 new HelpText(() => T("fc.entryHides"), () => T("fc.entryHides"))),
         });

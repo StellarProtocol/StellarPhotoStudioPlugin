@@ -205,5 +205,6 @@
   "fc.reason.photo": "โหมดกล้องของเกมเปิดขึ้น",
   "fc.reason.disconnect": "หลุดการเชื่อมต่อ",
   "fc.unit.speed": "{0} ม./วิ",
-  "fc.unit.metres": "{0} ม."
+  "fc.unit.metres": "{0} ม.",
+  "fc.help.invertY": "ขณะกดเมาส์ขวาค้าง เลื่อนเมาส์ขึ้นจะมองลง และเลื่อนลงจะมองขึ้น"
 }

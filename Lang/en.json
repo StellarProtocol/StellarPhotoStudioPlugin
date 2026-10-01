@@ -205,5 +205,6 @@
   "fc.reason.photo": "the game's camera mode opened",
   "fc.reason.disconnect": "disconnected",
   "fc.unit.speed": "{0} m/s",
-  "fc.unit.metres": "{0} m"
+  "fc.unit.metres": "{0} m",
+  "fc.help.invertY": "Moving the mouse up looks down (and down looks up) while you hold the right mouse button."
 }

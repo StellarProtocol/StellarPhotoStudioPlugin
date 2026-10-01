@@ -16,9 +16,11 @@ public sealed partial class Plugin
             Id: "photostudio.freecam.hud",
             Title: T("fc.title.hud"),
             DefaultRect: new WindowRect(0f, 16f, 760f, 0f),
-            Category: WindowCategory.Tools,
-            Style: WindowPanelStyle.HudOverlay)
+            Category: WindowCategory.HUD,
+            Style: WindowPanelStyle.Borderless)
         {
+            // Same HUD set-up as PlayerHUD / RaidManager: HUD surface (shadowed text, transparent pill chips).
+            Surface = SurfaceStyle.HudOverlay,
             ShowTitleBar = false, StartVisible = false, Draggable = true, EditModeDragOnly = true,
             Anchor = WindowAnchor.Top, ShouldRender = () => InWorld() && _freeCam.Active,
         },
@@ -26,14 +28,16 @@ public sealed partial class Plugin
         {
             new RowElement(new HudElement[]
             {
-                new PillElement(HudLine),
+                new PillElement(HudLine, Color: () => _services.Theme.Colors.HudText),
                 new ConditionalElement(() => _freeCam.Frozen,
-                    new PillElement(() => T("fc.badge.frozen"), Color: () => _services.Theme.Colors.Accent)),
+                    new PillElement(() => T("fc.badge.frozen"), Color: () => _services.Theme.Colors.HudAccent)),
                 new ConditionalElement(() => _services.CombatState.LocalPlayerInCombat,
                     new PillElement(() => T("fc.badge.combat"), Color: () => _services.Theme.Colors.HpFill)),
             }, Gap: 6f, Justify: RowJustify.Center),
             new ConditionalElement(() => !_fcSettings.HintHidden,
-                new TextElement(HudHint, Color: Muted, Align: TextAlign.Center, Shadow: true, NoWrap: true)),
+                // The hint sits on its own HUD pill chip (mockup .hint) so it stays readable over a bright world.
+                new RowElement(new HudElement[] { new PillElement(HudHint, Color: () => _services.Theme.Colors.HudText) },
+                    Justify: RowJustify.Center)),
         }, Gap: 4f)));
 
     private string HudLine() => _loc.TFormat("fc.hud.line",

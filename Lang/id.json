@@ -205,5 +205,6 @@
   "fc.reason.photo": "mode kamera game terbuka",
   "fc.reason.disconnect": "terputus",
   "fc.unit.speed": "{0} m/dtk",
-  "fc.unit.metres": "{0} m"
+  "fc.unit.metres": "{0} m",
+  "fc.help.invertY": "Saat tombol kanan mouse ditahan, menggerakkan mouse ke atas membuat pandangan ke bawah, dan sebaliknya."
 }

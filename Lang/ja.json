@@ -205,5 +205,6 @@
   "fc.reason.photo": "ゲームのカメラモードが開きました",
   "fc.reason.disconnect": "切断されました",
   "fc.unit.speed": "{0} m/秒",
-  "fc.unit.metres": "{0} m"
+  "fc.unit.metres": "{0} m",
+  "fc.help.invertY": "右クリックを押している間、マウスを上に動かすと下を向き、下に動かすと上を向きます。"
 }

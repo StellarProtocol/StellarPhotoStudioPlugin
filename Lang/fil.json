@@ -205,5 +205,6 @@
   "fc.reason.photo": "bumukas ang camera mode ng laro",
   "fc.reason.disconnect": "na-disconnect",
   "fc.unit.speed": "{0} m/s",
-  "fc.unit.metres": "{0} m"
+  "fc.unit.metres": "{0} m",
+  "fc.help.invertY": "Habang pinipindot ang kanang button ng mouse, ang paggalaw ng mouse pataas ay tumitingin pababa, at pababa ay pataas."
 }
