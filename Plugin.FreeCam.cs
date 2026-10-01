@@ -94,6 +94,4 @@ public sealed partial class Plugin
         return _services.CombatLookup.GetEntityName(id) ?? "—";
     }
 
-    private bool _emoteListDirty = true;
-    private void TickFreeCamUi(float dt) { }
 }

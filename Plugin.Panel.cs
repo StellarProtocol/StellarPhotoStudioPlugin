@@ -5,7 +5,7 @@ using Stellar.Abstractions.Services;
 namespace Stellar.PhotoStudio;
 
 // The full panel (approved mockup, docs/superpowers/specs/assets/2026-09-30-photo-studio-panel-layout.md § 2):
-// GlassMenu 440×660 at the top-right, three tabs (CooldownBar tab-strip recipe), each tab in its own scroll
+// GlassMenu 440×660 at the top-right, four tabs (Capture · Look · Camera · Presets) (CooldownBar tab-strip recipe), each tab in its own scroll
 // area, and a fixed Capture footer on every tab so the player can tune a look and shoot without switching.
 public sealed partial class Plugin
 {
@@ -31,14 +31,16 @@ public sealed partial class Plugin
     {
         new RowElement(new HudElement[]
         {
-            TabButton(0, "ps.tab.capture"),
-            TabButton(1, "ps.tab.look"),
-            TabButton(2, "ps.tab.presets"),
+            TabButton(StudioTabs.Capture, "ps.tab.capture"),
+            TabButton(StudioTabs.Look, "ps.tab.look"),
+            TabButton(StudioTabs.Camera, "ps.tab.camera"),
+            TabButton(StudioTabs.Presets, "ps.tab.presets"),
         }, Gap: 4f),
         new SeparatorElement(),
-        new ConditionalElement(() => _settings.Tab == 0, new ScrollElement(BuildCaptureTab(), Height: 420f), Fill: true),
-        new ConditionalElement(() => _settings.Tab == 1, new ScrollElement(BuildLookTab(), Height: 420f), Fill: true),
-        new ConditionalElement(() => _settings.Tab == 2, new ScrollElement(BuildPresetsTab(), Height: 420f), Fill: true),
+        new ConditionalElement(() => _settings.Tab == StudioTabs.Capture, new ScrollElement(BuildCaptureTab(), Height: 420f), Fill: true),
+        new ConditionalElement(() => _settings.Tab == StudioTabs.Look, new ScrollElement(BuildLookTab(), Height: 420f), Fill: true),
+        new ConditionalElement(() => _settings.Tab == StudioTabs.Camera, new ScrollElement(BuildCameraTab(), Height: 420f), Fill: true),
+        new ConditionalElement(() => _settings.Tab == StudioTabs.Presets, new ScrollElement(BuildPresetsTab(), Height: 420f), Fill: true),
         new SeparatorElement(),
         BuildCaptureFooter(),
     }, Gap: 8f);
