@@ -23,9 +23,13 @@ public sealed partial class Plugin
 
     private HudElement BuildCameraTab() => new ColumnElement(new HudElement[]
     {
-        new CellElement(new ButtonElement(() => _freeCam.Active ? T("fc.exit") : T("fc.enter"),
-            OnClick: ToggleFreeCamera, Style: MenuButtonStyle.Filled), Weight: 1f),
-        new TextElement(FreeCamStatus, Color: Muted),
+        // Mockup: status line left, Free camera button right, one row.
+        new RowElement(new HudElement[]
+        {
+            new CellElement(new TextElement(FreeCamStatus, Color: Muted), Weight: 1f),
+            new ButtonElement(() => _freeCam.Active ? T("fc.exit") : T("fc.enter"),
+                OnClick: () => ToggleFreeCamera(), Style: MenuButtonStyle.Filled),
+        }, Gap: 8f),
         new SeparatorElement(),
         MovementGroup(),
         new SeparatorElement(),
