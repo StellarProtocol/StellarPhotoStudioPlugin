@@ -47,7 +47,7 @@ public sealed partial class Plugin
         new CellElement(new RowElement(new HudElement[]
         {
             new TextElement(PersonName, Emphasis: true, NoWrap: true),
-            new TextElement(PersonKindText, Color: Muted, NoWrap: true, FontSize: 15),   // same size as the name: baselines matched (sandbox D3)
+            new TextElement(PersonKindText, Color: Muted, NoWrap: true),   // 2-3 px baseline offset vs the bold name: framework menu text ignores FontSize (sandbox D3, framework issue)
         }, Gap: 6f, Justify: RowJustify.Center), Weight: 1f),
         new CellElement(new ButtonElement(() => "›", () => _posingCtl.Cycle(1)), Width: PersonArrowW),
     }, Gap: 8f);
@@ -131,7 +131,7 @@ public sealed partial class Plugin
             LookModeButton(part, LookMode.Lens, "pz.look.lens"),
             LookModeButton(part, LookMode.Free, "pz.look.free"),
             new CellElement(new ButtonElement(() => T("pz.lock"), () => _posingCtl.ToggleLock(part), Enabled: PoseEnabled,
-                Active: () => _posingCtl.State.Locked(part)), Width: LockW),
+                Active: () => _posingCtl.State.Locked(part)), Weight: 1f),   // fills the row's last 95 px (sandbox: fixed 90 left a 5 px gap)
         }, Gap: 4f),
         new ConditionalElement(() => _posingCtl.State.Mode(part) == LookMode.Free, AimPad(part)),
     }, Gap: 4f);
