@@ -8,9 +8,11 @@ namespace Stellar.PhotoStudio.FreeCam;
 // Per-frame stepping and input edges: FreeCamSession.Frame.cs.
 
 /// <summary>
-/// The free camera (spec §§ 3–4, 7): owns the camera control, the input shield, the freeze token, the look-at handle and
-/// the entry hides, and releases all of them through <see cref="Release"/> — the one release path — whatever ends the
-/// session (exit, the framework, unload, an exception in the frame code). Main thread.
+/// The free camera (spec §§ 3–4, 7): owns the camera control, the input shield, the look-at handle and the entry hides,
+/// and releases all of them through <see cref="Release"/> — the one release path — whatever ends the session (exit, the
+/// framework, unload, an exception in the frame code). The freeze and the posed people belong to the
+/// <see cref="StudioScene"/> and outlive the camera (scene-stays spec § 1): the session only toggles the freeze through it
+/// and reads the leash centre from it, and remembers its last pose for a re-entry while the scene is set (§ 6). Main thread.
 /// </summary>
 internal sealed partial class FreeCamSession : IDisposable
 {
@@ -20,21 +22,23 @@ internal sealed partial class FreeCamSession : IDisposable
     private readonly FreeCamInput _input = new();
     private readonly Action<float> _onFrame;
     private readonly Action<CameraReleaseReason> _onReleased;
-    private readonly Action<bool> _onFreezeChanged;
+    private readonly StudioScene _scene;
+    private readonly Action _onSceneChanged;
     private readonly Action<bool> _onCombatChanged;
     private ICameraControl? _control;
     private IInputShieldHandle? _shield;
-    private IDisposable? _freeze, _look, _hide;
+    private IDisposable? _look, _hide;
     private CameraPose _entry;
 
-    public FreeCamSession(FreeCamPorts ports, FreeCamSettings settings, FreeCamHost host)
+    public FreeCamSession(FreeCamPorts ports, FreeCamSettings settings, FreeCamHost host, StudioScene scene)
     {
         _p = ports;
         _settings = settings;
         _host = host;
+        _scene = scene;
         _onFrame = OnFrame;
         _onReleased = OnReleased;
-        _onFreezeChanged = OnFreezeChanged;
+        _onSceneChanged = () => StateChanged?.Invoke();
         _onCombatChanged = _ => StateChanged?.Invoke();
     }
 
@@ -43,7 +47,8 @@ internal sealed partial class FreeCamSession : IDisposable
 
     public bool Active => _control is not null;
     public FreeCamMode Mode { get; private set; }
-    public bool Frozen => _freeze is not null;
+    /// <summary>The scene's freeze (it outlives the free camera — <see cref="StudioScene.Frozen"/>).</summary>
+    public bool Frozen => _scene.Frozen;
     public EntityId Subject { get; private set; }
     /// <summary>The farthest the orbit camera sits from a newly selected subject (closer cameras keep their distance).</summary>
     internal const float FrameDistance = 4f;
@@ -55,7 +60,10 @@ internal sealed partial class FreeCamSession : IDisposable
     /// <summary>Replaces keyboard/mouse input while set (the env-gated self-test only).</summary>
     internal CamIntent? ScriptedIntent { get; set; }
 
-    public bool Enter()
+    /// <summary>Takes the camera. <paramref name="subject"/> = the person to orbit (the Person group's selection; none or
+    /// gone = yourself). While the scene is set the camera returns to the pose it had when it left (spec § 6); otherwise
+    /// it starts from the game camera.</summary>
+    public bool Enter(EntityId subject = default)
     {
         if (Active) return true;
         if (!_p.Camera.TryAcquire(out var control))
@@ -69,15 +77,14 @@ internal sealed partial class FreeCamSession : IDisposable
         _rmbDown = false;
         _lookFromOwnWindow = false;
         _entry = control.GamePose;
-        Subject = _p.Snapshot.LocalEntityId;
+        Subject = EntrySubject(subject);
         _subjectPos = SubjectPosition(CameraMath.ToVec(_entry.Position));
-        PlaceAtEntry();
-        Mode = FreeCamMode.Orbit;
+        PlaceForEntry();
         if (_settings.EntryHides != VisibilityLayers.None) _hide = _p.Visibility.Hide(_settings.EntryHides);
         if (_settings.LookAt) _look = _p.Camera.LookAtCamera();
         control.Frame += _onFrame;
         _p.Camera.Released += _onReleased;
-        _p.Freeze.Changed += _onFreezeChanged;
+        _scene.Changed += _onSceneChanged;
         _p.Combat.Changed += _onCombatChanged;
         StateChanged?.Invoke();
         return true;
@@ -87,15 +94,11 @@ internal sealed partial class FreeCamSession : IDisposable
 
     public void Dispose() => Release(CameraReleaseReason.PluginUnloaded, frameworkEnded: false);
 
+    /// <summary>Space: freezes the scene around the orbit subject, or unfreezes it (through the scene).</summary>
     public void ToggleFreeze()
     {
         if (!Active) return;
-        if (_freeze is not null) EndFreeze();
-        else
-        {
-            _freeze = _p.Freeze.Freeze();
-            _freezeCentre = _subjectPos;
-        }
+        _scene.ToggleFreeze(_subjectPos);
         StateChanged?.Invoke();
     }
 
@@ -128,7 +131,7 @@ internal sealed partial class FreeCamSession : IDisposable
         if (!Active || id.IsNone || id == Subject || !_p.Transforms.TryGetTransform(id, out var p, out _)) return;
         Subject = id;
         _subjectPos = CameraMath.ToVec(p);
-        if (_freezeCentre is not null) _freezeCentre = _subjectPos;
+        _scene.MoveFreezeCentre(_subjectPos);
         if (Mode == FreeCamMode.Orbit)
         {
             // Frame the new subject: keep the viewing angle but come no further than FrameDistance (a far pick stayed tiny —
@@ -151,40 +154,14 @@ internal sealed partial class FreeCamSession : IDisposable
         }
     }
 
-    /// <summary>Spec § 7: on death the free camera stays and the freeze ends.</summary>
-    public void OnLocalDeath()
-    {
-        if (_freeze is null) return;
-        EndFreeze();
-        StateChanged?.Invoke();
-    }
-
     private void OnReleased(CameraReleaseReason reason)
     {
         if (_control is { IsActive: false }) Release(reason, frameworkEnded: true);
     }
 
-    private void OnFreezeChanged(bool frozen)
-    {
-        if (!frozen && _freeze is not null) EndFreeze();   // the framework unfroze (zone change / cutscene)
-        StateChanged?.Invoke();
-    }
-
-    /// <summary>Null the field before disposing: the real SceneFreezeService is ref-counted and raises
-    /// <see cref="ISceneFreeze.Changed"/>(false) synchronously when the last token is disposed, re-entering
-    /// <see cref="OnFreezeChanged"/> while this method is still on the stack — with the field already null, that
-    /// re-entry sees nothing to end and just forwards the one state-changed notification, instead of disposing the
-    /// same token a second time. Internal (not private) so the reentrancy can be pinned directly, without the
-    /// public callers' own trailing <see cref="StateChanged"/> notify muddying the count.</summary>
-    internal void EndFreeze()
-    {
-        var freeze = _freeze;
-        _freeze = null;
-        _freezeCentre = null;
-        freeze?.Dispose();
-    }
-
-    /// <summary>The one release path. Unsubscribes first, so our own dispose never re-enters through Released.
+    /// <summary>The one release path. Unsubscribes first, so our own dispose never re-enters through Released. Returns
+    /// only the camera, the shield, the look-at handle and the entry hides — the freeze and the posed people stay with
+    /// the scene (scene-stays spec § 1); the pose is remembered for a re-entry while the scene is set (§ 6).
     /// Each disposal step is isolated (spec § 7): an exception from one — e.g. the camera control's own
     /// <c>Dispose()</c> re-raises <c>Released</c> to every other holder of that event, and another plugin's
     /// throwing handler propagates straight back out of that call — must never stop the rest from running. The
@@ -196,12 +173,12 @@ internal sealed partial class FreeCamSession : IDisposable
         _control = null;
         c.Frame -= _onFrame;
         _p.Camera.Released -= _onReleased;
-        _p.Freeze.Changed -= _onFreezeChanged;
+        _scene.Changed -= _onSceneChanged;
         _p.Combat.Changed -= _onCombatChanged;
+        RememberPose();
 
         ReleaseStep(() => { _shield?.Dispose(); _shield = null; });
         ReleaseStep(() => { if (!frameworkEnded) c.Dispose(); });
-        ReleaseStep(EndFreeze);
         ReleaseStep(() => { _look?.Dispose(); _look = null; });
         ReleaseStep(() => { _hide?.Dispose(); _hide = null; });
 

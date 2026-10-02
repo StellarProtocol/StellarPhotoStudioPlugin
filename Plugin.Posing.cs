@@ -5,41 +5,56 @@ using Stellar.PhotoStudio.Posing;
 
 namespace Stellar.PhotoStudio;
 
-// Posing by person (spec 2026-10-02-photo-studio-posing-design.md): the Person group's controller, kept in step with the
-// free camera's orbit subject (one selection). The framework resets every touched person whenever the free camera ends,
-// whatever the reason; the controller then forgets the panel state. The UI is Plugin.Panel.Person.cs.
+// Posing by person (spec 2026-10-02-photo-studio-posing-design.md; scene-stays spec § 5): the Person group's controller.
+// It keeps its own selection, so posing works with the free camera off; while the camera is on the selection and the
+// orbit subject are one. Poses belong to the scene (Plugin.Scene.cs): leaving the free camera keeps them; Reset scene and
+// the framework's scene-end reasons (targets released) end them. The UI is Plugin.Panel.Person.cs.
 public sealed partial class Plugin
 {
     private const float PosePollInterval = 0.1f;   // the panel's own ~10 Hz refresh
     private PosingController _posingCtl = null!;
     private Action _onPosingChanged = null!;
+    private Action _onPosesCounted = null!;
     private float _posePollIn;
 
     private void StartPosing()
     {
         _posingCtl = new PosingController(_services.Posing,
-            new PosingHost(() => _freeCam.Subject, id => _freeCam.SetSubject(id), OnPoseResult, () => _services.CombatSnapshot.LocalEntityId,
+            new PosingHost(() => _freeCam.Subject, SelectInScene, OnPoseResult, () => _services.CombatSnapshot.LocalEntityId,
                 DescribeAction));
+        _scene.TrackPoses(() => _posingCtl.PosedCount);
+        _onPosesCounted = _scene.NotifyPosesChanged;
+        _posingCtl.PosedChanged += _onPosesCounted;
         _onPosingChanged = OnPosingChanged;
         _services.Posing.Changed += _onPosingChanged;
         RetireLookAtToggle();
     }
 
-    private void StopPosing() => _services.Posing.Changed -= _onPosingChanged;
+    private void StopPosing()
+    {
+        _services.Posing.Changed -= _onPosingChanged;
+        _posingCtl.PosedChanged -= _onPosesCounted;
+    }
 
-    /// <summary>From OnFreeCamStateChanged: follow the orbit subject while the free camera is on; forget everything when
-    /// it ends (the framework has already reset every touched person by then).</summary>
+    /// <summary>From OnFreeCamStateChanged: follow the orbit subject while the free camera is on. Leaving the free camera
+    /// keeps the selection and every pose (scene-stays spec § 1).</summary>
     private void SyncPosing()
     {
         if (_freeCam.Active) _posingCtl.SyncSubject();
-        else _posingCtl.Clear();
     }
 
-    /// <summary>From OnUpdate: while the panel is up in the free camera, follow what the selected person is already
-    /// doing (owner bug 2026-10-02: someone mid-emote showed "Pick a pose" at 0 %) — one cheap framework read per 0.1 s.</summary>
+    /// <summary>From OnUpdate: while the panel is up (free camera on or off — scene-stays spec § 5), follow what the
+    /// selected person is already doing (owner bug 2026-10-02: someone mid-emote showed "Pick a pose" at 0 %) — one cheap
+    /// framework read per 0.1 s. Out of the world the selection is forgotten (entity ids no longer mean anyone).</summary>
     private void TickPosing(float dt)
     {
-        if (!_freeCam.Active || !_panelWin.IsShown) return;
+        if (!InWorld())
+        {
+            if (!_posingCtl.Subject.IsNone) _posingCtl.Clear();
+            return;
+        }
+        if (!_panelWin.IsShown) return;
+        _posingCtl.EnsureSubject();
         _posePollIn -= dt;
         if (_posePollIn > 0f) return;
         _posePollIn = PosePollInterval;

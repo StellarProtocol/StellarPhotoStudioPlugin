@@ -46,6 +46,7 @@ internal sealed class FakeCamera : ICameraOverride
     public bool TryAcquire([NotNullWhen(true)] out ICameraControl? control)
     {
         control = Busy ? null : Control;
+        if (!Busy) Control.IsActive = true;   // a re-acquire hands back a live control, as the framework does
         return !Busy;
     }
     public IDisposable LookAtCamera() { var h = new FakeHandle(); LookAts.Add(h); return h; }
@@ -178,15 +179,18 @@ internal sealed class SessionRig
     public int Dismissed;
     public FreeCamSettings Settings;
     public FreeCamSession Session;
+    /// <summary>The scene the session freezes through (the freeze outlives the free camera — scene-stays spec § 1).</summary>
+    public readonly StudioScene Scene;
 
     public SessionRig(float smoothing = 0f, IPosing? posing = null)
     {
         Transforms.Positions[1] = new Position3D(0, 0, 0);        // the local player stands at the origin
         Config.Values["freecam.smoothing"] = smoothing;
         Settings = new FreeCamSettings(Config);
+        Scene = new StudioScene(Freeze, posing);
         Session = new FreeCamSession(
             new FreeCamPorts(Camera, Shield, Freeze, Combat, Visibility, Transforms, Snapshot, Picker, posing),
-            Settings, new FreeCamHost((n, r) => Notices.Add((n, r)), (_, _) => { HitTests++; return OverUi; }, Dismiss, Warnings.Add));
+            Settings, new FreeCamHost((n, r) => Notices.Add((n, r)), (_, _) => { HitTests++; return OverUi; }, Dismiss, Warnings.Add), Scene);
     }
 
     private bool Dismiss()

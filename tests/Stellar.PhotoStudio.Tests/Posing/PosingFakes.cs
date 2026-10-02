@@ -93,8 +93,11 @@ internal sealed class FakePosing : IPosing
         return t;
     }
 
+    public int ResetAllCalls;
+
     public void ResetAll()
     {
+        ResetAllCalls++;
         foreach (var t in Targets.Values) t.State = PoseTargetState.Released;
         Changed?.Invoke();
     }

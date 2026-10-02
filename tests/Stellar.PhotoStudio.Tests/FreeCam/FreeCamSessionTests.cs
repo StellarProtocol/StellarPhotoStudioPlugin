@@ -45,6 +45,7 @@ public sealed class FreeCamSessionTests
         Assert.Equal(FreeCamNotice.Busy, r.Notices[0].Notice);
     }
 
+    // Scene-stays spec § 1 (2026-10-02): exit returns the camera, shield, look-at and hides — the freeze is the scene's.
     [Fact]
     public void Exit_releases_everything_exactly_once_and_says_nothing()
     {
@@ -57,7 +58,8 @@ public sealed class FreeCamSessionTests
         Assert.Equal(1, r.Camera.Control.Disposed);
         Assert.Equal(1, r.Shield.Handle.Disposed);
         Assert.Equal(1, r.Visibility.Hides[0].Handle.Disposed);
-        Assert.Equal(1, r.Freeze.Tokens[0].Disposed);
+        Assert.Equal(0, r.Freeze.Tokens[0].Disposed);   // the freeze stays with the scene
+        Assert.True(r.Scene.Frozen);
         Assert.Equal(1, r.Camera.LookAts[0].Disposed);
         Assert.False(r.Session.Active);
         Assert.Empty(r.Notices);
@@ -107,7 +109,7 @@ public sealed class FreeCamSessionTests
         var r = new SessionRig();
         r.Session.Enter();
         r.Session.ToggleFreeze();
-        r.Session.OnLocalDeath();
+        r.Scene.OnLocalDeath();
         Assert.False(r.Session.Frozen);
         Assert.Equal(1, r.Freeze.Tokens[0].Disposed);
         Assert.True(r.Session.Active);
@@ -356,7 +358,8 @@ public sealed class FreeCamSessionTests
         Assert.False(r.Session.Active);
         Assert.Equal(1, r.Camera.Control.Disposed);
         Assert.Equal(1, r.Shield.Handle.Disposed);
-        Assert.Equal(1, r.Freeze.Tokens[0].Disposed);
+        Assert.Equal(0, r.Freeze.Tokens[0].Disposed);   // scene-stays § 1: the freeze outlives the free camera
+        Assert.True(r.Scene.Frozen);
         Assert.Equal(1, r.Visibility.Hides[0].Handle.Disposed);
         Assert.Empty(r.Notices);
     }
@@ -376,7 +379,7 @@ public sealed class FreeCamSessionTests
         Assert.False(r.Session.Active);
         Assert.Equal(1, r.Camera.Control.Disposed);
         Assert.Equal(1, r.Shield.Handle.Disposed);
-        Assert.Equal(1, r.Freeze.Tokens[0].Disposed);
+        Assert.Equal(0, r.Freeze.Tokens[0].Disposed);   // scene-stays § 1: not the camera's to end
         Assert.Equal(1, r.Camera.LookAts[0].Disposed);
         Assert.Equal(1, r.Visibility.Hides[0].Handle.Disposed);
         Assert.Empty(r.Notices);   // Exit keeps the existing toast semantics: none, throw or not
@@ -389,14 +392,17 @@ public sealed class FreeCamSessionTests
         r.Session.Enter();
         r.Session.ToggleFreeze();                  // freeze on
         var raises = 0;
+        var sceneRaises = 0;
         r.Session.StateChanged += () => raises++;
-        r.Session.EndFreeze();                      // the fake's token raises Changed(false) synchronously from
+        r.Scene.Changed += () => sceneRaises++;
+        r.Scene.EndFreeze();                        // the fake's token raises Changed(false) synchronously from
                                                        // inside its own Dispose(), re-entering OnFreezeChanged while
-                                                       // the session's own _freeze field still references it — the
+                                                       // the scene's own token field still references it — the
                                                        // real, ref-counted SceneFreezeService does the same.
         Assert.False(r.Session.Frozen);
         Assert.Equal(1, r.Freeze.Tokens[0].Disposed);
         Assert.Equal(1, raises);
+        Assert.Equal(1, sceneRaises);
     }
 
     [Fact]
@@ -410,9 +416,12 @@ public sealed class FreeCamSessionTests
         Assert.False(r.Session.Active);
         Assert.Equal(1, r.Camera.Control.Disposed);
         Assert.Equal(1, r.Shield.Handle.Disposed);
-        Assert.Equal(1, r.Freeze.Tokens[0].Disposed);
+        Assert.Equal(0, r.Freeze.Tokens[0].Disposed);   // the camera's dispose leaves the freeze to the scene …
         Assert.Equal(1, r.Camera.LookAts[0].Disposed);
         Assert.Equal(1, r.Visibility.Hides[0].Handle.Disposed);
         Assert.Empty(r.Notices);
+        r.Scene.Dispose();                               // … whose dispose (Photo Studio unloading) ends it, once
+        r.Scene.Dispose();
+        Assert.Equal(1, r.Freeze.Tokens[0].Disposed);
     }
 }

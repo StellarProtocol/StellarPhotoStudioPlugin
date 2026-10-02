@@ -192,7 +192,9 @@ public sealed partial class Plugin
     private void PzFinish()
     {
         _freeCam.Exit();
-        var clean = !_freeCam.Active && !_services.Posing.IsAvailable && !_services.CameraOverride.IsOverridden && !_services.InputShield.IsShielded;
+        ResetScene();   // scene-stays: leaving the free camera keeps the scene (posing stays available); Reset scene ends it
+        var clean = !_freeCam.Active && !_scene.IsSet && !_services.CameraOverride.IsOverridden && !_services.InputShield.IsShielded &&
+                    !_services.SceneFreeze.IsFrozen;
         PzLog("exit", clean);
         _services.Log.Info("[PhotoStudio] posing selftest DONE");
         _pzStep = -1;

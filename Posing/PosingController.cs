@@ -6,8 +6,10 @@ using Stellar.Abstractions.Services;
 namespace Stellar.PhotoStudio.Posing;
 
 /// <summary>What the Person group needs from the plugin around it (plain callbacks keep the controller testable).</summary>
-/// <param name="Subject">The free camera's orbit subject now.</param>
-/// <param name="SetSubject">Makes a person the orbit subject — selecting a person IS orbiting them (spec § 3).</param>
+/// <param name="Subject">The free camera's orbit subject now (read by <see cref="PosingController.SyncSubject"/>, which runs
+/// only while the free camera is on).</param>
+/// <param name="SetSubject">Makes a person the orbit subject while the free camera is on — selecting a person IS orbiting
+/// them (spec § 3); does nothing while it is off (the selection is then the controller's own).</param>
 /// <param name="Refused">A pose could not be played (Refused: the game showed its own message; Unavailable: ours).</param>
 /// <param name="LocalEntityId">The local player's entity id — used only to tell whether the subject is you
 /// (<see cref="PosingController.SubjectIsSelf"/>), independent of whether a <see cref="PersonInfo"/> was ever
@@ -22,10 +24,13 @@ internal sealed record PosingHost(Func<EntityId> Subject, Action<EntityId> SetSu
 internal readonly record struct DescribedAction(EmoteInfo Emote, bool Unlocked);
 
 /// <summary>
-/// The Person group's logic (spec 2026-10-02 §§ 3–4). One selection: the free camera's orbit subject. Per person, the
-/// panel's state (<see cref="PersonUiState"/>) and the framework's <see cref="IPoseTarget"/>, fetched on the first control
-/// (the framework then makes the copy / model) and dropped once released. The framework resets every touched person when
-/// the free camera ends; <see cref="Clear"/> then forgets the panel state. Main thread.
+/// The Person group's logic (spec 2026-10-02 §§ 3–4; scene-stays spec § 5). The controller keeps its own selected person,
+/// so posing works with the free camera off (‹ › select without a camera); while the free camera is on, the selection and
+/// the orbit subject are one (selecting orbits that person, picking in the camera selects). Per person, the panel's state
+/// (<see cref="PersonUiState"/>) and the framework's <see cref="IPoseTarget"/>, fetched on the first control (the framework
+/// then makes the copy / model) and dropped once released. Poses belong to the scene: leaving the free camera keeps them;
+/// the Reset scene button (<see cref="ForgetPoses"/> + <see cref="IPosing.ResetAll"/>) and the framework's own scene-end
+/// reasons (targets released → <see cref="OnPosingChanged"/>) end them. Main thread.
 /// </summary>
 internal sealed class PosingController
 {
@@ -49,7 +54,23 @@ internal sealed class PosingController
         _host = host;
     }
 
+    /// <summary>The selected person (the free camera's orbit subject while it is on).</summary>
     public EntityId Subject { get; private set; }
+
+    /// <summary>How many people are posed now: touched through a control and not yet reset or released.</summary>
+    public int PosedCount
+    {
+        get
+        {
+            var n = 0;
+            foreach (var t in _targets.Values)
+                if (t.State != PoseTargetState.Released) n++;
+            return n;
+        }
+    }
+
+    /// <summary>Raised when <see cref="PosedCount"/> may have changed (someone posed, reset, released or forgotten).</summary>
+    public event Action? PosedChanged;
     public PersonInfo? Person => _known.TryGetValue(Subject.Value, out var p) ? p : null;
     public PersonUiState State => StateOf(Subject.Value);
     public PoseResult LastResult { get; private set; } = PoseResult.Applied;
@@ -85,9 +106,25 @@ internal sealed class PosingController
     /// yet costs one people read at <see cref="PeopleRadius"/>; one picked beyond that (the camera can reach ~60 m) costs
     /// one more at <see cref="SubjectSearchRadius"/>, so a far pick still resolves a name/kind instead of showing "you"
     /// with no copy note.</summary>
-    public void SyncSubject()
+    public void SyncSubject() => Adopt(_host.Subject());
+
+    /// <summary>Selects <paramref name="person"/> — with the free camera on, that also makes them the orbit subject.</summary>
+    public void Select(EntityId person)
     {
-        var s = _host.Subject();
+        if (person.IsNone || person == Subject) return;
+        Adopt(person);
+        _host.SetSubject(person);
+    }
+
+    /// <summary>With nobody selected (start, or after <see cref="Clear"/>), selects yourself. Cheap: a no-op once someone
+    /// is selected.</summary>
+    public void EnsureSubject()
+    {
+        if (Subject.IsNone) Adopt(_host.LocalEntityId());
+    }
+
+    private void Adopt(EntityId s)
+    {
         if (s == Subject) return;
         Subject = s;
         if (!s.IsNone && !_known.ContainsKey(s.Value))
@@ -126,8 +163,7 @@ internal sealed class PosingController
     {
         var people = _posing.NearbyPeople(PeopleRadius);
         Remember(people);
-        var next = PersonCycle.Next(people, Subject, direction);
-        if (!next.IsNone && next != Subject) _host.SetSubject(next);
+        Select(PersonCycle.Next(people, Subject, direction));
     }
 
     public void Play(EmoteInfo action)
@@ -256,12 +292,13 @@ internal sealed class PosingController
     {
         var key = Subject.Value;
         if (_targets.TryGetValue(key, out var t)) t.Reset();
-        _targets.Remove(key);
+        var had = _targets.Remove(key);
         _states.Remove(key);
+        if (had) PosedChanged?.Invoke();
     }
 
-    /// <summary>From <see cref="IPosing.Changed"/>: people the framework released (left, or the free camera ended) are
-    /// forgotten; the next control selects them again.</summary>
+    /// <summary>From <see cref="IPosing.Changed"/>: people the framework released (left, the scene ended, or the scene was
+    /// reset) are forgotten; the next control selects them again.</summary>
     public void OnPosingChanged()
     {
         _releasedScratch.Clear();
@@ -272,15 +309,26 @@ internal sealed class PosingController
             _targets.Remove(key);
             _states.Remove(key);
         }
+        if (_releasedScratch.Count > 0) PosedChanged?.Invoke();
     }
 
-    public void Clear()
+    /// <summary>The Reset scene button (before <see cref="IPosing.ResetAll"/>): forgets every person's pose and panel state;
+    /// the selection stays.</summary>
+    public void ForgetPoses()
     {
+        var had = _targets.Count > 0;
         _targets.Clear();
         _states.Clear();
+        LastResult = PoseResult.Applied;
+        if (had) PosedChanged?.Invoke();
+    }
+
+    /// <summary>Forgets everything, the selection too (the world was left: entity ids no longer mean anyone).</summary>
+    public void Clear()
+    {
+        ForgetPoses();
         _known.Clear();
         Subject = EntityId.None;
-        LastResult = PoseResult.Applied;
     }
 
     private IPoseTarget? Target()
@@ -291,6 +339,7 @@ internal sealed class PosingController
         var selected = _posing.Select(Subject);
         if (selected is null) { _targets.Remove(key); return null; }
         _targets[key] = selected;
+        PosedChanged?.Invoke();
         return selected;
     }
 

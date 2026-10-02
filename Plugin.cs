@@ -47,6 +47,7 @@ public sealed partial class Plugin : IStellarPlugin
         services.Log.Info($"[PhotoStudio] game root resolved: {root.Path} (verified={root.Verified})");
 
         _settings = new StudioSettings(services.Config.GetSection("photostudio"));
+        StartScene();                            // Plugin.Scene.cs — the freeze + posing lifetime (outlives the free camera)
         StartFreeCamera();                       // Plugin.FreeCam.cs
         StartPosing();                           // Plugin.Posing.cs — needs the free camera session + settings
         _look = new LookController(services.RenderLook);
@@ -84,8 +85,9 @@ public sealed partial class Plugin : IStellarPlugin
 
     public void Dispose()
     {
-        StopFreeCamera();   // camera, shield, freeze, look-at and hides go first (spec § 7)
-        StopPosing();       // the framework already reset every posed person when the camera was handed back
+        StopFreeCamera();   // camera, shield, look-at and hides go first (spec § 7)
+        StopPosing();
+        StopScene();        // Plugin.Scene.cs — unfreezes and resets every posed person (the scene ends on unload)
         _services.Framework.Update -= _onFrameworkUpdate;
         _loc.LanguageChanged -= _onLanguageChanged;
         _services.PhotoMode.CutsceneChanged -= _onCutsceneChanged;

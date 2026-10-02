@@ -13,10 +13,10 @@ internal sealed partial class FreeCamSession
     private Vector3 _shownPos;
     private float _shownYaw, _shownPitch;
     private Vector3 _subjectPos;
-    private Vector3? _freezeCentre;
     private bool _rmbDown, _lookFromOwnWindow;
 
-    private Vector3 LeashCentre => _freezeCentre ?? _subjectPos;
+    /// <summary>Scene-stays spec § 8: while frozen the leash centre stays the scene's freeze centre.</summary>
+    private Vector3 LeashCentre => _scene.FreezeCentre ?? _subjectPos;
 
     private void OnFrame(float dt)
     {

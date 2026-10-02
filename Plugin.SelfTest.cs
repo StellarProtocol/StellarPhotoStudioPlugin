@@ -52,7 +52,9 @@ public sealed partial class Plugin
         _freeCam.ScriptedIntent = null;
         SelfTestLog("leash", _freeCam.Distance <= _fcSettings.Leash + 0.01f, $"distance={_freeCam.Distance:F2} leash={_fcSettings.Leash:F0}");
         _freeCam.Exit();
-        var clean = !_freeCam.Active && !_services.CameraOverride.IsOverridden && !_services.InputShield.IsShielded && !_services.SceneFreeze.IsFrozen;
+        ResetScene();   // scene-stays: leaving the free camera keeps the scene; Reset scene ends it
+        var clean = !_freeCam.Active && !_scene.IsSet && !_services.CameraOverride.IsOverridden && !_services.InputShield.IsShielded &&
+                    !_services.SceneFreeze.IsFrozen;
         SelfTestLog("exit", clean);
         _services.Log.Info("[PhotoStudio] freecam selftest DONE");
         _selfTestStep = -1;
