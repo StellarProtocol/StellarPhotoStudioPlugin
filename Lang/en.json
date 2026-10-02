@@ -256,5 +256,11 @@
   "sc.pill.back": "{0} back to the camera",
   "fc.status.kept": "Free camera is off · scene kept. Press {0} to go back.",
   "pz.hint.selectOff": "‹ › to choose · clicking a character needs the free camera",
-  "sc.status.frozenOnly": "Frozen · the whole game is paused"
+  "sc.status.frozenOnly": "Frozen · the whole game is paused",
+  "ps.cap.shape": "Shape",
+  "ps.cap.shape.screen": "Screen",
+  "ps.cap.frameGuide": "Show frame guide",
+  "ps.help.frameGuide": "Dims everything outside the photo's shape, with thirds lines, while the free camera is on or this tab is open. It is never in the photo.",
+  "ps.guide.title": "Frame guide",
+  "ps.toast.shapeCapped": "Too large for this graphics card — saved smaller (same shape)."
 }

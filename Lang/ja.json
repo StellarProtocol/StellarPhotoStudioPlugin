@@ -256,5 +256,11 @@
   "sc.pill.back": "{0} でカメラに戻る",
   "fc.status.kept": "フリーカメラはオフ · シーンは維持中。{0} で戻ります。",
   "pz.hint.selectOff": "‹ › で選択 · キャラクターのクリック選択はフリーカメラ中のみ",
-  "sc.status.frozenOnly": "停止中 · ゲーム全体が一時停止中"
+  "sc.status.frozenOnly": "停止中 · ゲーム全体が一時停止中",
+  "ps.cap.shape": "形",
+  "ps.cap.shape.screen": "画面",
+  "ps.cap.frameGuide": "フレームガイドを表示",
+  "ps.help.frameGuide": "フリーカメラ中またはこのタブを開いている間、写真の形の外側を暗くし、三分割線を表示します。写真には写りません。",
+  "ps.guide.title": "フレームガイド",
+  "ps.toast.shapeCapped": "このグラフィックカードには大きすぎるため、同じ形で小さく保存しました。"
 }

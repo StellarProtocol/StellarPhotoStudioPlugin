@@ -37,6 +37,9 @@ public sealed partial class Plugin
                     new PillElement(() => T("fc.badge.frozen"), Color: () => _services.Theme.Colors.HudText)),   // ❄ carries the meaning; HudAccent was unreadable / same red as combat in Crimson (sandbox S2)
                 new ConditionalElement(() => _services.CombatState.LocalPlayerInCombat,
                     new PillElement(() => T("fc.badge.combat"), Color: () => _services.Theme.Colors.HpFill)),
+                // Portrait-capture spec § 5: the shape + real output size beside the camera line while a shape is set.
+                new ConditionalElement(() => _settings.Shape != PhotoShape.Screen,
+                    new PillElement(() => ShapeFrame.GuideLabel(_settings.Shape, PlannedSize()), Color: () => _services.Theme.Colors.HudText)),
             }, Gap: 6f, Justify: RowJustify.Center),
             new ConditionalElement(() => !_fcSettings.HintHidden,
                 // The hint sits on its own HUD pill chip (mockup .hint) so it stays readable over a bright world.

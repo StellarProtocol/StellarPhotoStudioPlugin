@@ -256,5 +256,11 @@
   "sc.pill.back": "{0} kembali ke kamera",
   "fc.status.kept": "Kamera bebas nonaktif · adegan tetap. Tekan {0} untuk kembali.",
   "pz.hint.selectOff": "‹ › untuk memilih · klik karakter perlu kamera bebas",
-  "sc.status.frozenOnly": "Dibekukan · seluruh game dijeda"
+  "sc.status.frozenOnly": "Dibekukan · seluruh game dijeda",
+  "ps.cap.shape": "Bentuk",
+  "ps.cap.shape.screen": "Layar",
+  "ps.cap.frameGuide": "Tampilkan panduan bingkai",
+  "ps.help.frameGuide": "Menggelapkan semua di luar bentuk foto, dengan garis sepertiga, saat kamera bebas aktif atau tab ini terbuka. Tidak pernah ikut di foto.",
+  "ps.guide.title": "Panduan bingkai",
+  "ps.toast.shapeCapped": "Terlalu besar untuk kartu grafis ini — disimpan lebih kecil (bentuk sama)."
 }

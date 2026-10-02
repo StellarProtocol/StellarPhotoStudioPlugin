@@ -17,6 +17,14 @@ public sealed partial class Plugin
         LabeledRow(() => T("ps.cap.resolution"),
             ScaleButton(1), ScaleButton(2), ScaleButton(4), new SpacerElement(),
             new TextElement(ResolutionText, Color: Muted, Align: TextAlign.Right)),
+        // Shape row (portrait-capture spec § 1; approved mockup 2026-10-03): Screen + the five shapes, wrapping on narrow panels.
+        LabeledRow(() => T("ps.cap.shape"), ShapeButtons()),
+        new RowElement(new HudElement[]
+        {
+            new SpacerElement(Width: LabelW),
+            new CellElement(HelpToggle("capture.frameGuide", () => _settings.ShowFrameGuide, _settings.SetShowFrameGuide,
+                new HelpText(() => T("ps.cap.frameGuide"), () => T("ps.help.frameGuide"))), Weight: 1f),
+        }),
         LabeledRow(() => T("ps.cap.format"),
             FormatButton(CaptureFormat.Png, "PNG"), FormatButton(CaptureFormat.Jpg, "JPG")),
         new ConditionalElement(() => _settings.Format == CaptureFormat.Jpg, SliderRow(
@@ -58,7 +66,22 @@ public sealed partial class Plugin
     }, Gap: 6f);
 
     private HudElement ScaleButton(int s) => new ButtonElement(() => $"{s}×",
-        OnClick: () => _settings.SetScale(s), Active: () => _settings.Scale == s, Width: 48f);
+        OnClick: () => _settings.SetScale(s), Active: () => _settings.Scale == s, Width: 40f);   // 40: the size text must fit at the 400 px minimum (sandbox)
+
+    // Sandbox-measured (2026-10-03): label 96 + these widths + 3 px gaps fit the 400 px minimum panel; a 4-character
+    // ratio ("9:16", "21:9") wraps below 44 px, a 3-character one fits 36.
+    private const float ShapeWideW = 44f, ShapeNarrowW = 36f, ShapeScreenW = 54f;
+
+    private HudElement ShapeButtons() => new RowElement(new HudElement[]
+    {
+        ShapeButton(PhotoShape.Screen, ShapeScreenW), ShapeButton(PhotoShape.Portrait9x16, ShapeWideW),
+        ShapeButton(PhotoShape.Portrait4x5, ShapeNarrowW), ShapeButton(PhotoShape.Portrait2x3, ShapeNarrowW),
+        ShapeButton(PhotoShape.Square, ShapeNarrowW), ShapeButton(PhotoShape.Wide21x9, ShapeWideW),
+    }, Gap: 3f);
+
+    private HudElement ShapeButton(PhotoShape shape, float width) => new ButtonElement(
+        () => shape == PhotoShape.Screen ? T("ps.cap.shape.screen") : PhotoShapes.RatioLabel(shape),
+        OnClick: () => _settings.SetShape(shape), Active: () => _settings.Shape == shape, Width: width);
 
     private HudElement FormatButton(CaptureFormat f, string label) => new ButtonElement(() => label,
         OnClick: () => _settings.SetFormat(f), Active: () => _settings.Format == f, Width: 60f);

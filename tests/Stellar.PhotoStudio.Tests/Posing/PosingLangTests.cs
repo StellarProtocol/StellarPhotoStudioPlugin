@@ -21,6 +21,7 @@ public sealed class PosingLangTests
         // Scene group + SCENE pill (scene-stays spec 2026-10-02).
         "sc.group", "sc.help", "sc.freeze", "sc.unfreeze", "sc.reset", "sc.status.empty", "sc.status.frozen",
         "sc.status.posed", "sc.pill.title", "sc.pill.posed", "sc.pill.back", "fc.status.kept", "pz.hint.selectOff", "sc.status.frozenOnly",
+        "ps.cap.shape", "ps.cap.shape.screen", "ps.cap.frameGuide", "ps.help.frameGuide", "ps.guide.title", "ps.toast.shapeCapped",
     };
 
     [Theory]

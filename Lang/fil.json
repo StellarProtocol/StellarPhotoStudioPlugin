@@ -256,5 +256,11 @@
   "sc.pill.back": "{0} pabalik sa camera",
   "fc.status.kept": "Naka-off ang free camera · nananatili ang eksena. Pindutin ang {0} para bumalik.",
   "pz.hint.selectOff": "‹ › para pumili · kailangan ng free camera para mag-click ng karakter",
-  "sc.status.frozenOnly": "Nakahinto · nakahinto ang buong laro"
+  "sc.status.frozenOnly": "Nakahinto · nakahinto ang buong laro",
+  "ps.cap.shape": "Hugis",
+  "ps.cap.shape.screen": "Screen",
+  "ps.cap.frameGuide": "Ipakita ang gabay sa frame",
+  "ps.help.frameGuide": "Pinapadilim ang lahat sa labas ng hugis ng litrato, may mga linya ng thirds, habang naka-on ang free camera o bukas ang tab na ito. Hindi ito kasama sa litrato.",
+  "ps.guide.title": "Gabay sa frame",
+  "ps.toast.shapeCapped": "Masyadong malaki para sa graphics card na ito — mas maliit ang na-save (parehong hugis)."
 }

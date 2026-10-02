@@ -57,7 +57,7 @@ public sealed partial class Plugin
         {
             case CaptureShortfall.ScaleCapped: warning = T("ps.toast.cappedSize"); break;
             case CaptureShortfall.Retried2x: warning = T("ps.toast.retried2x"); break;
-            // ShapeCapped: the planned (real) size was already shown before the shot; no toast string yet (UI follow-up).
+            case CaptureShortfall.ShapeCapped: warning = T("ps.toast.shapeCapped"); break;
         }
         _toastWarning = warning;
         ShowFileToast(T("ps.toast.saved"), r.Path ?? "", $"{r.Width} × {r.Height} · {FormatName()}{size}");
