@@ -124,10 +124,15 @@ public sealed partial class FreeCamProbe : IStellarPlugin
         ("R6_setup", StepSetup6, false),          // run 6 (2026-10-02): CloneModelForPhoto NRE root cause
         ("R6_window", StepWindow6, false),
         ("R6_summary", StepSummary6, false),
-        ("R7_setup", StepSetup7, true),          // run 7 (2026-10-02): monster freeze undone in combat — root cause
-        ("R7_combat", StepCombat7, true),
-        ("R7_return", StepReturn7, true),
-        ("R7_summary", StepSummary7, true),
+        ("R7_setup", StepSetup7, false),          // run 7 (2026-10-02): monster freeze undone in combat — root cause
+        ("R7_combat", StepCombat7, false),
+        ("R7_return", StepReturn7, false),
+        ("R7_summary", StepSummary7, false),
+        ("R8_restore", StepRestore8, true),       // run 8 (2026-10-02): verify the framework freeze fix (fw 57147d1+)
+        ("R8_town", StepTown8, true),
+        ("R8_mount", StepMount8, false),          // 8a: personal mount = part of the player model (no VehicleEnt)
+        ("R8_combat", StepCombat8, false),        // 8a: character never moves (unfocused window) — no combat
+        ("R8_return", StepReturn8, true),
     };
 
     internal void Log(string msg)

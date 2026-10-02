@@ -192,3 +192,15 @@ world entry) — filter the array, never blank the entry (an empty grep pattern 
 
 **Do not re-arm as is:** a Harmony patch on `EntityAttrExtensions.tryCalculateAnimSpeed` hangs the main thread the first
 time it is invoked (runs 7c and 7d); Il2CppInterop's runtime `XrefScanner.UsedBy` hung it too (run 7a).
+
+## Run 8 steps (2026-10-02: verify the framework freeze fix, feat/posing 57147d1 + 4996245)
+
+Same scenario recipe as run 7 (temporary copy, `STELLAR_AUTONAV_ACCOUNT=2`, `STELLAR_DIAGNOSTICS=1`, CLICK FAILED filtered,
+`TIMEOUT_S=560` so a foreground 10-min wait covers it). No probe hooks are armed in run 8.
+
+| Step | Verdict lines |
+|---|---|
+| `R8_restore` | `R8 RESTORE autobattle setting: prev= now=false`; `R8 HOME unlock:` (only 50806 Arena Town is unlocked on this character — 50801 is NOT, which is why `AsyncUserTp(8, 50801)` changed no scene) |
+| `R8_town` | framework `[FreeCam] freeze on … excluded=[self]`; `R8 INJECT …` — a `AnimComp.Speed = 1.25` write through the interop setter (= the patched native `set_Speed`) on frozen players/NPCs must read back 0.00 (`SUBSTITUTED`), self passes through; after unfreeze `R8 INJECT-RESTORE … RESTORED-LATEST`; framework `[FreeCam] freeze held: … gameWrites=` |
+| `R8_mount` (off in auto after 8a) | `R8 MOUNT link …`: a personal mount is NOT a separate entity (`rideUuid=0`, `rideId=12010016`, no VehicleEnt within 15 m) — it is part of the player model, so the self exclusion already covers it |
+| `R8_combat` (off in auto after 8a) | teleport to Asteria 50707, path-find, auto-battle, 16 s freeze. 8a: the character never moved (path-finding `ERequest`, auto-battle never engaged; nearest monsters 32-34 m) |

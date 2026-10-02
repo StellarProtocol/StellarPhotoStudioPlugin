@@ -23,7 +23,7 @@ namespace Stellar.PhotoStudio.FreeCamProbe;
 public sealed partial class FreeCamProbe
 {
     private const float R7Range = 40f;
-    private const float R7FreezeSeconds = 10f;
+    private float _r7FreezeSeconds = 10f;   // run 8 sets 6 / 15 s per cycle
     private const int R7Cycles = 3;
     private const int R7MaxTracked = 30;
 
@@ -270,7 +270,7 @@ public sealed partial class FreeCamProbe
         Log($"R7C{c} FREEZE applied f0 t={Time.realtimeSinceStartup:F2} isFrozen={_services.SceneFreeze.IsFrozen} holds={_services.SceneFreeze.HoldsPositions} subject={subject}");
         Shot? f1 = null, f2 = null, f3 = null, f4 = null;
         var t0 = Time.realtimeSinceStartup;
-        while (Time.realtimeSinceStartup - t0 < R7FreezeSeconds && !Aborted(epoch))
+        while (Time.realtimeSinceStartup - t0 < _r7FreezeSeconds && !Aborted(epoch))
         {
             var el = Time.realtimeSinceStartup - t0;
             var fr = subject == 0 ? null : EntRegion(subject, 0.10f, 0.20f);
@@ -282,6 +282,7 @@ public sealed partial class FreeCamProbe
                 else if (f3 != null && f4 == null && el > 6.6f) f4 = Capture($"R7C{c}_F_t4", r1);
             }
             if (Time.frameCount % 30 == 0) R7RefreshTracked();   // monsters that come into range mid-freeze
+            if (_r8Inject && el > 1.0f) R8InjectNow();            // run 8: gate check (Run8.cs)
             yield return null;
         }
         Log($"R7C{c} frozen window done f{R7F()} isFrozen={_services.SceneFreeze.IsFrozen}; pixel subject={subject} " +
