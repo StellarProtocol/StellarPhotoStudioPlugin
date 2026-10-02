@@ -19,13 +19,15 @@ public sealed partial class Plugin
     private HudElement PersonGroup() => FoldGroup("pz.group.person", "pz.help.person",
         () => _fcSettings.PoseOpen, open => _fcSettings.SetPoseOpen(open), new HudElement[]
         {
-            new ConditionalElement(() => _freeCam.Active, PersonBody(), new TextElement(() => T("pz.off"), Color: Muted)),
+            // Scene-stays spec § 5: posing works with the free camera off; only being out of the world turns it off.
+            new ConditionalElement(() => _services.Posing.IsAvailable, PersonBody(), new TextElement(() => T("pz.off"), Color: Muted)),
         });
 
     private HudElement PersonBody() => new ColumnElement(new HudElement[]
     {
         PersonRow(),
-        new TextElement(() => T("pz.hint.select"), Color: Muted, FontSize: SubFont),
+        // Click-to-select needs the free camera's picker; off the camera the hint points at ‹ › instead.
+        new TextElement(() => T(_freeCam.Active ? "pz.hint.select" : "pz.hint.selectOff"), Color: Muted, FontSize: SubFont),
         new ConditionalElement(() => _posingCtl.IsCopy,
             new PanelElement(new TextElement(() => T("pz.note.copy"), Color: Accent), Padding: 6f)),
         new ConditionalElement(() => _posingCtl.Failed, new TextElement(() => T("pz.failed"), Color: Muted)),
@@ -92,7 +94,8 @@ public sealed partial class Plugin
                 () => _loc.TFormat("pz.unit.percent", F(_posingCtl.State.Moment * 100f, "0")), () => _posingCtl.SetMoment(0f), HasPose), Weight: 1f),
             HelpDot("pz.moment", () => T("pz.moment"), () => T("pz.help.moment")),
         }, Gap: 6f),
-        new ConditionalElement(() => _posingCtl.ShowClothHint && !_freeCam.Frozen, new TextElement(() => T("pz.hint.cloth"), Color: Muted)),
+        // "Press Space…" names the free camera's key; off the camera the Scene group's Freeze button is the way.
+        new ConditionalElement(() => _posingCtl.ShowClothHint && !SceneFrozen && _freeCam.Active, new TextElement(() => T("pz.hint.cloth"), Color: Muted)),
     }, Gap: 4f);
 
     private string PoseLabel() => (_posingCtl.State.Action?.Name ?? T("pz.pose.pick")) + (_poseListOpen ? "  ▾" : "  ▸");

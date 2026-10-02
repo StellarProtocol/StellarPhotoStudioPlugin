@@ -18,6 +18,9 @@ public sealed class PosingLangTests
         "pz.sub.eyes", "pz.look.default", "pz.look.lens", "pz.look.free", "pz.lock", "pz.rotate", "pz.reset", "pz.hint.cloth",
         "pz.unit.percent", "pz.unit.degrees", "pz.pose.current", "pz.help.person", "pz.help.moment", "pz.help.expression", "pz.help.head",
         "pz.help.eyes", "pz.help.rotate", "pz.full", "fc.help.pose",
+        // Scene group + SCENE pill (scene-stays spec 2026-10-02).
+        "sc.group", "sc.help", "sc.freeze", "sc.unfreeze", "sc.reset", "sc.status.empty", "sc.status.frozen",
+        "sc.status.posed", "sc.pill.title", "sc.pill.posed", "sc.pill.back", "fc.status.kept", "pz.hint.selectOff",
     };
 
     [Theory]
@@ -39,7 +42,9 @@ public sealed class PosingLangTests
     {
         var en = Load("en");
         Assert.Equal("Click a character to select · Backspace for you", en.GetProperty("pz.hint.select").GetString());
-        Assert.Equal("Posing a local copy — only you see it. The real player is hidden until you exit.", en.GetProperty("pz.note.copy").GetString());
+        // Scene-stays spec (2026-10-02, owner-approved mockup): copies outlive the free camera, so the note names the reset.
+        Assert.Equal("Posing a local copy — only you see it. The real player is hidden until you reset the scene.", en.GetProperty("pz.note.copy").GetString());
+        Assert.Equal("Reset scene", en.GetProperty("sc.reset").GetString());
         Assert.Equal("Press Space to freeze cloth too", en.GetProperty("pz.hint.cloth").GetString());
         Assert.Equal("Reset this person", en.GetProperty("pz.reset").GetString());
     }

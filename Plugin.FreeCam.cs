@@ -46,8 +46,7 @@ public sealed partial class Plugin
     private void OnFreeCamStateChanged()
     {
         SyncPosing();   // Plugin.Posing.cs — selection follows the orbit subject while the free camera is on
-        _freeCamHudWin.SetVisible(_freeCam.Active);
-        _freeCamHudWin.MarkDirty();
+        SyncSceneHud();
         _panelWin.MarkDirty();
     }
 

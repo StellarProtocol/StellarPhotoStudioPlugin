@@ -32,13 +32,15 @@ public sealed partial class Plugin
                 OnClick: () => ToggleFreeCamera(), Style: MenuButtonStyle.Filled), Width: 150f),
         }, Gap: 8f),
         new SeparatorElement(),
+        SceneGroup(),
+        new SeparatorElement(),
         MovementGroup(),
         new SeparatorElement(),
         PersonGroup(),
     }, Gap: 8f);
 
     private string FreeCamStatus() =>
-        !_freeCam.Active ? _loc.TFormat("fc.status.off", BindingText(StudioHotkeys.FreeCam))
+        !_freeCam.Active ? _loc.TFormat(SceneIsSet ? "fc.status.kept" : "fc.status.off", BindingText(StudioHotkeys.FreeCam))
         : _freeCam.Mode == FreeCamMode.Fly ? T("fc.status.fly")
         : _loc.TFormat("fc.status.orbit", SubjectName());
 

@@ -59,7 +59,16 @@ public sealed partial class Plugin
     private void OnSceneChanged()
     {
         _panelWin?.MarkDirty();
-        _freeCamHudWin?.MarkDirty();
+        SyncSceneHud();
+    }
+
+    /// <summary>The top HUD shows the camera line while the free camera is on and the SCENE pill while it is off with a
+    /// scene set (spec § 7); one window, visibility driven by the two events, never polled.</summary>
+    private void SyncSceneHud()
+    {
+        if (_freeCamHudWin is null) return;
+        _freeCamHudWin.SetVisible(_freeCam.Active || _scene.IsSet);
+        _freeCamHudWin.MarkDirty();
     }
 
     /// <summary>From the Person group's selection (PosingHost.SetSubject): with the free camera on, the selection is the

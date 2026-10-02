@@ -38,6 +38,7 @@ internal sealed class FreeCamSettings
         HintHidden = cfg.Get("freecam.hintHidden", false);
         MovementOpen = cfg.Get("ui.freecam.movementOpen", false);   // 1.2: collapsed by default so Person is above the fold (review)
         PoseOpen = cfg.Get("ui.freecam.poseOpen", true);
+        SceneOpen = cfg.Get("ui.freecam.sceneOpen", true);
         _favourites = ParseIds(cfg.Get("freecam.favourites", "") ?? "");
     }
 
@@ -52,6 +53,7 @@ internal sealed class FreeCamSettings
     public bool HintHidden { get; private set; }
     public bool MovementOpen { get; private set; }
     public bool PoseOpen { get; private set; }
+    public bool SceneOpen { get; private set; }
     public IReadOnlyList<int> Favourites => _favourites;
     public RigTuning Tuning => new(MoveSpeed, Sensitivity, Smoothing, InvertY, Leash);
 
@@ -83,6 +85,7 @@ internal sealed class FreeCamSettings
     public void SetHintHidden(bool on) { HintHidden = on; Store("freecam.hintHidden", on); }
     public void SetMovementOpen(bool open) { MovementOpen = open; Store("ui.freecam.movementOpen", open); }
     public void SetPoseOpen(bool open) { PoseOpen = open; Store("ui.freecam.poseOpen", open); }
+    public void SetSceneOpen(bool open) { SceneOpen = open; Store("ui.freecam.sceneOpen", open); }
 
     public bool IsFavourite(int id) => _favourites.Contains(id);
 

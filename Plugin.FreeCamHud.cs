@@ -22,14 +22,17 @@ public sealed partial class Plugin
             // Same HUD set-up as PlayerHUD / RaidManager: HUD surface (shadowed text, transparent pill chips).
             Surface = SurfaceStyle.HudOverlay,
             ShowTitleBar = false, StartVisible = false, Draggable = true, EditModeDragOnly = true,
-            Anchor = WindowAnchor.Top, ShouldRender = () => InWorld() && _freeCam.Active,
+            Anchor = WindowAnchor.Top, ShouldRender = () => InWorld() && (_freeCam.Active || ScenePillVisible),
         },
-        new ColumnElement(new HudElement[]
+        // Free camera on: the camera line + key hint. Off with a scene set: the SCENE pill (scene-stays spec § 7).
+        new ConditionalElement(() => _freeCam.Active, CameraHud(), ScenePill())));
+
+    private HudElement CameraHud() => new ColumnElement(new HudElement[]
         {
             new RowElement(new HudElement[]
             {
                 new PillElement(HudLine, Color: () => _services.Theme.Colors.HudText),
-                new ConditionalElement(() => _freeCam.Frozen,
+                new ConditionalElement(() => SceneFrozen,
                     new PillElement(() => T("fc.badge.frozen"), Color: () => _services.Theme.Colors.HudText)),   // ❄ carries the meaning; HudAccent was unreadable / same red as combat in Crimson (sandbox S2)
                 new ConditionalElement(() => _services.CombatState.LocalPlayerInCombat,
                     new PillElement(() => T("fc.badge.combat"), Color: () => _services.Theme.Colors.HpFill)),
@@ -38,7 +41,22 @@ public sealed partial class Plugin
                 // The hint sits on its own HUD pill chip (mockup .hint) so it stays readable over a bright world.
                 new RowElement(new HudElement[] { new PillElement(HudHint, Color: () => _services.Theme.Colors.HudText) },
                     Justify: RowJustify.Center)),
-        }, Gap: 4f)));
+        }, Gap: 4f);
+
+    private HudElement ScenePill() => new RowElement(new HudElement[]
+    {
+        new PillElement(SceneLine, Color: () => _services.Theme.Colors.HudText),
+        new ConditionalElement(() => SceneFrozen,
+            new PillElement(() => T("fc.badge.frozen"), Color: () => _services.Theme.Colors.HudText)),
+        new ConditionalElement(() => _services.CombatState.LocalPlayerInCombat,
+            new PillElement(() => T("fc.badge.combat"), Color: () => _services.Theme.Colors.HpFill)),
+        new PillElement(() => _loc.TFormat("sc.pill.back", BindingText(StudioHotkeys.FreeCam)),
+            Color: () => _services.Theme.Colors.HudText),
+    }, Gap: 6f, Justify: RowJustify.Center);
+
+    private string SceneLine() => ScenePosedCount > 0
+        ? T("sc.pill.title") + " · " + _loc.TFormat("sc.pill.posed", ScenePosedCount.ToString(System.Globalization.CultureInfo.InvariantCulture))
+        : T("sc.pill.title");
 
     private string HudLine() => _loc.TFormat("fc.hud.line",
         T(_freeCam.Mode == FreeCamMode.Orbit ? "fc.mode.orbit" : "fc.mode.fly"),
