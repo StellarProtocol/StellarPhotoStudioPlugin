@@ -6,8 +6,8 @@ using Stellar.PhotoStudio.Posing;
 namespace Stellar.PhotoStudio;
 
 // Posing self-test COPY SWEEP (TEST client only; inert unless BOTH STELLAR_PHOTOSTUDIO_POSING_SELFTEST=1 and
-// STELLAR_PHOTOSTUDIO_POSING_SWEEP=1). After the regular clone person, every other player nearby
-// (every loaded player within PzSweepRadius = the controller's far-pick radius, rescanned for newcomers for up to PzSweepWindow, at most
+// STELLAR_PHOTOSTUDIO_POSING_SWEEP=1, or =<seconds> for a longer look-out). After the regular clone person, every other player nearby
+// (every loaded player within PzSweepRadius = the controller's far-pick radius, rescanned for newcomers for up to the window, at most
 // PzSweepMax copies) is taken as a photo copy in turn: play → copy Ready → capture (posed) → reset → capture (real
 // player shown again). Why: the framework's Male-idle copy guard (regression clone-nre-male-null-ridetpl) fires only on
 // an idle MALE source, and the public posing surface carries no gender — so the sweep copies everyone nearby and the
@@ -23,12 +23,16 @@ public sealed partial class Plugin
     private bool _pzSweepOn;
     private EntityId _pzCloned;
     private int _pzSweepAt, _pzSweepCopies;
-    private float _pzSweepBegan;
+    private float _pzSweepBegan, _pzSweepWindow = PzSweepWindow;
 
     private void ArmPosingSweep()
     {
-        _pzSweepOn = _pzOn && Environment.GetEnvironmentVariable(PosingSweepEnvVar) == "1";
-        if (_pzSweepOn) _services.Log.Info("[PhotoStudio] posing selftest sweep armed");
+        // "1" = the default look-out window; a larger whole number = that many seconds (a quiet spot needs longer).
+        var raw = Environment.GetEnvironmentVariable(PosingSweepEnvVar);
+        var parsed = int.TryParse(raw, out var secs);
+        _pzSweepOn = _pzOn && parsed && secs >= 1;
+        _pzSweepWindow = _pzSweepOn && secs > 1 ? Math.Min(secs, 900) : PzSweepWindow;
+        if (_pzSweepOn) _services.Log.Info($"[PhotoStudio] posing selftest sweep armed window={_pzSweepWindow:0}s");
     }
 
     /// <summary>The step after the regular clone person: the sweep when armed, else straight on to the NPC.</summary>
@@ -45,7 +49,7 @@ public sealed partial class Plugin
     }
 
     // One look for players not yet copied (every loaded player model within PzSweepRadius, nearest first); when none is
-    // new, wait PzSweepRescan and look again until PzSweepWindow has passed or PzSweepMax copies were made.
+    // new, wait PzSweepRescan and look again until the window has passed or PzSweepMax copies were made.
     private void PzSweepScan()
     {
         _pzSweep.Clear();
@@ -64,7 +68,7 @@ public sealed partial class Plugin
             PzBegin($"sweep-{_pzSweepCopies - 1}", _pzSweep[_pzSweepAt].Id, next: PzSweepStep + 1);
             return;
         }
-        if (_pzSweepCopies < PzSweepMax && _pzClock - _pzSweepBegan < PzSweepWindow)
+        if (_pzSweepCopies < PzSweepMax && _pzClock - _pzSweepBegan < _pzSweepWindow)
         {
             _pzStep = PzSweepStep + 2;   // rescan later
             PzDue(PzSweepRescan);
