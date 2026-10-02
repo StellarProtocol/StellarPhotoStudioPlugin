@@ -204,3 +204,17 @@ Same scenario recipe as run 7 (temporary copy, `STELLAR_AUTONAV_ACCOUNT=2`, `STE
 | `R8_town` | framework `[FreeCam] freeze on … excluded=[self]`; `R8 INJECT …` — a `AnimComp.Speed = 1.25` write through the interop setter (= the patched native `set_Speed`) on frozen players/NPCs must read back 0.00 (`SUBSTITUTED`), self passes through; after unfreeze `R8 INJECT-RESTORE … RESTORED-LATEST`; framework `[FreeCam] freeze held: … gameWrites=` |
 | `R8_mount` (off in auto after 8a) | `R8 MOUNT link …`: a personal mount is NOT a separate entity (`rideUuid=0`, `rideId=12010016`, no VehicleEnt within 15 m) — it is part of the player model, so the self exclusion already covers it |
 | `R8_combat` (off in auto after 8a) | teleport to Asteria 50707, path-find, auto-battle, 16 s freeze. 8a: the character never moved (path-finding `ERequest`, auto-battle never engaged; nearest monsters 32-34 m) |
+
+## Run 9 steps (2026-10-02: global time pause `Time.timeScale = 0` feasibility; earlier steps off in auto except env + R8_restore)
+
+Scenario: `scenario/timepause-probe.sh` (copy, run, delete). Modes via `STELLAR_TIMEPAUSE_MODE`: `town` (45 s pause with the
+framework's real `ICameraOverride`, self emote/effect/skill press, captures, blend + game-camera tests), `field` (teleport to
+Asteria 50707, self skill via `PlayerInputController:Attack(1,…)`, 35 s pause, home after), `long` (300 s pause, network only).
+No Harmony patch is added by run 9. Results: freecam worktree `docs/recon/free-camera-recon.md` § Run 9 and
+`.superpowers/sdd/posing/time-pause-probe.md`.
+
+| Step | Verdict lines |
+|---|---|
+| `R9_setup` | `R9 TIME boot` (timeScale, brain ignoreTimeScale/update modes), `R9 CENSUS` (ParticleSystem useUnscaledTime, Animator updateMode, PlayableDirector) |
+| `R9_run` | `R9 PAUSE ON/OFF` (frames, `framesWithDeltaTime>0`, game timeScale writes, snaps); `PAUSED 2.0 s (P1->P2)` / `P1->P3` diffs vs `UNPAUSED baseline`; `effect clock`; `fwTicks`; `CAMERA orbit`; `FW CAPTURE`; `BLEND A..F`, `FOLLOW`, `GAMECAM rotate`; `HOLD +Ns` (sends, net, entities); `RESUME +3f/+1s/+3s/+6s` gaps + skill; `SNAP while paused` |
+| `R9_end` | `LUA net counters final` (ConnectMgr disc/recon/dlg/fail), `SENDS total` |
