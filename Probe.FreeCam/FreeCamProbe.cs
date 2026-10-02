@@ -143,7 +143,8 @@ public sealed partial class FreeCamProbe : IStellarPlugin
         ("R11_setup", StepSetup11, false),        // run 11 (2026-10-02): locomotion animating in place under the time pause
         ("R11_remote", StepRemote11, false),
         ("R11_end", StepEnd11, false),
-        ("R12_request", StepRequest12, true),     // run 12: a request re-poses a model with the clock stopped; the gate holds it
+        ("R12_request", StepRequest12, false),    // run 12: a request re-poses a model with the clock stopped; the gate holds it
+        ("R13_run", StepRun13, true),             // run 13 (2026-10-03): time-pause review fixes (STELLAR_R13 modes)
     };
 
     internal void Log(string msg)
@@ -155,6 +156,7 @@ public sealed partial class FreeCamProbe : IStellarPlugin
 
     private void OnUpdate(float dt)
     {
+        _r13Ticks++;
         if (_services.ClientState.Phase == GamePhase.World)
             Try("self uuid", () => _selfUuid = Panda.ZGame.ZEntityMgr.IsCreated ? Panda.ZGame.ZEntityMgr.Instance.PlayerUuid : 0);
         if (!_auto || _autoRan || _busy) return;
