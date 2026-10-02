@@ -15,6 +15,7 @@ public sealed class StudioSessionTests
         public bool IsCapturing { get; private set; }
         public async Task<CaptureResult> CaptureAsync(CaptureRequest r) { Calls++; IsCapturing = true; var x = await Tcs.Task; IsCapturing = false; return x; }
         public CaptureSize PlanSize(CaptureRequest r) => default;
+        public int MaxTextureSize => 16384;
     }
 
     [Fact]

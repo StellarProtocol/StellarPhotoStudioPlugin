@@ -25,6 +25,7 @@ public sealed partial class Plugin : IStellarPlugin
     private readonly IStudioView _view;
     private readonly PanelOpenState _panel;
     private readonly PhotoModeAttach _photoModeAttach;
+    private readonly CapturePlanCache _planCache;   // PlannedSize()/EffectiveScale() — rebuilt only on shape/scale/window change
     private readonly Action<float> _onFrameworkUpdate;
     private readonly Action<bool> _onCutsceneChanged;
     private readonly Action _onLanguageChanged;
@@ -37,6 +38,7 @@ public sealed partial class Plugin : IStellarPlugin
     {
         _services = services;
         _loc = services.Localization;
+        _planCache = new CapturePlanCache(services.ScreenCapture);
         LogBootDiag(); // Plugin.Diagnostics.cs — gated on StellarDiagnostics.IsEnabled
 
         var assemblyDir = Path.GetDirectoryName(typeof(Plugin).Assembly.Location) ?? "";
@@ -143,7 +145,7 @@ public sealed partial class Plugin : IStellarPlugin
     /// <summary>UI binding (spec § 4/6): the REAL output size for the current Scale + Shape on this window — the
     /// framework's own plan, GPU texture limit included. Shown next to Resolution and under Capture.</summary>
     internal CaptureSize PlannedSize() =>
-        _services.ScreenCapture.PlanSize(new CaptureRequest { Scale = _settings.Scale, Aspect = PhotoShapes.Aspect(_settings.Shape) });
+        _planCache.Size(_settings.Shape, _settings.Scale, _services.Framework.ScreenWidth, _services.Framework.ScreenHeight);
 
     private void OnCaptureResult(CaptureResult r)
     {
@@ -205,7 +207,8 @@ public sealed partial class Plugin : IStellarPlugin
 
     /// <summary>The scale the image was ACTUALLY captured at — the framework lowers 4× to 2× on the pixel cap or a
     /// memory fallback, so the requested setting would be wrong in the sidecar.</summary>
-    private int EffectiveScale() => CaptureScale.Effective(_services.Framework.ScreenWidth, _services.Framework.ScreenHeight, _settings.Scale);
+    private int EffectiveScale() =>
+        _planCache.EffectiveScale(_settings.Shape, _settings.Scale, _services.Framework.ScreenWidth, _services.Framework.ScreenHeight);
 
     private int CapturedScale(CaptureResult r) => ShapeFrame.CapturedScale(new CaptureSize(r.Width, r.Height),
         _services.Framework.ScreenWidth, _services.Framework.ScreenHeight, _settings.Scale);

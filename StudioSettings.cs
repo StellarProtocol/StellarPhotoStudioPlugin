@@ -83,7 +83,16 @@ internal sealed class StudioSettings
 
     public void SetScale(int s) { Scale = Normalize(s); Store("capture.scale", Scale); }
     // Stored as a string key ("screen", "9:16", …): an unknown value (a newer build's shape) reads back as Screen.
-    public void SetShape(PhotoShape s) { Shape = s; Store("capture.shape", PhotoShapes.Key(s)); }
+    public void SetShape(PhotoShape s)
+    {
+        var changed = Shape != s;
+        Shape = s;
+        Store("capture.shape", PhotoShapes.Key(s));
+        if (changed) ShapeChanged?.Invoke();
+    }
+
+    /// <summary>Raised after <see cref="Shape"/> changes value (the preset session counts it as an edit).</summary>
+    public event Action? ShapeChanged;
     public void SetShowFrameGuide(bool on) { ShowFrameGuide = on; Store("capture.frameGuide", on); }
     public void SetFormat(CaptureFormat f) { Format = f; Store("capture.format", f == CaptureFormat.Jpg ? "jpg" : "png"); }
     public void SetJpgQuality(int q) { JpgQuality = Math.Clamp(q, 1, 100); Store("capture.jpgQuality", JpgQuality); }

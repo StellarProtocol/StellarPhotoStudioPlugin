@@ -82,5 +82,9 @@ public sealed class FrameGuidePainterTests
             Assert.Equal(0, raw[y * (1 + w * 4)]);                   // filter 0 per row
             Assert.Equal(rgba.AsSpan(y * w * 4, w * 4).ToArray(), raw.AsSpan(y * (1 + w * 4) + 1, w * 4).ToArray());
         }
+
+        // Review minor 7: the chunk CRC is pinned through the one chunk whose CRC is a known constant — an empty IEND
+        // always ends 'AE 42 60 82' (CRC-32 of "IEND"); a broken table or a CRC over the wrong bytes changes it.
+        Assert.Equal(new byte[] { 0, 0, 0, 0, (byte)'I', (byte)'E', (byte)'N', (byte)'D', 0xAE, 0x42, 0x60, 0x82 }, png[^12..]);
     }
 }
