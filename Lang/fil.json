@@ -244,17 +244,17 @@
   "pz.help.rotate": "Iniikot ang tao. Ibinabalik ng ↺ sa dating harap.",
   "pz.full": "Naabot na ang limit ng litrato — mag-reset ng isang tao para ma-pose ang taong ito.",
   "sc.group": "Eksena",
-  "sc.help": "Ang paghinto at ang mga pinose na tao ay bahagi ng eksena, hindi ng free camera. Paglabas mo sa free camera, gagana ulit ang mga key mo kaya mailalakad mo ang karakter mo papasok sa kuha habang nananatili ang lahat gaya ng inayos mo; pindutin ang key ng free camera para bumalik kung saan ka umalis. Hindi kailanman inihihinto ang sarili mong karakter. Ang I-reset ang eksena, paglipat ng zone, cutscene o pag-off ng Photo Studio ay nagbabalik sa lahat sa normal.",
+  "sc.help": "Inihihinto ng Freeze ang buong laro sa screen mo — lahat ng tao, bawat skill at effect, pati ang sarili mong karakter — parang pag-pause ng video. Tuloy ang laban sa server, kaya lalabas ang nangyari paglabas sa hinto. Ang paghinto, mga naka-pose at mga nakatagong layer ay bahagi ng eksena, hindi ng free camera: nananatili sila kapag umalis ka, at ang Ituloy (o Space sa free camera) lang ang nagtutuloy sa laro. Ang I-reset ang eksena, paglipat ng zone, cutscene o pag-off ng Photo Studio ay nagbabalik sa lahat sa normal.",
   "sc.freeze": "❄ Ihinto",
   "sc.unfreeze": "❄ Ituloy",
   "sc.reset": "I-reset ang eksena",
   "sc.status.empty": "Walang nakahinto o naka-pose",
-  "sc.status.frozen": "Nakahinto · {0} taong naka-pose · laging nakakagalaw ang karakter mo",
-  "sc.status.posed": "{0} taong naka-pose · laging nakakagalaw ang karakter mo",
+  "sc.status.frozen": "Nakahinto · {0} taong naka-pose · nakahinto ang buong laro",
+  "sc.status.posed": "{0} taong naka-pose",
   "sc.pill.title": "EKSENA",
   "sc.pill.posed": "{0} naka-pose",
   "sc.pill.back": "{0} pabalik sa camera",
   "fc.status.kept": "Naka-off ang free camera · nananatili ang eksena. Pindutin ang {0} para bumalik.",
   "pz.hint.selectOff": "‹ › para pumili · kailangan ng free camera para mag-click ng karakter",
-  "sc.status.frozenOnly": "Nakahinto · laging nakakagalaw ang karakter mo"
+  "sc.status.frozenOnly": "Nakahinto · nakahinto ang buong laro"
 }

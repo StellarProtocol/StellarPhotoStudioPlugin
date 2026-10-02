@@ -244,17 +244,17 @@
   "pz.help.rotate": "Turns the person. ↺ returns them to the way they faced.",
   "pz.full": "Photo limit reached — reset someone to pose this person.",
   "sc.group": "Scene",
-  "sc.help": "Freeze and posed people belong to the scene, not the free camera. Leave the free camera and your keys work again, so you can walk your character into the shot while everything else stays as you set it; press the free camera key to come back where you left. Your own character is never frozen. Reset scene, a zone change, a cutscene or turning Photo Studio off returns everyone to normal.",
+  "sc.help": "Freeze pauses the whole game on your screen — everyone, every skill and effect, and your own character — like pausing a video. The fight carries on with the server, so anything that happened shows when you unfreeze. Freeze, posed people and hidden layers belong to the scene, not the free camera: they stay when you leave it, and only Unfreeze (or Space in the free camera) resumes the game. Reset scene, a zone change, a cutscene or turning Photo Studio off returns everything to normal.",
   "sc.freeze": "❄ Freeze",
   "sc.unfreeze": "❄ Unfreeze",
   "sc.reset": "Reset scene",
   "sc.status.empty": "Nothing frozen or posed",
-  "sc.status.frozen": "Frozen · {0} people posed · your character can always move",
-  "sc.status.posed": "{0} people posed · your character can always move",
+  "sc.status.frozen": "Frozen · {0} people posed · the whole game is paused",
+  "sc.status.posed": "{0} people posed",
   "sc.pill.title": "SCENE",
   "sc.pill.posed": "{0} posed",
   "sc.pill.back": "{0} back to the camera",
   "fc.status.kept": "Free camera is off · scene kept. Press {0} to go back.",
   "pz.hint.selectOff": "‹ › to choose · clicking a character needs the free camera",
-  "sc.status.frozenOnly": "Frozen · your character can always move"
+  "sc.status.frozenOnly": "Frozen · the whole game is paused"
 }

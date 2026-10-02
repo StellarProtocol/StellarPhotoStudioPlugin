@@ -244,17 +244,17 @@
   "pz.help.rotate": "Memutar orang itu. ↺ mengembalikan ke arah semula.",
   "pz.full": "Batas foto tercapai — atur ulang seseorang untuk memberi pose orang ini.",
   "sc.group": "Adegan",
-  "sc.help": "Pembekuan dan orang yang diberi pose adalah bagian dari adegan, bukan kamera bebas. Saat kamu keluar dari kamera bebas, tombolmu berfungsi lagi sehingga kamu bisa menggerakkan karaktermu ke dalam bidikan sementara semuanya tetap seperti yang kamu atur; tekan tombol kamera bebas untuk kembali ke posisi terakhir. Karaktermu sendiri tidak pernah dibekukan. Atur ulang adegan, pindah zona, cutscene, atau mematikan Photo Studio mengembalikan semua orang ke normal.",
+  "sc.help": "Bekukan menjeda seluruh game di layarmu — semua orang, setiap skill dan efek, termasuk karaktermu sendiri — seperti menjeda video. Pertarungan tetap berjalan di server, jadi apa yang terjadi akan terlihat saat kamu melanjutkan. Pembekuan, orang yang diberi pose, dan lapisan yang disembunyikan adalah bagian dari adegan, bukan kamera bebas: semuanya tetap saat kamu keluar, dan hanya Lanjutkan (atau Space di kamera bebas) yang melanjutkan game. Atur ulang adegan, pindah zona, cutscene, atau mematikan Photo Studio mengembalikan semuanya ke normal.",
   "sc.freeze": "❄ Bekukan",
   "sc.unfreeze": "❄ Lanjutkan",
   "sc.reset": "Atur ulang adegan",
   "sc.status.empty": "Tidak ada yang dibekukan atau diberi pose",
-  "sc.status.frozen": "Dibekukan · {0} orang diberi pose · karaktermu selalu bisa bergerak",
-  "sc.status.posed": "{0} orang diberi pose · karaktermu selalu bisa bergerak",
+  "sc.status.frozen": "Dibekukan · {0} orang diberi pose · seluruh game dijeda",
+  "sc.status.posed": "{0} orang diberi pose",
   "sc.pill.title": "ADEGAN",
   "sc.pill.posed": "{0} diberi pose",
   "sc.pill.back": "{0} kembali ke kamera",
   "fc.status.kept": "Kamera bebas nonaktif · adegan tetap. Tekan {0} untuk kembali.",
   "pz.hint.selectOff": "‹ › untuk memilih · klik karakter perlu kamera bebas",
-  "sc.status.frozenOnly": "Dibekukan · karaktermu selalu bisa bergerak"
+  "sc.status.frozenOnly": "Dibekukan · seluruh game dijeda"
 }
