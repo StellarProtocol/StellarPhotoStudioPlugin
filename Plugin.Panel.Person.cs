@@ -82,7 +82,7 @@ public sealed partial class Plugin
                 new TextElement(PoseLabel, NoWrap: true, Color: () => PoseEnabled() ? Normal() : MenuMuted()),
                 () => { if (PoseEnabled()) _poseListOpen = !_poseListOpen; }), Padding: 4f), Weight: 1f),
             new CellElement(new ButtonElement(() => _posingCtl.State.Playing ? "❚❚" : "▶", () => _posingCtl.TogglePlay(), Enabled: HasPose), Width: 34f),
-            new CellElement(new ButtonElement(() => "↺", () => _posingCtl.Restart(), Enabled: HasPose), Width: 28f),
+            new CellElement(new ButtonElement(() => "↺", () => _posingCtl.Restart(), Enabled: () => HasPose() && _posingCtl.CanRestart), Width: 28f),   // off for a detected pose you have not unlocked
         }, Gap: 6f),
         new ConditionalElement(() => _poseListOpen && PoseEnabled(), PoseList()),
         new RowElement(new HudElement[]
