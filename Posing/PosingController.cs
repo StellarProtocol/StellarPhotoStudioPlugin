@@ -12,7 +12,10 @@ namespace Stellar.PhotoStudio.Posing;
 /// <param name="LocalEntityId">The local player's entity id — used only to tell whether the subject is you
 /// (<see cref="PosingController.SubjectIsSelf"/>), independent of whether a <see cref="PersonInfo"/> was ever
 /// resolved for them.</param>
-internal sealed record PosingHost(Func<EntityId> Subject, Action<EntityId> SetSubject, Action<PoseResult> Refused, Func<EntityId> LocalEntityId);
+/// <param name="DescribeAction">The emote for an action id a person is already doing: the unlocked emote's entry when it
+/// is one, else a generic "current pose" entry carrying that id.</param>
+internal sealed record PosingHost(Func<EntityId> Subject, Action<EntityId> SetSubject, Action<PoseResult> Refused, Func<EntityId> LocalEntityId,
+    Func<int, EmoteInfo> DescribeAction);
 
 /// <summary>
 /// The Person group's logic (spec 2026-10-02 §§ 3–4). One selection: the free camera's orbit subject. Per person, the
@@ -80,9 +83,38 @@ internal sealed class PosingController
         var s = _host.Subject();
         if (s == Subject) return;
         Subject = s;
-        if (s.IsNone || _known.ContainsKey(s.Value)) return;
-        Remember(_posing.NearbyPeople(PeopleRadius));
-        if (!_known.ContainsKey(s.Value)) Remember(_posing.NearbyPeople(SubjectSearchRadius));
+        if (!s.IsNone && !_known.ContainsKey(s.Value))
+        {
+            Remember(_posing.NearbyPeople(PeopleRadius));
+            if (!_known.ContainsKey(s.Value)) Remember(_posing.NearbyPeople(SubjectSearchRadius));
+        }
+        PollCurrentAction();
+    }
+
+    /// <summary>Owner bug 2026-10-02: a person already doing an emote shows it, playing, with the Moment following it —
+    /// never "Pick a pose" at 0 %. Called on a subject change and on each panel poll (~10 Hz; one cheap framework read).
+    /// Stops once the user sets the pose (<see cref="PersonUiState.UserPosed"/>) until the person is reset. True when
+    /// what the panel shows changed.</summary>
+    public bool PollCurrentAction()
+    {
+        if (!Available) return false;
+        var s = State;
+        if (s.UserPosed) return false;
+        if (!_posing.TryGetCurrentAction(Subject, out var id, out var moment))
+        {
+            if (!s.Detected) return false;
+            s.Action = null;
+            s.Playing = false;
+            s.Moment = 0f;
+            s.Detected = false;
+            return true;
+        }
+        var changed = !s.Detected || s.Action?.Id != id || !s.Playing || s.Moment != moment;
+        if (s.Action?.Id != id) s.Action = _host.DescribeAction(id);
+        s.Playing = true;
+        s.Moment = moment;
+        s.Detected = true;
+        return changed;
     }
 
     public void Cycle(int direction)
@@ -100,10 +132,12 @@ internal sealed class PosingController
         s.Action = action;
         s.Playing = true;
         s.Moment = 0f;
+        TakeOver(s);
         Report(t.PlayAction(action.Id));
     }
 
-    /// <summary>❚❚ holds the pose where it is now (one game read); ▶ lets it play again.</summary>
+    /// <summary>❚❚ holds the pose where it is now (one game read); ▶ lets it play again. A detected action (the person's
+    /// own) is held where it is — the framework adopts it, it is never played again from the start.</summary>
     public void TogglePlay()
     {
         var s = State;
@@ -112,12 +146,21 @@ internal sealed class PosingController
         {
             t.Moment = -1f;
             s.Playing = true;
+            TakeOver(s);
             return;
         }
-        var live = t.Moment;
-        if (live >= 0f) s.Moment = live;
+        if (s.Detected && !s.UserPosed)
+        {
+            if (_posing.TryGetCurrentAction(Subject, out var id, out var now) && id == s.Action.Id) s.Moment = now;
+        }
+        else
+        {
+            var live = t.Moment;
+            if (live >= 0f) s.Moment = live;
+        }
         t.Moment = s.Moment;
         s.Playing = false;
+        TakeOver(s);
     }
 
     public void Restart()
@@ -131,6 +174,7 @@ internal sealed class PosingController
         if (s.Action is null || Target() is not { } t) return;
         s.Moment = Math.Clamp(value, 0f, 1f);
         s.Playing = false;
+        TakeOver(s);
         t.Moment = s.Moment;
     }
 
@@ -234,6 +278,9 @@ internal sealed class PosingController
         _targets[key] = selected;
         return selected;
     }
+
+    // The user set the pose: our own state wins from now on (no more auto-detect for this person until Reset).
+    private static void TakeOver(PersonUiState s) => s.UserPosed = true;
 
     private PersonUiState StateOf(long key)
     {

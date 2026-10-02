@@ -16,7 +16,7 @@ public sealed class PosingLangTests
         "pz.group.person", "pz.kind.you", "pz.kind.player", "pz.kind.npc", "pz.loading", "pz.hint.select", "pz.note.copy",
         "pz.failed", "pz.off", "pz.pose.pick", "pz.moment", "pz.sub.expression", "pz.expression.none", "pz.hold", "pz.sub.head",
         "pz.sub.eyes", "pz.look.default", "pz.look.lens", "pz.look.free", "pz.lock", "pz.rotate", "pz.reset", "pz.hint.cloth",
-        "pz.unit.percent", "pz.unit.degrees", "pz.help.person", "pz.help.moment", "pz.help.expression", "pz.help.head",
+        "pz.unit.percent", "pz.unit.degrees", "pz.pose.current", "pz.help.person", "pz.help.moment", "pz.help.expression", "pz.help.head",
         "pz.help.eyes", "pz.help.rotate", "pz.full", "fc.help.pose",
     };
 

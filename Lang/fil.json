@@ -220,6 +220,7 @@
   "pz.failed": "Hindi pa mapo-pose ang karakter na ito ngayon.",
   "pz.off": "Simulan ang free camera para makapag-pose ng mga tao.",
   "pz.pose.pick": "Pumili ng pose",
+  "pz.pose.current": "Kasalukuyang pose",
   "pz.moment": "Sandali",
   "pz.sub.expression": "Ekspresyon",
   "pz.expression.none": "Wala",

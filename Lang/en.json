@@ -220,6 +220,7 @@
   "pz.failed": "This character can't be posed right now.",
   "pz.off": "Start the free camera to pose people.",
   "pz.pose.pick": "Pick a pose",
+  "pz.pose.current": "Current pose",
   "pz.moment": "Moment",
   "pz.sub.expression": "Expression",
   "pz.expression.none": "None",

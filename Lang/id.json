@@ -220,6 +220,7 @@
   "pz.failed": "Karakter ini belum bisa diberi pose sekarang.",
   "pz.off": "Nyalakan kamera bebas untuk mengatur pose orang.",
   "pz.pose.pick": "Pilih pose",
+  "pz.pose.current": "Pose saat ini",
   "pz.moment": "Momen",
   "pz.sub.expression": "Ekspresi",
   "pz.expression.none": "Tidak ada",

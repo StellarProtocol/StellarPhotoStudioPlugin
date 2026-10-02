@@ -63,6 +63,19 @@ internal sealed class FakePosing : IPosing
 
     public bool TryGetVisiblePosition(EntityId person, out Position3D position) => Visible.TryGetValue(person.Value, out position);
 
+    /// <summary>What each person is doing right now (the game's running action); absent = idle.</summary>
+    public readonly Dictionary<long, (int Id, float Moment)> Running = new();
+    public int ActionReads;
+
+    public bool TryGetCurrentAction(EntityId person, out int actionId, out float moment)
+    {
+        ActionReads++;
+        if (IsAvailable && Running.TryGetValue(person.Value, out var r)) { actionId = r.Id; moment = r.Moment; return true; }
+        actionId = 0;
+        moment = -1f;
+        return false;
+    }
+
     /// <summary>Distance-filtered like the real game read, so a test can tell a 40 m scan from a wider fallback one.</summary>
     public IReadOnlyList<PersonInfo> NearbyPeople(float radius)
     {
@@ -95,10 +108,12 @@ internal sealed class PosingRig
     public EntityId Subject = new(1);
     public EntityId LocalId = new(1);
     public static readonly EmoteInfo Dance = new(9020, "Dance I", "", false);
+    public const string CurrentPose = "Current pose";
 
     public PosingRig()
     {
-        Ctl = new PosingController(Posing, new PosingHost(() => Subject, id => { Subject = id; Ctl!.SyncSubject(); }, Refusals.Add, () => LocalId));
+        Ctl = new PosingController(Posing, new PosingHost(() => Subject, id => { Subject = id; Ctl!.SyncSubject(); }, Refusals.Add, () => LocalId,
+            id => id == Dance.Id ? Dance : new EmoteInfo(id, CurrentPose, "", false)));
         Ctl.SyncSubject();
     }
 

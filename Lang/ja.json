@@ -220,6 +220,7 @@
   "pz.failed": "このキャラクターには今ポーズをつけられません。",
   "pz.off": "フリーカメラを開始すると人物にポーズをつけられます。",
   "pz.pose.pick": "ポーズを選択",
+  "pz.pose.current": "現在のポーズ",
   "pz.moment": "瞬間",
   "pz.sub.expression": "表情",
   "pz.expression.none": "なし",

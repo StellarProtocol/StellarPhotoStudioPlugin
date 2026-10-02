@@ -11,6 +11,11 @@ internal sealed class PersonUiState
     public EmoteInfo? Action { get; set; }
     public bool Playing { get; set; }
     public float Moment { get; set; }
+    /// <summary><see cref="Action"/> is what the person was already doing (read from the game), not a pose we set.</summary>
+    public bool Detected { get; set; }
+    /// <summary>The user has set this person's pose (picked, paused, scrubbed or restarted): from then on our own state
+    /// wins and the running action is no longer followed, until the person is reset.</summary>
+    public bool UserPosed { get; set; }
     public int ExpressionIndex { get; set; } = -1;
     public bool Hold { get; set; } = true;   // owner P3: an expression holds until changed
     public float Yaw { get; set; }

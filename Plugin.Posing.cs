@@ -10,13 +10,16 @@ namespace Stellar.PhotoStudio;
 // whatever the reason; the controller then forgets the panel state. The UI is Plugin.Panel.Person.cs.
 public sealed partial class Plugin
 {
+    private const float PosePollInterval = 0.1f;   // the panel's own ~10 Hz refresh
     private PosingController _posingCtl = null!;
     private Action _onPosingChanged = null!;
+    private float _posePollIn;
 
     private void StartPosing()
     {
         _posingCtl = new PosingController(_services.Posing,
-            new PosingHost(() => _freeCam.Subject, id => _freeCam.SetSubject(id), OnPoseResult, () => _services.CombatSnapshot.LocalEntityId));
+            new PosingHost(() => _freeCam.Subject, id => _freeCam.SetSubject(id), OnPoseResult, () => _services.CombatSnapshot.LocalEntityId,
+                DescribeAction));
         _onPosingChanged = OnPosingChanged;
         _services.Posing.Changed += _onPosingChanged;
         RetireLookAtToggle();
@@ -30,6 +33,25 @@ public sealed partial class Plugin
     {
         if (_freeCam.Active) _posingCtl.SyncSubject();
         else _posingCtl.Clear();
+    }
+
+    /// <summary>From OnUpdate: while the panel is up in the free camera, follow what the selected person is already
+    /// doing (owner bug 2026-10-02: someone mid-emote showed "Pick a pose" at 0 %) — one cheap framework read per 0.1 s.</summary>
+    private void TickPosing(float dt)
+    {
+        if (!_freeCam.Active || !_panelWin.IsShown) return;
+        _posePollIn -= dt;
+        if (_posePollIn > 0f) return;
+        _posePollIn = PosePollInterval;
+        if (_posingCtl.PollCurrentAction()) _panelWin.MarkDirty();
+    }
+
+    /// <summary>The emote for an action a person is already doing: the unlocked emote when it is one, else "Current pose".</summary>
+    private EmoteInfo DescribeAction(int actionId)
+    {
+        foreach (var e in _services.Emotes.Unlocked)
+            if (e.Id == actionId) return e;
+        return new EmoteInfo(actionId, T("pz.pose.current"), "", false);
     }
 
     private void OnPosingChanged()
