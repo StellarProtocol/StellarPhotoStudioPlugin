@@ -30,6 +30,7 @@ public sealed partial class Plugin
     {
         _pzOn = Environment.GetEnvironmentVariable(PosingSelfTestEnvVar) == "1";
         if (_pzOn) _services.Log.Info("[PhotoStudio] posing selftest armed");
+        ArmPosingSweep();
     }
 
     private void TickPosingSelfTest(float dt)
@@ -54,9 +55,11 @@ public sealed partial class Plugin
             case 6: if (PzDetectPhase()) _pzStep = 7; break;
             case 7: if (PzPersonPhase()) PzWaitFrom(8); break;
             case 8: PzFind("clone", PersonKind.Player, next: 9, skip: 10); break;
-            case 9: if (PzPersonPhase()) PzWaitFrom(10); break;
+            case 9: if (PzPersonPhase()) PzWaitFrom(PzAfterClone); break;
             case 10: PzFind("npc", PersonKind.Npc, next: 11, skip: 12); break;
             case 11: if (PzPersonPhase()) _pzStep = 12; break;
+            case PzSweepStep: PzSweepStart(); break;
+            case PzSweepStep + 1: PzSweepTick(); break;
             default: PzFinish(); break;
         }
     }
@@ -82,7 +85,7 @@ public sealed partial class Plugin
     private void PzFind(string who, PersonKind kind, int next, int skip)
     {
         foreach (var p in _services.Posing.NearbyPeople(PosingController.PeopleRadius))
-            if (p.Kind == kind) { PzBegin(who, p.Id, next); return; }
+            if (p.Kind == kind) { if (kind == PersonKind.Player) _pzCloned = p.Id; PzBegin(who, p.Id, next); return; }
         if (_pzClock - _pzSince < PzFindLimit) { PzDue(2f); return; }
         _services.Log.Info($"[PhotoStudio] posing selftest step={who} skipped reason=nobody-within-{PosingController.PeopleRadius:0}m");
         _pzStep = skip;
