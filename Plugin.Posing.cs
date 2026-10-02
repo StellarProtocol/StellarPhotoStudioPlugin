@@ -15,12 +15,15 @@ public sealed partial class Plugin
     private PosingController _posingCtl = null!;
     private Action _onPosingChanged = null!;
     private Action _onPosesCounted = null!;
+    private Func<EntityId, bool> _isSeen = null!;
     private float _posePollIn;
 
     private void StartPosing()
     {
+        StartSceneSelection();   // Plugin.Scene.cs — needs the free camera session
+        _isSeen = _selection.IsSeen;
         _posingCtl = new PosingController(_services.Posing,
-            new PosingHost(() => _freeCam.Subject, SelectInScene, OnPoseResult, () => _services.CombatSnapshot.LocalEntityId,
+            new PosingHost(() => _freeCam.Subject, _selection.Select, OnPoseResult, () => _services.CombatSnapshot.LocalEntityId,
                 DescribeAction));
         _scene.TrackPoses(() => _posingCtl.PosedCount);
         _onPosesCounted = _scene.NotifyPosesChanged;
@@ -45,7 +48,8 @@ public sealed partial class Plugin
 
     /// <summary>From OnUpdate: while the panel is up (free camera on or off — scene-stays spec § 5), follow what the
     /// selected person is already doing (owner bug 2026-10-02: someone mid-emote showed "Pick a pose" at 0 %) — one cheap
-    /// framework read per 0.1 s. Out of the world the selection is forgotten (entity ids no longer mean anyone).</summary>
+    /// framework read per 0.1 s. Out of the world the selection is forgotten (entity ids no longer mean anyone); off the
+    /// free camera a selected person who left falls back to yourself on the same tick (no extra poll).</summary>
     private void TickPosing(float dt)
     {
         if (!InWorld())
@@ -58,7 +62,8 @@ public sealed partial class Plugin
         _posePollIn -= dt;
         if (_posePollIn > 0f) return;
         _posePollIn = PosePollInterval;
-        if (_posingCtl.PollCurrentAction()) _panelWin.MarkDirty();
+        var gone = !_freeCam.Active && _posingCtl.FallBackIfGone(_isSeen);
+        if (_posingCtl.PollCurrentAction() | gone) _panelWin.MarkDirty();
     }
 
     /// <summary>The emote for an action a person is already doing: the unlocked emote when it is one, else "Current pose"

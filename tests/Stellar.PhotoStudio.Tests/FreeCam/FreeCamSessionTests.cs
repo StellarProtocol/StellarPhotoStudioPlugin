@@ -45,7 +45,9 @@ public sealed class FreeCamSessionTests
         Assert.Equal(FreeCamNotice.Busy, r.Notices[0].Notice);
     }
 
-    // Scene-stays spec § 1 (2026-10-02): exit returns the camera, shield, look-at and hides — the freeze is the scene's.
+    // Scene-stays spec § 1 (2026-10-02): exit returns the camera, shield and look-at — the freeze is the scene's, and so
+    // are the entry hides while the scene is set (review I-1, 2026-10-02: they used to be released here; the spec says
+    // they stay). They go, exactly once, when the scene ends.
     [Fact]
     public void Exit_releases_everything_exactly_once_and_says_nothing()
     {
@@ -57,12 +59,16 @@ public sealed class FreeCamSessionTests
         r.Session.Exit();
         Assert.Equal(1, r.Camera.Control.Disposed);
         Assert.Equal(1, r.Shield.Handle.Disposed);
-        Assert.Equal(1, r.Visibility.Hides[0].Handle.Disposed);
+        Assert.Equal(0, r.Visibility.Hides[0].Handle.Disposed);   // frozen → the scene keeps the entry hides
+        Assert.True(r.Scene.HoldsEntryHide);
         Assert.Equal(0, r.Freeze.Tokens[0].Disposed);   // the freeze stays with the scene
         Assert.True(r.Scene.Frozen);
         Assert.Equal(1, r.Camera.LookAts[0].Disposed);
         Assert.False(r.Session.Active);
         Assert.Empty(r.Notices);
+        r.Scene.Reset();                                          // the scene ends → the hides go, once
+        r.Scene.Reset();
+        Assert.Equal(1, r.Visibility.Hides[0].Handle.Disposed);
     }
 
     [Fact]
@@ -360,8 +366,10 @@ public sealed class FreeCamSessionTests
         Assert.Equal(1, r.Shield.Handle.Disposed);
         Assert.Equal(0, r.Freeze.Tokens[0].Disposed);   // scene-stays § 1: the freeze outlives the free camera
         Assert.True(r.Scene.Frozen);
-        Assert.Equal(1, r.Visibility.Hides[0].Handle.Disposed);
+        Assert.Equal(0, r.Visibility.Hides[0].Handle.Disposed);   // … and so do the entry hides (review I-1)
         Assert.Empty(r.Notices);
+        r.Freeze.FrameworkReleaseAll();                           // the scene ends (zone change) → they go
+        Assert.Equal(1, r.Visibility.Hides[0].Handle.Disposed);
     }
 
     // Hardening round 1 (2026-10-01): Release isolates every disposal step, and EndFreeze survives the real
@@ -381,7 +389,8 @@ public sealed class FreeCamSessionTests
         Assert.Equal(1, r.Shield.Handle.Disposed);
         Assert.Equal(0, r.Freeze.Tokens[0].Disposed);   // scene-stays § 1: not the camera's to end
         Assert.Equal(1, r.Camera.LookAts[0].Disposed);
-        Assert.Equal(1, r.Visibility.Hides[0].Handle.Disposed);
+        Assert.True(r.Scene.HoldsEntryHide);             // the hide step still ran after the throw: handed to the scene (I-1)
+        Assert.Equal(0, r.Visibility.Hides[0].Handle.Disposed);
         Assert.Empty(r.Notices);   // Exit keeps the existing toast semantics: none, throw or not
     }
 

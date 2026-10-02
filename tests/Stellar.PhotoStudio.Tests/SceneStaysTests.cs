@@ -15,13 +15,15 @@ internal sealed class SceneRig
     public readonly FakePosing Posing = new();
     public readonly SessionRig Cam;
     public readonly PosingController Ctl;
+    public readonly SceneSelection Selection;
 
     public SceneRig()
     {
         Cam = new SessionRig(posing: Posing);
         Cam.Transforms.Positions[2] = new Position3D(3, 0, 3);
         Cam.Transforms.Positions[3] = new Position3D(6, 0, 0);
-        Ctl = new PosingController(Posing, new PosingHost(() => Cam.Session.Subject, id => Cam.Session.SetSubject(id), _ => { },
+        Selection = new SceneSelection(Cam.Session, Cam.Scene, Posing, Cam.Transforms);
+        Ctl = new PosingController(Posing, new PosingHost(() => Cam.Session.Subject, Selection.Select, _ => { },
             () => Cam.Snapshot.LocalEntityId, id => new DescribedAction(new EmoteInfo(id, "Current pose", "", false), false)));
         Cam.Scene.TrackPoses(() => Ctl.PosedCount);
         Ctl.PosedChanged += Cam.Scene.NotifyPosesChanged;

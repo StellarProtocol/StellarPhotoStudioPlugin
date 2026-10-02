@@ -1,5 +1,6 @@
 using System;
 using System.Numerics;
+using Stellar.Abstractions.Domain;
 using Stellar.Abstractions.Services;
 
 namespace Stellar.PhotoStudio;
@@ -9,7 +10,11 @@ namespace Stellar.PhotoStudio;
 /// the freeze centre (the free camera's leash centre while frozen) and the posing lifetime. It belongs to the scene, not
 /// to the free camera: leaving the free camera keeps it. It ends on <see cref="Reset"/> (the Reset scene button), on the
 /// framework's own reasons (the freeze's <see cref="ISceneFreeze.Changed"/>(false) on a zone change / cutscene; posing
-/// targets released by the framework) and on <see cref="Dispose"/> (Photo Studio unloading). Main thread.
+/// targets released by the framework) and on <see cref="Dispose"/> (Photo Studio unloading) — in general whenever
+/// <see cref="IsSet"/> goes from true to false. While set it also keeps the free camera's entry hides once the camera has
+/// left (spec § 1, review I-1: <see cref="KeepEntryHide"/> / <see cref="TakeEntryHide"/>) and releases them when the scene
+/// ends; each end bumps <see cref="Generation"/> so a pose remembered for an older scene is never restored (review I-3).
+/// Main thread.
 /// </summary>
 internal sealed class StudioScene : IDisposable
 {
@@ -18,6 +23,9 @@ internal sealed class StudioScene : IDisposable
     private readonly Action<bool> _onFreezeChanged;
     private Func<int> _posedCount = () => 0;
     private IDisposable? _token;
+    private IDisposable? _entryHide;
+    private VisibilityLayers _entryHideLayers;
+    private bool _wasSet;
     private bool _disposed;
 
     public StudioScene(ISceneFreeze freeze, IPosing? posing)
@@ -46,11 +54,46 @@ internal sealed class StudioScene : IDisposable
     /// pose (spec § 6) and the off-camera SCENE pill shows (spec § 7).</summary>
     public bool IsSet => Frozen || PosedCount > 0;
 
+    /// <summary>Counts scene ends (set → not set, Reset scene, unload). A free-camera pose remembered under an older
+    /// generation belongs to a scene that is gone, so re-entry starts from the game camera (review I-3).</summary>
+    public int Generation { get; private set; }
+
+    /// <summary>True while the scene keeps the free camera's entry hides (the camera left with the scene set).</summary>
+    public bool HoldsEntryHide => _entryHide is not null;
+
+    /// <summary>The layers the kept entry hide covers (<see cref="VisibilityLayers.None"/> when none is kept).</summary>
+    public VisibilityLayers EntryHideLayers => _entryHide is null ? VisibilityLayers.None : _entryHideLayers;
+
     /// <summary>Wires the posed-people count (the Person group's controller); called once at start.</summary>
     public void TrackPoses(Func<int> posedCount) => _posedCount = posedCount;
 
     /// <summary>The Person group's posed set changed; forwards one <see cref="Changed"/>.</summary>
-    public void NotifyPosesChanged() => Changed?.Invoke();
+    public void NotifyPosesChanged() => Raise();
+
+    /// <summary>The free camera left while the scene is set: the scene keeps its entry hide until the scene ends (spec
+    /// § 1). With nothing set (or once disposed) the hide is released at once — nothing would ever release it later.</summary>
+    public void KeepEntryHide(IDisposable hide, VisibilityLayers layers)
+    {
+        if (_disposed || !IsSet)
+        {
+            hide.Dispose();
+            return;
+        }
+        var old = _entryHide;
+        (_entryHide, _entryHideLayers) = (hide, layers);
+        _wasSet = true;
+        if (!ReferenceEquals(old, hide)) old?.Dispose();
+    }
+
+    /// <summary>The free camera re-enters: hands back the kept entry hide (null when none), so the camera reuses it instead
+    /// of stacking a second hide of the same layers.</summary>
+    public IDisposable? TakeEntryHide(out VisibilityLayers layers)
+    {
+        var hide = _entryHide;
+        layers = hide is null ? VisibilityLayers.None : _entryHideLayers;
+        _entryHide = null;
+        return hide;
+    }
 
     /// <summary>Freezes the scene around <paramref name="centre"/>, or ends the freeze when already frozen.</summary>
     public void ToggleFreeze(Vector3? centre)
@@ -62,7 +105,7 @@ internal sealed class StudioScene : IDisposable
             _token = _freeze.Freeze();
             FreezeCentre = centre;
         }
-        Changed?.Invoke();
+        Raise();
     }
 
     /// <summary>A newly selected person becomes the freeze centre while frozen (the free camera's existing rule).</summary>
@@ -75,8 +118,11 @@ internal sealed class StudioScene : IDisposable
     /// players shown again).</summary>
     public void Reset()
     {
+        if (_disposed) return;
         EndFreeze();
         _posing?.ResetAll();
+        if (_wasSet || _entryHide is not null) EndScene();
+        _wasSet = IsSet;
         Changed?.Invoke();
     }
 
@@ -85,7 +131,7 @@ internal sealed class StudioScene : IDisposable
     {
         if (_token is null) return;
         EndFreeze();
-        Changed?.Invoke();
+        Raise();
     }
 
     /// <summary>Photo Studio unloading ends the scene.</summary>
@@ -96,6 +142,7 @@ internal sealed class StudioScene : IDisposable
         _freeze.Changed -= _onFreezeChanged;
         EndFreeze();
         _posing?.ResetAll();
+        EndScene();
     }
 
     /// <summary>Null the field before disposing: the real SceneFreezeService is ref-counted and raises
@@ -114,6 +161,25 @@ internal sealed class StudioScene : IDisposable
     private void OnFreezeChanged(bool frozen)
     {
         if (!frozen && _token is not null) EndFreeze();   // the framework unfroze (zone change / cutscene)
+        Raise();
+    }
+
+    /// <summary>Every change notification goes through here: a set → not-set transition is the scene ending.</summary>
+    private void Raise()
+    {
+        var set = IsSet;
+        if (_wasSet && !set) EndScene();
+        _wasSet = set;
         Changed?.Invoke();
+    }
+
+    /// <summary>The scene ended: a new generation (the remembered camera pose is stale) and the kept entry hides go.</summary>
+    private void EndScene()
+    {
+        Generation++;
+        _wasSet = false;
+        var hide = _entryHide;
+        _entryHide = null;
+        hide?.Dispose();
     }
 }

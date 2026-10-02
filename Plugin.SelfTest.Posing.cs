@@ -191,11 +191,12 @@ public sealed partial class Plugin
 
     private void PzFinish()
     {
+        var wasSet = _scene.IsSet;
         _freeCam.Exit();
+        if (wasSet) LogSceneKept(PzLog);   // proof the exit kept the scene (Plugin.SelfTest.cs)
+        else PzLog("scene-kept-skipped", true, "nothing set at exit");
         ResetScene();   // scene-stays: leaving the free camera keeps the scene (posing stays available); Reset scene ends it
-        var clean = !_freeCam.Active && !_scene.IsSet && !_services.CameraOverride.IsOverridden && !_services.InputShield.IsShielded &&
-                    !_services.SceneFreeze.IsFrozen;
-        PzLog("exit", clean);
+        PzLog("exit", SceneCleanAfterReset());
         _services.Log.Info("[PhotoStudio] posing selftest DONE");
         _pzStep = -1;
     }

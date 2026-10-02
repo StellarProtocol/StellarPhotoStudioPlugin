@@ -95,6 +95,9 @@ internal sealed class FakePosing : IPosing
 
     public int ResetAllCalls;
 
+    /// <summary>The framework's Changed after a target's state moved on its own (a model loaded or failed).</summary>
+    public void RaiseChanged() => Changed?.Invoke();
+
     public void ResetAll()
     {
         ResetAllCalls++;

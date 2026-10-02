@@ -2,18 +2,19 @@ using Stellar.Abstractions.Domain;
 
 namespace Stellar.PhotoStudio.FreeCam;
 
-/// <summary>Where the camera starts on entry (scene-stays spec § 6): the pose it had when it left while the scene is set,
-/// else the game camera's pose (R always snaps to the game camera).</summary>
+/// <summary>Where the camera starts on entry (scene-stays spec § 6): the pose it had when it left while the SAME scene is
+/// still set, else the game camera's pose (R always snaps to the game camera); and the entry hides, which the scene keeps
+/// while the camera is away (review I-1).</summary>
 internal sealed partial class FreeCamSession
 {
     private SavedPose? _lastPose;
 
-    /// <summary>The pose remembered at the last release, if any (null before the first exit).</summary>
-    internal bool HasLastPose => _lastPose is not null;
+    /// <summary>A pose is remembered for the scene that is set now (the camera left it and it has not ended since).</summary>
+    internal bool HasLastPose => _lastPose is { } last && last.Generation == _scene.Generation && _scene.IsSet;
 
     private void PlaceForEntry()
     {
-        if (_scene.IsSet && _lastPose is { } last)
+        if (HasLastPose && _lastPose is { } last)
         {
             Restore(last);
             return;
@@ -32,8 +33,38 @@ internal sealed partial class FreeCamSession
         return _p.Transforms.TryGetTransform(requested, out _, out _) ? requested : self;
     }
 
+    /// <summary>Remembered only while the scene is set, tagged with the scene's generation: a scene that ends (Reset scene,
+    /// the framework unfreezing, the posed set emptying) makes the pose stale, so a NEW scene starts from the game camera
+    /// (review I-3).</summary>
     private void RememberPose() =>
-        _lastPose = new SavedPose(Mode, _orbit, _fly, new FlyState(_shownPos, _shownYaw, _shownPitch), (Roll, Fov));
+        _lastPose = _scene.IsSet
+            ? new SavedPose(Mode, _orbit, _fly, new FlyState(_shownPos, _shownYaw, _shownPitch), (Roll, Fov), _scene.Generation)
+            : null;
+
+    /// <summary>Entry: reuse the hide the scene kept when its layers still match the setting (no second hide of the same
+    /// layers); after a settings change, hide the new layers first and then drop the kept one (no flash of the HUD
+    /// between the two); with entry hides now off, just drop it.</summary>
+    private void TakeEntryHides()
+    {
+        var kept = _scene.TakeEntryHide(out var keptLayers);
+        var want = _settings.EntryHides;
+        if (kept is not null && keptLayers == want)
+        {
+            (_hide, _hideLayers) = (kept, keptLayers);
+            return;
+        }
+        if (want != VisibilityLayers.None) (_hide, _hideLayers) = (_p.Visibility.Hide(want), want);
+        kept?.Dispose();
+    }
+
+    /// <summary>Release: the hides go to the scene when it is set (it releases them when it ends), else they end now.</summary>
+    private void ReleaseEntryHides(bool keep)
+    {
+        if (_hide is not { } hide) return;
+        _hide = null;
+        if (keep) _scene.KeepEntryHide(hide, _hideLayers);
+        else hide.Dispose();
+    }
 
     /// <summary>Snap (no damping) back to the remembered pose. The orbit is kept relative to its centre, so a subject who
     /// stayed put (a frozen or posed person) is framed exactly as before; the leash still applies on the next frame.</summary>
@@ -47,5 +78,6 @@ internal sealed partial class FreeCamSession
     }
 
     /// <summary>The camera as it left: mode, both rigs, the shown (damped) pose and the lens (roll, FOV).</summary>
-    private readonly record struct SavedPose(FreeCamMode Mode, OrbitState Orbit, FlyState Fly, FlyState Shown, (float Roll, float Fov) Lens);
+    private readonly record struct SavedPose(FreeCamMode Mode, OrbitState Orbit, FlyState Fly, FlyState Shown, (float Roll, float Fov) Lens,
+        int Generation);
 }

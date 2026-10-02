@@ -1,7 +1,5 @@
 using System;
-using System.Numerics;
 using Stellar.Abstractions.Domain;
-using Stellar.PhotoStudio.FreeCam;
 
 namespace Stellar.PhotoStudio;
 
@@ -11,7 +9,9 @@ namespace Stellar.PhotoStudio;
 public sealed partial class Plugin
 {
     private StudioScene _scene = null!;
+    private SceneSelection _selection = null!;
     private Action _onSceneChanged = null!;
+    private Action<bool> _onSceneCombatChanged = null!;
 
     /// <summary>True while Photo Studio holds a scene freeze (with or without the free camera).</summary>
     internal bool SceneFrozen => _scene.Frozen;
@@ -31,11 +31,20 @@ public sealed partial class Plugin
         _scene = new StudioScene(_services.SceneFreeze, _services.Posing);
         _onSceneChanged = OnSceneChanged;
         _scene.Changed += _onSceneChanged;
+        // The SCENE pill's ⚔ IN COMBAT badge must refresh with the free camera off too (the camera's own combat
+        // subscription lives only while it is on). Plugin-lifetime subscription.
+        _onSceneCombatChanged = _ => _freeCamHudWin?.MarkDirty();
+        _services.CombatState.Changed += _onSceneCombatChanged;
     }
 
-    /// <summary>Photo Studio unloading ends the scene (unfreeze, every posed person reset).</summary>
+    /// <summary>After the free camera exists: the Person group's selection routing (camera on → orbit; off → freeze centre).</summary>
+    private void StartSceneSelection() =>
+        _selection = new SceneSelection(_freeCam, _scene, _services.Posing, _services.EntityTransforms);
+
+    /// <summary>Photo Studio unloading ends the scene (unfreeze, every posed person reset, kept entry hides released).</summary>
     private void StopScene()
     {
+        _services.CombatState.Changed -= _onSceneCombatChanged;
         _scene.Changed -= _onSceneChanged;
         _scene.Dispose();
     }
@@ -45,7 +54,7 @@ public sealed partial class Plugin
     internal void ToggleSceneFreeze()
     {
         if (_freeCam.Active) _freeCam.ToggleFreeze();
-        else if (InWorld() || _scene.Frozen) _scene.ToggleFreeze(PersonPosition(SelectedPerson()));
+        else if (InWorld() || _scene.Frozen) _scene.ToggleFreeze(_selection.PositionOf(SelectedPerson()));
     }
 
     /// <summary>The Scene group's Reset scene button: unfreezes and returns every posed person to normal; the free camera
@@ -71,22 +80,6 @@ public sealed partial class Plugin
         _freeCamHudWin.MarkDirty();
     }
 
-    /// <summary>From the Person group's selection (PosingHost.SetSubject): with the free camera on, the selection is the
-    /// orbit subject; off it, a frozen scene's centre follows the selection as the camera's would (spec § 8).</summary>
-    private void SelectInScene(EntityId person)
-    {
-        if (_freeCam.Active) _freeCam.SetSubject(person);
-        else if (_scene.Frozen && PersonPosition(person) is { } at) _scene.MoveFreezeCentre(at);
-    }
-
     private EntityId SelectedPerson() =>
         _posingCtl.Subject.IsNone ? _services.CombatSnapshot.LocalEntityId : _posingCtl.Subject;
-
-    /// <summary>Where a person is seen: their posed copy / stand-in while there is one, else the entity; null when the game
-    /// no longer has them.</summary>
-    private Vector3? PersonPosition(EntityId person)
-    {
-        if (_services.Posing.TryGetVisiblePosition(person, out var posed)) return CameraMath.ToVec(posed);
-        return _services.EntityTransforms.TryGetTransform(person, out var p, out _) ? CameraMath.ToVec(p) : null;
-    }
 }

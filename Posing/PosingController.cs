@@ -47,6 +47,7 @@ internal sealed class PosingController
     private readonly Dictionary<long, IPoseTarget> _targets = new();
     private readonly Dictionary<long, PersonInfo> _known = new();
     private readonly List<long> _releasedScratch = new();
+    private int _announcedPosed;
 
     public PosingController(IPosing posing, PosingHost host)
     {
@@ -57,19 +58,22 @@ internal sealed class PosingController
     /// <summary>The selected person (the free camera's orbit subject while it is on).</summary>
     public EntityId Subject { get; private set; }
 
-    /// <summary>How many people are posed now: touched through a control and not yet reset or released.</summary>
+    /// <summary>How many people are really posed now: touched through a control (any control — a facing or look-only
+    /// touch counts) and live: Idle / Loading / Ready. A target the framework could not make (Failed, Full — including
+    /// a Loading model that then failed) or released is not posed (review minor: the SCENE pill / status said "1 posed"
+    /// for a person nothing was done to).</summary>
     public int PosedCount
     {
         get
         {
             var n = 0;
             foreach (var t in _targets.Values)
-                if (t.State != PoseTargetState.Released) n++;
+                if (IsPosed(t.State)) n++;
             return n;
         }
     }
 
-    /// <summary>Raised when <see cref="PosedCount"/> may have changed (someone posed, reset, released or forgotten).</summary>
+    /// <summary>Raised when <see cref="PosedCount"/> changed (someone posed, failed, reset, released or forgotten).</summary>
     public event Action? PosedChanged;
     public PersonInfo? Person => _known.TryGetValue(Subject.Value, out var p) ? p : null;
     public PersonUiState State => StateOf(Subject.Value);
@@ -122,6 +126,19 @@ internal sealed class PosingController
     {
         if (Subject.IsNone) Adopt(_host.LocalEntityId());
     }
+
+    /// <summary>Off the free camera (from the panel's ~10 Hz tick): a selected person who left — no live pose target, and
+    /// <paramref name="seen"/> (a visible copy or an entity transform) says the game no longer has them — falls back to
+    /// yourself. Never moves the freeze centre (the host's SetSubject is not called). True when the selection changed.</summary>
+    public bool FallBackIfGone(Func<EntityId, bool> seen)
+    {
+        if (Subject.IsNone || SubjectIsSelf || HasLiveTarget(Subject) || seen(Subject)) return false;
+        Adopt(_host.LocalEntityId());
+        return true;
+    }
+
+    private bool HasLiveTarget(EntityId person) =>
+        _targets.TryGetValue(person.Value, out var t) && t.State != PoseTargetState.Released;
 
     private void Adopt(EntityId s)
     {
@@ -177,6 +194,7 @@ internal sealed class PosingController
         s.Moment = 0f;
         TakeOver(s);
         Report(t.PlayAction(action.Id));
+        AnnouncePosed();   // a Full / Failed answer un-counts the person Target() just counted
     }
 
     /// <summary>❚❚ holds the pose where it is now (one game read); ▶ lets it play again. A detected action (the person's
@@ -292,13 +310,14 @@ internal sealed class PosingController
     {
         var key = Subject.Value;
         if (_targets.TryGetValue(key, out var t)) t.Reset();
-        var had = _targets.Remove(key);
+        _targets.Remove(key);
         _states.Remove(key);
-        if (had) PosedChanged?.Invoke();
+        AnnouncePosed();
     }
 
     /// <summary>From <see cref="IPosing.Changed"/>: people the framework released (left, the scene ended, or the scene was
-    /// reset) are forgotten; the next control selects them again.</summary>
+    /// reset) are forgotten; the next control selects them again. A model that finished loading or failed changes the
+    /// count too.</summary>
     public void OnPosingChanged()
     {
         _releasedScratch.Clear();
@@ -309,18 +328,17 @@ internal sealed class PosingController
             _targets.Remove(key);
             _states.Remove(key);
         }
-        if (_releasedScratch.Count > 0) PosedChanged?.Invoke();
+        AnnouncePosed();
     }
 
     /// <summary>The Reset scene button (before <see cref="IPosing.ResetAll"/>): forgets every person's pose and panel state;
     /// the selection stays.</summary>
     public void ForgetPoses()
     {
-        var had = _targets.Count > 0;
         _targets.Clear();
         _states.Clear();
         LastResult = PoseResult.Applied;
-        if (had) PosedChanged?.Invoke();
+        AnnouncePosed();
     }
 
     /// <summary>Forgets everything, the selection too (the world was left: entity ids no longer mean anyone).</summary>
@@ -339,8 +357,19 @@ internal sealed class PosingController
         var selected = _posing.Select(Subject);
         if (selected is null) { _targets.Remove(key); return null; }
         _targets[key] = selected;
-        PosedChanged?.Invoke();
+        AnnouncePosed();
         return selected;
+    }
+
+    private static bool IsPosed(PoseTargetState state) =>
+        state is PoseTargetState.Idle or PoseTargetState.Loading or PoseTargetState.Ready;
+
+    private void AnnouncePosed()
+    {
+        var n = PosedCount;
+        if (n == _announcedPosed) return;
+        _announcedPosed = n;
+        PosedChanged?.Invoke();
     }
 
     private void Describe(PersonUiState s, int id)

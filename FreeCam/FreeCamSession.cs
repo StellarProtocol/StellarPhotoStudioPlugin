@@ -12,7 +12,8 @@ namespace Stellar.PhotoStudio.FreeCam;
 /// and releases all of them through <see cref="Release"/> — the one release path — whatever ends the session (exit, the
 /// framework, unload, an exception in the frame code). The freeze and the posed people belong to the
 /// <see cref="StudioScene"/> and outlive the camera (scene-stays spec § 1): the session only toggles the freeze through it
-/// and reads the leash centre from it, and remembers its last pose for a re-entry while the scene is set (§ 6). Main thread.
+/// and reads the leash centre from it, hands its entry hides to it when it leaves while the scene is set (they stay until
+/// the scene ends; review I-1), and remembers its last pose for a re-entry into the same scene (§ 6). Main thread.
 /// </summary>
 internal sealed partial class FreeCamSession : IDisposable
 {
@@ -28,6 +29,7 @@ internal sealed partial class FreeCamSession : IDisposable
     private ICameraControl? _control;
     private IInputShieldHandle? _shield;
     private IDisposable? _look, _hide;
+    private VisibilityLayers _hideLayers;
     private CameraPose _entry;
 
     public FreeCamSession(FreeCamPorts ports, FreeCamSettings settings, FreeCamHost host, StudioScene scene)
@@ -80,7 +82,7 @@ internal sealed partial class FreeCamSession : IDisposable
         Subject = EntrySubject(subject);
         _subjectPos = SubjectPosition(CameraMath.ToVec(_entry.Position));
         PlaceForEntry();
-        if (_settings.EntryHides != VisibilityLayers.None) _hide = _p.Visibility.Hide(_settings.EntryHides);
+        TakeEntryHides();
         if (_settings.LookAt) _look = _p.Camera.LookAtCamera();
         control.Frame += _onFrame;
         _p.Camera.Released += _onReleased;
@@ -160,8 +162,9 @@ internal sealed partial class FreeCamSession : IDisposable
     }
 
     /// <summary>The one release path. Unsubscribes first, so our own dispose never re-enters through Released. Returns
-    /// only the camera, the shield, the look-at handle and the entry hides — the freeze and the posed people stay with
-    /// the scene (scene-stays spec § 1); the pose is remembered for a re-entry while the scene is set (§ 6).
+    /// only the camera, the shield and the look-at handle — the freeze, the posed people and (while the scene is set) the
+    /// entry hides stay with the scene (scene-stays spec § 1); the pose is remembered for a re-entry while the scene is
+    /// set (§ 6). Unload releases the hides here (the scene ends right after).
     /// Each disposal step is isolated (spec § 7): an exception from one — e.g. the camera control's own
     /// <c>Dispose()</c> re-raises <c>Released</c> to every other holder of that event, and another plugin's
     /// throwing handler propagates straight back out of that call — must never stop the rest from running. The
@@ -180,7 +183,7 @@ internal sealed partial class FreeCamSession : IDisposable
         ReleaseStep(() => { _shield?.Dispose(); _shield = null; });
         ReleaseStep(() => { if (!frameworkEnded) c.Dispose(); });
         ReleaseStep(() => { _look?.Dispose(); _look = null; });
-        ReleaseStep(() => { _hide?.Dispose(); _hide = null; });
+        ReleaseStep(() => ReleaseEntryHides(keep: reason != CameraReleaseReason.PluginUnloaded && _scene.IsSet));
 
         ScriptedIntent = null;
         StateChanged?.Invoke();

@@ -7,7 +7,8 @@ namespace Stellar.PhotoStudio;
 
 // Unattended free-camera smoke for the TEST client only (STELLAR_PHOTOSTUDIO_FREECAM_SELFTEST=1, read once at load;
 // inert otherwise). 15 s after entering the world: enter → scripted orbit → emote → freeze → capture → unfreeze → fly
-// toward the leash → exit, one log line per step. Every image is an in-process camera render (no desktop capture).
+// toward the leash → freeze again → exit (logs scene-kept: the freeze and entry hides stay) → Reset scene, one log line
+// per step. Every image is an in-process camera render (no desktop capture).
 public sealed partial class Plugin
 {
     private const string SelfTestEnvVar = "STELLAR_PHOTOSTUDIO_FREECAM_SELFTEST";
@@ -51,11 +52,11 @@ public sealed partial class Plugin
     {
         _freeCam.ScriptedIntent = null;
         SelfTestLog("leash", _freeCam.Distance <= _fcSettings.Leash + 0.01f, $"distance={_freeCam.Distance:F2} leash={_fcSettings.Leash:F0}");
+        if (!_scene.Frozen) _freeCam.ToggleFreeze();   // set a scene, so the exit below proves it stays
         _freeCam.Exit();
+        LogSceneKept(SelfTestLog);
         ResetScene();   // scene-stays: leaving the free camera keeps the scene; Reset scene ends it
-        var clean = !_freeCam.Active && !_scene.IsSet && !_services.CameraOverride.IsOverridden && !_services.InputShield.IsShielded &&
-                    !_services.SceneFreeze.IsFrozen;
-        SelfTestLog("exit", clean);
+        SelfTestLog("exit", SceneCleanAfterReset());
         _services.Log.Info("[PhotoStudio] freecam selftest DONE");
         _selfTestStep = -1;
     }
@@ -75,6 +76,20 @@ public sealed partial class Plugin
     }
 
     private void Due(float seconds) => _selfTestDueAt = _selfTestClock + seconds;
+
+    /// <summary>Right after Exit(), before Reset scene (review minor): the in-game smoke's proof that leaving the free camera
+    /// kept the scene — still frozen in the framework, or people still posed, with the entry hides kept by the scene.</summary>
+    private void LogSceneKept(Action<string, bool, string> log)
+    {
+        var kept = !_freeCam.Active && _scene.IsSet && (!_scene.Frozen || _services.SceneFreeze.IsFrozen);
+        log("scene-kept", kept, $"frozen={_scene.Frozen} fwFrozen={_services.SceneFreeze.IsFrozen} posed={_scene.PosedCount} " +
+                                $"entryHidesKept={_scene.HoldsEntryHide} layers={_scene.EntryHideLayers}");
+    }
+
+    /// <summary>After Reset scene: nothing of the camera or the scene is left (entry hides released too).</summary>
+    private bool SceneCleanAfterReset() =>
+        !_freeCam.Active && !_scene.IsSet && !_scene.HoldsEntryHide && !_services.CameraOverride.IsOverridden &&
+        !_services.InputShield.IsShielded && !_services.SceneFreeze.IsFrozen;
 
     private void SelfTestLog(string step, bool ok, string detail = "") =>
         _services.Log.Info($"[PhotoStudio] freecam selftest step={step} ok={ok} {detail}".TrimEnd());
