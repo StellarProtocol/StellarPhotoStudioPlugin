@@ -1,3 +1,4 @@
+using System.Globalization;
 using Stellar.Abstractions.Domain;
 using Stellar.Abstractions.Services;
 using Stellar.PhotoStudio.FreeCam;
@@ -43,20 +44,20 @@ public sealed partial class Plugin
                     Justify: RowJustify.Center)),
         }, Gap: 4f);
 
+    // Mockup order: SCENE · ❄ FROZEN · N posed · ⚔ IN COMBAT · <key> back to the camera.
     private HudElement ScenePill() => new RowElement(new HudElement[]
     {
-        new PillElement(SceneLine, Color: () => _services.Theme.Colors.HudText),
+        new PillElement(() => T("sc.pill.title"), Color: () => _services.Theme.Colors.HudText),
         new ConditionalElement(() => SceneFrozen,
             new PillElement(() => T("fc.badge.frozen"), Color: () => _services.Theme.Colors.HudText)),
+        new ConditionalElement(() => ScenePosedCount > 0,
+            new PillElement(() => _loc.TFormat("sc.pill.posed", ScenePosedCount.ToString(CultureInfo.InvariantCulture)),
+                Color: () => _services.Theme.Colors.HudText)),
         new ConditionalElement(() => _services.CombatState.LocalPlayerInCombat,
             new PillElement(() => T("fc.badge.combat"), Color: () => _services.Theme.Colors.HpFill)),
         new PillElement(() => _loc.TFormat("sc.pill.back", BindingText(StudioHotkeys.FreeCam)),
             Color: () => _services.Theme.Colors.HudText),
     }, Gap: 6f, Justify: RowJustify.Center);
-
-    private string SceneLine() => ScenePosedCount > 0
-        ? T("sc.pill.title") + " · " + _loc.TFormat("sc.pill.posed", ScenePosedCount.ToString(System.Globalization.CultureInfo.InvariantCulture))
-        : T("sc.pill.title");
 
     private string HudLine() => _loc.TFormat("fc.hud.line",
         T(_freeCam.Mode == FreeCamMode.Orbit ? "fc.mode.orbit" : "fc.mode.fly"),

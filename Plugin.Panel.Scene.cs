@@ -25,7 +25,7 @@ public sealed partial class Plugin
     private string SceneStatus()
     {
         var posed = ScenePosedCount.ToString(CultureInfo.InvariantCulture);
-        if (SceneFrozen) return _loc.TFormat("sc.status.frozen", posed);
+        if (SceneFrozen) return ScenePosedCount > 0 ? _loc.TFormat("sc.status.frozen", posed) : T("sc.status.frozenOnly");
         return ScenePosedCount > 0 ? _loc.TFormat("sc.status.posed", posed) : T("sc.status.empty");
     }
 }

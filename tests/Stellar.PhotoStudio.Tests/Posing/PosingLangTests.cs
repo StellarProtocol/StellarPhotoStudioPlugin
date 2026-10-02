@@ -20,7 +20,7 @@ public sealed class PosingLangTests
         "pz.help.eyes", "pz.help.rotate", "pz.full", "fc.help.pose",
         // Scene group + SCENE pill (scene-stays spec 2026-10-02).
         "sc.group", "sc.help", "sc.freeze", "sc.unfreeze", "sc.reset", "sc.status.empty", "sc.status.frozen",
-        "sc.status.posed", "sc.pill.title", "sc.pill.posed", "sc.pill.back", "fc.status.kept", "pz.hint.selectOff",
+        "sc.status.posed", "sc.pill.title", "sc.pill.posed", "sc.pill.back", "fc.status.kept", "pz.hint.selectOff", "sc.status.frozenOnly",
     };
 
     [Theory]
