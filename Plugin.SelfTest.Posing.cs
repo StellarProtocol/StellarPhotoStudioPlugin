@@ -23,6 +23,8 @@ public sealed partial class Plugin
     private float _pzClock, _pzDueAt, _pzSince;
     private string _pzWho = "";
     private int _pzGameEmote;
+    private float _pzHeldUi, _pzHeldFirst;
+    private bool _pzHeldFirstOk;
 
     private void ArmPosingSelfTest()
     {
@@ -44,14 +46,17 @@ public sealed partial class Plugin
         switch (_pzStep)
         {
             case 0: PzLog("enter", _freeCam.Enter()); _pzStep = 1; PzDue(1f); break;
-            case 1: PzGameEmote(); _pzStep = 2; PzDue(1f); break;
-            case 2: PzBegin("self", _services.CombatSnapshot.LocalEntityId, next: 3); break;
-            case 3: if (PzDetectPhase()) _pzStep = 4; break;
-            case 4: if (PzPersonPhase()) PzWaitFrom(5); break;
-            case 5: PzFind("clone", PersonKind.Player, next: 6, skip: 7); break;
-            case 6: if (PzPersonPhase()) PzWaitFrom(7); break;
-            case 7: PzFind("npc", PersonKind.Npc, next: 8, skip: 9); break;
-            case 8: if (PzPersonPhase()) _pzStep = 9; break;
+            case 1: PzProbeStart(loop: false); _pzStep = 2; break;
+            case 2: if (PzProbeTick()) { PzProbeStart(loop: true); _pzStep = 3; } break;
+            case 3: if (PzProbeTick()) { _pzStep = 4; PzDue(2f); } break;
+            case 4: PzGameEmote(); _pzStep = 5; PzDue(1f); break;
+            case 5: PzBegin("self", _services.CombatSnapshot.LocalEntityId, next: 6); break;
+            case 6: if (PzDetectPhase()) _pzStep = 7; break;
+            case 7: if (PzPersonPhase()) PzWaitFrom(8); break;
+            case 8: PzFind("clone", PersonKind.Player, next: 9, skip: 10); break;
+            case 9: if (PzPersonPhase()) PzWaitFrom(10); break;
+            case 10: PzFind("npc", PersonKind.Npc, next: 11, skip: 12); break;
+            case 11: if (PzPersonPhase()) _pzStep = 12; break;
             default: PzFinish(); break;
         }
     }
@@ -127,26 +132,36 @@ public sealed partial class Plugin
         PzLog("self-game-emote", result == EmoteResult.Played, $"id={id} result={result} unlocked={unlocked.Count}");
     }
 
-    /// <summary>Phase 0: the panel shows the running emote (detected id == the one the game played). Phase 1: ❚❚ holds it
-    /// where it is (the framework then reports the held point; nothing was played by us). True once done.</summary>
+    /// <summary>Phase 0: the panel shows the running emote (detected id == the one the game played). Phase 1: ❚❚, then a
+    /// first game-truth read. Phase 2 (~1 s later): a second read — the hold is real only if the game's moment did not
+    /// move (two reads within 0.01) and sits where the panel paused it (within 0.02). True once done.</summary>
     private bool PzDetectPhase()
     {
         var c = _posingCtl;
         var me = _services.CombatSnapshot.LocalEntityId;
-        if (_pzPhase++ == 0)
+        switch (_pzPhase++)
         {
-            c.PollCurrentAction();
-            var s = c.State;
-            PzStepDone("-detect", s.Detected && s.Action?.Id == _pzGameEmote,
-                $"played={_pzGameEmote} detected={s.Action?.Id} name={s.Action?.Name} playing={s.Playing} moment={s.Moment:F2}");
-            return false;
+            case 0:
+                c.PollCurrentAction();
+                var s = c.State;
+                PzStepDone("-detect", s.Detected && s.Action?.Id == _pzGameEmote,
+                    $"played={_pzGameEmote} detected={s.Action?.Id} name={s.Action?.Name} playing={s.Playing} moment={s.Moment:F2}");
+                return false;
+            case 1:
+                c.TogglePlay();
+                _pzHeldUi = c.State.Moment;
+                _pzHeldFirstOk = _services.Posing.TryGetCurrentAction(me, out var firstId, out _pzHeldFirst) && firstId == _pzGameEmote;
+                PzDue(1f);
+                return false;
+            default:
+                var held = _services.Posing.TryGetCurrentAction(me, out var id, out var moment);
+                var ok = !c.State.Playing && _pzHeldFirstOk && held && id == _pzGameEmote &&
+                         Math.Abs(moment - _pzHeldFirst) < 0.01f && Math.Abs(moment - _pzHeldUi) < 0.02f;
+                PzStepDone("-detect-pause", ok,
+                    $"id={id} first={_pzHeldFirst:F3} after1s={moment:F3} ui={_pzHeldUi:F3} state={c.TargetState}");
+                _pzPhase = 0;   // the regular self phases (our own pick) follow
+                return true;
         }
-        c.TogglePlay();
-        var held = _services.Posing.TryGetCurrentAction(me, out var id, out var moment);
-        var ok = !c.State.Playing && held && id == _pzGameEmote && Math.Abs(moment - c.State.Moment) < 0.01f;
-        PzStepDone("-detect-pause", ok, $"held={held} id={id} moment={moment:F2} ui={c.State.Moment:F2} state={c.TargetState}");
-        _pzPhase = 0;   // the regular self phases (our own pick) follow
-        return true;
     }
 
     private bool PzAwaitLoad()

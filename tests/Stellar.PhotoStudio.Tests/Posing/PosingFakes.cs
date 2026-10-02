@@ -113,7 +113,7 @@ internal sealed class PosingRig
     public PosingRig()
     {
         Ctl = new PosingController(Posing, new PosingHost(() => Subject, id => { Subject = id; Ctl!.SyncSubject(); }, Refusals.Add, () => LocalId,
-            id => id == Dance.Id ? Dance : new EmoteInfo(id, CurrentPose, "", false)));
+            id => id == Dance.Id ? new DescribedAction(Dance, true) : new DescribedAction(new EmoteInfo(id, CurrentPose, "", false), false)));
         Ctl.SyncSubject();
     }
 

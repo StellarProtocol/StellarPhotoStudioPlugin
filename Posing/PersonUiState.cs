@@ -16,6 +16,9 @@ internal sealed class PersonUiState
     /// <summary>The user has set this person's pose (picked, paused, scrubbed or restarted): from then on our own state
     /// wins and the running action is no longer followed, until the person is reset.</summary>
     public bool UserPosed { get; set; }
+    /// <summary><see cref="Action"/> is one of the player's unlocked emotes (a user pick always is; a detected action may
+    /// not be — then ↺ cannot replay it).</summary>
+    public bool ActionUnlocked { get; set; } = true;
     public int ExpressionIndex { get; set; } = -1;
     public bool Hold { get; set; } = true;   // owner P3: an expression holds until changed
     public float Yaw { get; set; }

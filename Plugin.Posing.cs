@@ -46,12 +46,13 @@ public sealed partial class Plugin
         if (_posingCtl.PollCurrentAction()) _panelWin.MarkDirty();
     }
 
-    /// <summary>The emote for an action a person is already doing: the unlocked emote when it is one, else "Current pose".</summary>
-    private EmoteInfo DescribeAction(int actionId)
+    /// <summary>The emote for an action a person is already doing: the unlocked emote when it is one, else "Current pose"
+    /// (not unlocked: ↺ is off for it).</summary>
+    private DescribedAction DescribeAction(int actionId)
     {
         foreach (var e in _services.Emotes.Unlocked)
-            if (e.Id == actionId) return e;
-        return new EmoteInfo(actionId, T("pz.pose.current"), "", false);
+            if (e.Id == actionId) return new DescribedAction(e, true);
+        return new DescribedAction(new EmoteInfo(actionId, T("pz.pose.current"), "", false), false);
     }
 
     private void OnPosingChanged()

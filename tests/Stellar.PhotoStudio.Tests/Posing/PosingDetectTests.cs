@@ -152,4 +152,78 @@ public sealed class PosingDetectTests
         Assert.False(r.Ctl.PollCurrentAction());
         Assert.Equal(before, r.Posing.ActionReads);
     }
+
+    // Fix round 1 (1): NPCs are never auto-detected (their stand-in cannot carry the live NPC's action).
+    [Fact]
+    public void An_npc_is_never_auto_detected()
+    {
+        var r = new PosingRig();
+        r.Posing.Running[3] = (9020, 0.4f);
+        r.Select(3);
+        var reads = r.Posing.ActionReads;
+        Assert.False(r.Ctl.PollCurrentAction());
+        Assert.Null(r.Ctl.State.Action);
+        Assert.Equal(reads, r.Posing.ActionReads);
+    }
+
+    // Fix round 1 (6): the action ended between the poll and the ❚❚ click — nothing is held, the panel says so.
+    [Fact]
+    public void Pausing_after_the_detected_action_ended_clears_it_and_holds_nothing()
+    {
+        var r = new PosingRig();
+        r.Posing.Running[2] = (9020, 0.3f);
+        r.Select(2);
+        r.Posing.Running.Remove(2);
+        r.Ctl.TogglePlay();
+        Assert.Null(r.Ctl.State.Action);
+        Assert.False(r.Ctl.State.Detected);
+        Assert.False(r.Ctl.State.UserPosed);
+        Assert.DoesNotContain(r.Target(2).Calls, c => c.StartsWith("moment"));
+        r.Posing.Running[2] = (9020, 0.1f);
+        Assert.True(r.Ctl.PollCurrentAction());   // detection still on
+    }
+
+    // Fix round 1 (6): a different action started between the poll and the click — the new one is named and held.
+    [Fact]
+    public void Pausing_after_the_action_changed_names_and_holds_the_new_one()
+    {
+        var r = new PosingRig();
+        r.Posing.Running[2] = (9020, 0.3f);
+        r.Select(2);
+        r.Posing.Running[2] = (9206, 0.15f);
+        r.Ctl.TogglePlay();
+        Assert.Equal(9206, r.Ctl.State.Action!.Id);
+        Assert.Equal(PosingRig.CurrentPose, r.Ctl.State.Action.Name);
+        Assert.Equal(0.15f, r.Ctl.State.Moment);
+        Assert.Equal(new[] { "moment 0.15" }, r.Target(2).Calls);
+    }
+
+    // Fix round 1 (7): ↺ is off for a detected action outside the unlocked emotes (the game would refuse it).
+    [Fact]
+    public void Restart_is_off_for_a_detected_action_that_is_not_unlocked()
+    {
+        var r = new PosingRig();
+        r.Posing.Running[2] = (9206, 0.3f);
+        r.Select(2);
+        Assert.False(r.Ctl.CanRestart);
+        r.Ctl.Restart();
+        Assert.Equal(0, r.Posing.Selects);   // nothing played, no target
+        r.Ctl.TogglePlay();
+        Assert.False(r.Ctl.CanRestart);   // still the same, now held
+    }
+
+    [Fact]
+    public void Restart_is_on_for_an_unlocked_detected_action_and_a_user_pick()
+    {
+        var r = new PosingRig();
+        r.Posing.Running[2] = (9020, 0.3f);
+        r.Select(2);
+        Assert.True(r.Ctl.CanRestart);
+        r.Posing.Running[2] = (9206, 0.3f);
+        r.Ctl.PollCurrentAction();
+        Assert.False(r.Ctl.CanRestart);
+        r.Ctl.Play(new EmoteInfo(9011, "Wave", "", false));
+        Assert.True(r.Ctl.CanRestart);
+        Assert.False(new PosingRig().Ctl.CanRestart);   // nothing shown
+    }
 }
