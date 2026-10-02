@@ -51,6 +51,11 @@
     <Reference Include="Panda.ZRpcGen"><HintPath>$(GameInterop)/Panda.ZRpcGen.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="ZRpc"><HintPath>$(GameInterop)/ZRpc.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.DirectorModule"><HintPath>$(GameInterop)/UnityEngine.DirectorModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.UI"><HintPath>$(GameInterop)/UnityEngine.UI.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.UIModule"><HintPath>$(GameInterop)/UnityEngine.UIModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Unity.Mathematics"><HintPath>$(GameInterop)/Unity.Mathematics.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="ECSModel"><HintPath>$(GameInterop)/ECSModel.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Unity.Collections"><HintPath>$(GameInterop)/Unity.Collections.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Rewired_Core"><HintPath>$(GameInterop)/Rewired_Core.dll</HintPath><Private>false</Private></Reference>
   </ItemGroup>
 </Project>

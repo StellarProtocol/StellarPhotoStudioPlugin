@@ -133,9 +133,17 @@ public sealed partial class FreeCamProbe : IStellarPlugin
         ("R8_mount", StepMount8, false),          // 8a: personal mount = part of the player model (no VehicleEnt)
         ("R8_combat", StepCombat8, false),        // 8a: character never moves (unfocused window) — no combat
         ("R8_return", StepReturn8, false),
-        ("R9_setup", StepSetup9, true),           // run 9 (2026-10-02): global time pause (Time.timeScale = 0) feasibility
-        ("R9_run", StepRun9, true),
-        ("R9_end", StepEnd9, true),
+        ("R9_setup", StepSetup9, false),          // run 9 (2026-10-02): global time pause (Time.timeScale = 0) feasibility
+        ("R9_run", StepRun9, false),
+        ("R9_end", StepEnd9, false),
+        ("R10_setup", StepSetup10, true),         // run 10 (2026-10-02): verify the framework time-pause freeze via Photo Studio's panel
+        ("R10_town", StepTown10, true),
+        ("R10_field", StepField10, true),
+        ("R10_end", StepEnd10, true),
+        ("R11_setup", StepSetup11, false),        // run 11 (2026-10-02): locomotion animating in place under the time pause
+        ("R11_remote", StepRemote11, false),
+        ("R11_end", StepEnd11, false),
+        ("R12_request", StepRequest12, true),     // run 12: a request re-poses a model with the clock stopped; the gate holds it
     };
 
     internal void Log(string msg)
