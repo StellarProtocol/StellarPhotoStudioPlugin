@@ -3,10 +3,10 @@ using Stellar.Abstractions.Services;
 
 namespace Stellar.PhotoStudio;
 
-// Frame guide (portrait-capture spec § 5, approved mockup 2026-10-03-portrait-capture-mockup.html): a full-canvas window
-// BEHIND every other window (ZOrder far below, so it never blocks a press — WindowInteractionTicker.FrontWindowBlocks only
-// lets a FRONT window block) showing one drawn PNG: the area outside the shape dimmed, a border, thirds lines. It is UI,
-// so the camera-render capture never contains it. Rebuilt only when the shape, the toggle or the canvas size changes.
+// Frame guide (portrait-capture spec § 5, approved mockup 2026-10-03-portrait-capture-mockup.html): a full-canvas PASSIVE
+// window (no padding, no click blocker — clicks reach the game and every window) BEHIND every other window, showing one
+// drawn PNG: the area outside the shape dimmed, a border, thirds lines. It is UI, so the camera-render capture never
+// contains it. Rebuilt only when the shape or the canvas size changes.
 public sealed partial class Plugin
 {
     private const int GuideZOrder = -10000;
@@ -18,10 +18,14 @@ public sealed partial class Plugin
     private bool GuideWanted() => InWorld() && ShapeFrame.GuideVisible(_settings.Shape, _settings.ShowFrameGuide,
         _freeCam.Active, _panelWin.IsShown && _settings.Tab == StudioTabs.Capture);
 
-    /// <summary>Called from OnUpdate: a few int compares; the window is only (re)built when its inputs change.</summary>
+    /// <summary>Called from OnUpdate: a few int compares. The window stays mounted while its inputs are unchanged (its
+    /// ShouldRender hides it), so switching tabs or the free camera costs nothing; it is only rebuilt — paint, encode,
+    /// mount — when the shape or the canvas size changes.</summary>
     private void TickFrameGuide()
     {
-        if (!GuideWanted()) { HideGuide(); return; }
+        var wanted = GuideWanted();
+        if (_guideWin is not null && _guideWin.IsShown != wanted) _guideWin.SetVisible(wanted);
+        if (!wanted) return;
         var w = _services.Framework.CanvasWidth;
         var h = _services.Framework.CanvasHeight;
         if (w <= 0 || h <= 0) return;
@@ -50,6 +54,7 @@ public sealed partial class Plugin
             {
                 Surface = SurfaceStyle.HudOverlay,
                 ShowTitleBar = false, StartVisible = true, Draggable = false, ZOrder = GuideZOrder,
+                Passive = true,   // no padding (the guide must line up with the photo) and no click blocker (review I-1/I-2)
                 Anchor = WindowAnchor.TopLeft, ShouldRender = GuideWanted,
             },
             new ImageElement(() => png, w, h)));
