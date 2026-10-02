@@ -31,14 +31,14 @@ internal sealed class PresetStore
     /// <paramref name="name"/> only case-insensitively (a case-only re-save), its OLD stored key is
     /// deleted first — otherwise the old and new casings would both persist as separate files. The
     /// new casing becomes the stored name.</summary>
-    public void Save(string name, LookSettings look)
+    public void Save(string name, LookSettings look, PhotoShape? shape = null)
     {
         GuardUser(name);
         var existing = _user.FirstOrDefault(p => NameEquals(p.Name, name));
         if (existing is not null && existing.Name != name) _files.Delete(existing.Name);
-        _files.Write(name, JsonSerializer.Serialize(PresetDto.From(name, look)));
+        _files.Write(name, JsonSerializer.Serialize(PresetDto.From(name, look, shape)));
         _user.RemoveAll(p => NameEquals(p.Name, name));
-        _user.Add(new Preset(name, false, look));
+        _user.Add(new Preset(name, false, look, shape));
         Invalidate();
     }
 
@@ -66,7 +66,7 @@ internal sealed class PresetStore
         if (All.Any(p => NameEquals(p.Name, to)))
             throw new InvalidOperationException("A preset with that name already exists.");
         var p = _user.Single(x => NameEquals(x.Name, from));
-        Save(to, p.Look);
+        Save(to, p.Look, p.Shape);
         Delete(from);
     }
 
@@ -76,7 +76,7 @@ internal sealed class PresetStore
     public string Export(string name)
     {
         var p = All.Single(x => NameEquals(x.Name, name));
-        return JsonSerializer.Serialize(PresetDto.From(p.Name, p.Look));
+        return JsonSerializer.Serialize(PresetDto.From(p.Name, p.Look, p.Shape));
     }
 
     /// <summary>Imports a preset. A name collision (built-in or user, case-insensitive) is resolved
@@ -86,7 +86,7 @@ internal sealed class PresetStore
         var dto = Parse(json);
         if (dto is null) return null;
         var name = UniqueName(PresetNames.Sanitize(dto.Name));
-        Save(name, dto.ToLook());
+        Save(name, dto.ToLook(), dto.ToShape());
         return _user.Single(p => NameEquals(p.Name, name));
     }
 
@@ -110,7 +110,7 @@ internal sealed class PresetStore
             }
             var dto = Parse(_files.Read(name));
             if (dto is null) { _warn($"Preset '{name}' could not be read and was skipped."); continue; }
-            _user.Add(new Preset(name, false, dto.ToLook()));
+            _user.Add(new Preset(name, false, dto.ToLook(), dto.ToShape()));
         }
     }
 

@@ -153,7 +153,8 @@ public sealed partial class Plugin
 
     private void StartPresetSession()
     {
-        _presetSession = new PresetSession(_presets, _editor, _settings.PresetName, ParseLook(_settings.WorkingJson));
+        _presetSession = new PresetSession(_presets, _editor, _settings.PresetName, ParseLook(_settings.WorkingJson),
+            new PresetShapeLink(() => _settings.Shape, _settings.SetShape));
         _presetSession.StateChanged += OnPresetStateChanged;
         _look.SetDraft(DraftFromEditor());
     }

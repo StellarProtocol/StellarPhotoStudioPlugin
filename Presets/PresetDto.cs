@@ -3,7 +3,9 @@ namespace Stellar.PhotoStudio.Presets;
 
 // Own DTO (rather than serializing LookSettings directly) so preset JSON on disk stays stable if the
 // framework's LookSettings record ever changes shape — only PresetDto.From/ToLook need to move.
-internal sealed record Preset(string Name, bool BuiltIn, LookSettings Look);
+// Shape (spec 2026-10-03 photo shapes): null = the preset sets no shape (built-ins, files saved before shapes) and
+// applying it leaves the current shape alone.
+internal sealed record Preset(string Name, bool BuiltIn, LookSettings Look, PhotoShape? Shape = null);
 
 internal sealed class PresetDto
 {
@@ -17,10 +19,14 @@ internal sealed class PresetDto
     public float[]? Bloom { get; set; }        // intensity, threshold
     public float[]? Vignette { get; set; }     // intensity, smoothness
     public float[]? FilmGrain { get; set; }    // intensity, response
+    // Photo shape key ("screen", "9:16", …; PhotoShapes.Key). Absent/null = no shape. Additive: an older build's
+    // reader ignores the unknown property, so a rollback keeps reading these files.
+    public string? Shape { get; set; }
 
-    public static PresetDto From(string name, LookSettings s) => new()
+    public static PresetDto From(string name, LookSettings s, PhotoShape? shape = null) => new()
     {
         Name = name,
+        Shape = shape is { } sh ? PhotoShapes.Key(sh) : null,
         Dof = s.Dof is { } d ? new[] { d.FocusDistance, d.Aperture, d.FocalLength, d.FocusOnLocalPlayer ? 1f : 0f } : null,
         Color = s.Color is { } c ? new[] { c.PostExposure, c.Contrast, c.Saturation, c.Filter.R, c.Filter.G, c.Filter.B } : null,
         WhiteBalance = s.WhiteBalance is { } w ? new[] { w.Temperature, w.Tint } : null,
@@ -33,6 +39,9 @@ internal sealed class PresetDto
         Vignette = s.Vignette is { } v ? new[] { v.Intensity, v.Smoothness } : null,
         FilmGrain = s.FilmGrain is { } f ? new[] { f.Intensity, f.Response } : null,
     };
+
+    /// <summary>The preset's shape; null when it sets none (or names a shape this build does not know).</summary>
+    public PhotoShape? ToShape() => PhotoShapes.TryParse(Shape);
 
     public LookSettings ToLook() => new()
     {

@@ -79,6 +79,7 @@ public sealed partial class Plugin : IStellarPlugin
         _loc.LanguageChanged += _onLanguageChanged;
         ArmSelfTest();                           // Plugin.SelfTest.cs — inert unless the env var is set
         ArmPosingSelfTest();                     // Plugin.SelfTest.Posing.cs — inert unless the env var is set
+        ArmShapeSelfTest();                      // Plugin.SelfTest.Shapes.cs — inert unless the env var is set
     }
 
     public string Name => "Photo Studio";
@@ -113,6 +114,7 @@ public sealed partial class Plugin : IStellarPlugin
         TickPosing(dt);                          // Plugin.Posing.cs — follows a person's own running emote (~10 Hz)
         TickSelfTest(dt);
         TickPosingSelfTest(dt);
+        TickShapeSelfTest();
         TickHideAllNotice();
     }
 
@@ -122,9 +124,25 @@ public sealed partial class Plugin : IStellarPlugin
         // Camera-render capture never contains UI or nameplates, so only world layers need hiding for it — hiding
         // the HUD too would just flicker it for two frames on every capture.
         var worldLayers = _settings.Hides & (VisibilityLayers.OtherPlayers | VisibilityLayers.KeepParty);
-        var s = new CaptureSettings(EffectiveScale(), _settings.Format, _settings.JpgQuality, folder, worldLayers);
-        return CaptureController.BuildRequest(s, DateTime.Now, _screenshotFolder);
+        // A shaped capture sizes from the REQUESTED scale (the framework shrinks both sides equally to fit); Screen keeps
+        // passing the already-lowered scale, as before.
+        var aspect = PhotoShapes.Aspect(_settings.Shape);
+        var scale = aspect is null ? EffectiveScale() : _settings.Scale;
+        var s = new CaptureSettings(scale, _settings.Format, _settings.JpgQuality, folder, worldLayers, aspect);
+        var request = CaptureController.BuildRequest(s, DateTime.Now, _screenshotFolder);
+        _lastPlan = new CapturePlan(_settings.Shape, _services.ScreenCapture.PlanSize(request), _settings.Scale);
+        return request;
     }
+
+    /// <summary>What the last request expected, for the toast's "why is it smaller" check.</summary>
+    private CapturePlan _lastPlan;
+
+    private readonly record struct CapturePlan(PhotoShape Shape, CaptureSize Planned, int RequestedScale);
+
+    /// <summary>UI binding (spec § 4/6): the REAL output size for the current Scale + Shape on this window — the
+    /// framework's own plan, GPU texture limit included. Shown next to Resolution and under Capture.</summary>
+    internal CaptureSize PlannedSize() =>
+        _services.ScreenCapture.PlanSize(new CaptureRequest { Scale = _settings.Scale, Aspect = PhotoShapes.Aspect(_settings.Shape) });
 
     private void OnCaptureResult(CaptureResult r)
     {
@@ -188,11 +206,8 @@ public sealed partial class Plugin : IStellarPlugin
     /// memory fallback, so the requested setting would be wrong in the sidecar.</summary>
     private int EffectiveScale() => CaptureScale.Effective(_services.Framework.ScreenWidth, _services.Framework.ScreenHeight, _settings.Scale);
 
-    private int CapturedScale(CaptureResult r)
-    {
-        var w = _services.Framework.ScreenWidth;
-        return w > 0 ? Math.Max(1, (int)Math.Round((double)r.Width / w)) : _settings.Scale;
-    }
+    private int CapturedScale(CaptureResult r) => ShapeFrame.CapturedScale(new CaptureSize(r.Width, r.Height),
+        _services.Framework.ScreenWidth, _services.Framework.ScreenHeight, _settings.Scale);
 
     /// <summary>The map's display name for the sidecar; <c>CurrentSceneName</c> is a numeric scene id.</summary>
     private string MapName()

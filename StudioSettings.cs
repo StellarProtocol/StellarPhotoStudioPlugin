@@ -22,6 +22,8 @@ internal sealed class StudioSettings
         Format = cfg.Get("capture.format", "png") == "jpg" ? CaptureFormat.Jpg : CaptureFormat.Png;
         JpgQuality = Math.Clamp(cfg.Get("capture.jpgQuality", 92), 1, 100);
         Folder = cfg.Get("capture.folder", "") ?? "";
+        Shape = PhotoShapes.Parse(cfg.Get("capture.shape", "screen"));
+        ShowFrameGuide = cfg.Get("capture.frameGuide", true);
         Hides = (VisibilityLayers)cfg.Get("hide.layers", 0) & Persistable;
         Pinned = cfg.Get("look.pinned", false);
         PresetName = cfg.Get("look.presetName", "Natural") ?? "Natural";
@@ -61,6 +63,10 @@ internal sealed class StudioSettings
     private static QualityMode Mode(int v) => v is >= 0 and <= 2 ? (QualityMode)v : QualityMode.Off;
 
     public int Scale { get; private set; }
+    /// <summary>The photo's shape (spec 2026-10-03); Screen = the window's shape (default, today's behaviour).</summary>
+    public PhotoShape Shape { get; private set; }
+    /// <summary>"Show frame guide" (default on): the dimmed outside-the-shape overlay while framing.</summary>
+    public bool ShowFrameGuide { get; private set; }
     public CaptureFormat Format { get; private set; }
     public int JpgQuality { get; private set; }
     /// <summary>Custom screenshot folder; empty = the default folder.</summary>
@@ -76,6 +82,9 @@ internal sealed class StudioSettings
     public bool DockedAuto { get; private set; }
 
     public void SetScale(int s) { Scale = Normalize(s); Store("capture.scale", Scale); }
+    // Stored as a string key ("screen", "9:16", …): an unknown value (a newer build's shape) reads back as Screen.
+    public void SetShape(PhotoShape s) { Shape = s; Store("capture.shape", PhotoShapes.Key(s)); }
+    public void SetShowFrameGuide(bool on) { ShowFrameGuide = on; Store("capture.frameGuide", on); }
     public void SetFormat(CaptureFormat f) { Format = f; Store("capture.format", f == CaptureFormat.Jpg ? "jpg" : "png"); }
     public void SetJpgQuality(int q) { JpgQuality = Math.Clamp(q, 1, 100); Store("capture.jpgQuality", JpgQuality); }
     public void SetFolder(string f) { Folder = f.Trim(); Store("capture.folder", Folder); }

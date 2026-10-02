@@ -52,8 +52,13 @@ public sealed partial class Plugin
     {
         var size = r.Path is not null && File.Exists(r.Path) ? $" · {FormatBytes(new FileInfo(r.Path).Length)}" : "";
         var warning = _folderFellBack ? T("ps.toast.folderFallback") : "";
-        if (r.Width > 0 && r.Width < _services.Framework.ScreenWidth * _settings.Scale)
-            warning = EffectiveScale() < _settings.Scale ? T("ps.toast.cappedSize") : T("ps.toast.retried2x");
+        var screenLong = Math.Max(_services.Framework.ScreenWidth, _services.Framework.ScreenHeight);
+        switch (ShapeFrame.Shortfall(_lastPlan.Shape, new CaptureSize(r.Width, r.Height), _lastPlan.Planned, screenLong, _lastPlan.RequestedScale))
+        {
+            case CaptureShortfall.ScaleCapped: warning = T("ps.toast.cappedSize"); break;
+            case CaptureShortfall.Retried2x: warning = T("ps.toast.retried2x"); break;
+            // ShapeCapped: the planned (real) size was already shown before the shot; no toast string yet (UI follow-up).
+        }
         _toastWarning = warning;
         ShowFileToast(T("ps.toast.saved"), r.Path ?? "", $"{r.Width} × {r.Height} · {FormatName()}{size}");
     }

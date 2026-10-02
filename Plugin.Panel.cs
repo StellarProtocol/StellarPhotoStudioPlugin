@@ -65,6 +65,8 @@ public sealed partial class Plugin
         if (Capturing)
             return _settings.Scale == 4 ? T("ps.status.capturing4x") : T("ps.capturing");
         var scale = EffectiveScale();
+        if (_settings.Shape != PhotoShape.Screen)   // a shape keeps its scale and shrinks both sides; the size is real
+            return ShapeFrame.StatusText(_settings.Scale, FormatName(), PlannedSize(), _settings.Shape);
         return scale < _settings.Scale
             ? _loc.TFormat("ps.status.capped", _settings.Scale, scale, FormatName(), ResolutionText())
             : $"{scale}× · {FormatName()} · {ResolutionText()}";
@@ -72,12 +74,8 @@ public sealed partial class Plugin
 
     private string FormatName() => _settings.Format == CaptureFormat.Jpg ? "JPG" : "PNG";
 
-    private string ResolutionText()
-    {
-        var w = _services.Framework.ScreenWidth * EffectiveScale();
-        var h = _services.Framework.ScreenHeight * EffectiveScale();
-        return $"{w} × {h}";
-    }
+    // The REAL output size (framework plan: scale caps, shape and GPU limit) — spec 2026-10-03 § 4.
+    private string ResolutionText() => ShapeFrame.SizeText(PlannedSize());
 
     private string HotkeyHint() => _loc.TFormat("ps.hint.hotkeys",
         BindingText("photostudio.capture"), BindingText("photostudio.panel"), BindingText("photostudio.hideall"));

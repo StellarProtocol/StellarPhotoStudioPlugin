@@ -11,20 +11,26 @@ namespace Stellar.PhotoStudio.Presets;
 /// renaming keeps the editor's current look, and restoring a stash entry puts the player back on its preset —
 /// swapping any current edits into the stash rather than discarding them.
 /// </summary>
+/// <summary>How a preset reads and sets the panel's photo shape (spec 2026-10-03: presets carry Shape).</summary>
+internal sealed record PresetShapeLink(Func<PhotoShape> Current, Action<PhotoShape> Apply);
+
 internal sealed class PresetSession
 {
     private readonly PresetStore _store;
     private readonly LookEditor _editor;
+    private readonly PresetShapeLink? _shape;
     private readonly List<(string Origin, LookSettings Look)> _stash = new();
     private bool _loading;
 
     /// <summary>Oldest set-aside edits beyond this are dropped (the player has walked away from them many times).</summary>
     public const int MaxStash = 10;
 
-    public PresetSession(PresetStore store, LookEditor editor, string activeName, LookSettings? workingLook)
+    /// <param name="shape">Null = presets neither save nor apply a shape (tests of the look-only behaviour).</param>
+    public PresetSession(PresetStore store, LookEditor editor, string activeName, LookSettings? workingLook, PresetShapeLink? shape = null)
     {
         _store = store;
         _editor = editor;
+        _shape = shape;
         var preset = Find(activeName) ?? store.All[0];
         ActiveName = preset.Name;
         Load(workingLook ?? preset.Look);
@@ -46,6 +52,7 @@ internal sealed class PresetSession
         if (Modified) PushStash();
         ActiveName = p.Name;
         Load(p.Look);
+        if (p.Shape is { } shape) _shape?.Apply(shape);   // a preset without a shape leaves the current one alone
         Modified = false;
         StateChanged?.Invoke();
     }
@@ -72,14 +79,14 @@ internal sealed class PresetSession
     public void Save()
     {
         if (ActiveIsBuiltIn) return;
-        _store.Save(ActiveName, _editor.Build());
+        _store.Save(ActiveName, _editor.Build(), _shape?.Current());
         Modified = false;
         StateChanged?.Invoke();
     }
 
     public void SaveAs(string name)
     {
-        _store.Save(name, _editor.Build());
+        _store.Save(name, _editor.Build(), _shape?.Current());
         ActiveName = Find(name)?.Name ?? name;
         Modified = false;
         StateChanged?.Invoke();
