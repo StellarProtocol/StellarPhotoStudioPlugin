@@ -72,6 +72,7 @@ public sealed partial class FreeCamProbe : IStellarPlugin
         DisarmCombatWatch();
         DisarmSendCounter();
         DisarmEmoteHooks();
+        DisarmCloneHook();
         ReleaseAll("dispose");
         ProbeTicks.FrameTick = null;
         ProbeTicks.LateTick = null;
@@ -112,14 +113,17 @@ public sealed partial class FreeCamProbe : IStellarPlugin
         ("R4_other_live", StepOtherLive4, false),
         ("R4_other_clone", StepOtherClone4, false),
         ("R4_npc", StepNpc4, false),            // run 4a/4b
-        ("R5_setup", StepSetup5, true),          // run 5 (2026-10-02): expression hold, NPC Partner-path model, opportunistic other clone
-        ("R5_face_selfclone", StepFaceSelfClone5, true),
+        ("R5_setup", StepSetup5, false),          // run 5 (2026-10-02): expression hold, NPC Partner-path model, opportunistic other clone
+        ("R5_face_selfclone", StepFaceSelfClone5, false),
         ("R5_face_self", StepFaceSelf5, false), // done in run 5a,
-        ("R5_npc_generate", StepNpcClone5, true),
-        ("R5_npc_live_reset", StepNpcLiveReset5, true),
-        ("R5_other_clone", StepOtherClone5, true),
-        ("R5_end", StepEnd5, true),
-        ("R4_summary", StepSummary4, true),
+        ("R5_npc_generate", StepNpcClone5, false),
+        ("R5_npc_live_reset", StepNpcLiveReset5, false),
+        ("R5_other_clone", StepOtherClone5, false),
+        ("R5_end", StepEnd5, false),
+        ("R4_summary", StepSummary4, false),
+        ("R6_setup", StepSetup6, true),          // run 6 (2026-10-02): CloneModelForPhoto NRE root cause
+        ("R6_window", StepWindow6, true),
+        ("R6_summary", StepSummary6, true),
     };
 
     internal void Log(string msg)

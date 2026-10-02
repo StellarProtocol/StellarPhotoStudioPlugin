@@ -48,6 +48,7 @@
     <Reference Include="Unity.RenderPipelines.Core.Runtime"><HintPath>$(GameInterop)/Unity.RenderPipelines.Core.Runtime.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="ZRenderPipeline"><HintPath>$(GameInterop)/ZRenderPipeline.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Panda.BlueprotocolEnv"><HintPath>$(GameInterop)/Panda.BlueprotocolEnv.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Panda.ZRpcGen"><HintPath>$(GameInterop)/Panda.ZRpcGen.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="ZRpc"><HintPath>$(GameInterop)/ZRpc.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Rewired_Core"><HintPath>$(GameInterop)/Rewired_Core.dll</HintPath><Private>false</Private></Reference>
   </ItemGroup>
