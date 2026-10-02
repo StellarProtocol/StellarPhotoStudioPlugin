@@ -60,6 +60,7 @@ public sealed partial class Plugin
             case 11: if (PzPersonPhase()) _pzStep = 12; break;
             case PzSweepStep: PzSweepStart(); break;
             case PzSweepStep + 1: PzSweepTick(); break;
+            case PzSweepStep + 2: PzSweepScan(); break;
             default: PzFinish(); break;
         }
     }
