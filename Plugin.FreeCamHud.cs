@@ -16,7 +16,7 @@ public sealed partial class Plugin
         new WindowSpec(
             Id: "photostudio.freecam.hud",
             Title: T("fc.title.hud"),
-            DefaultRect: new WindowRect(0f, 16f, 800f, 0f),   // 800: the id fly hint with Ctrl+Shift+F10 needs 752 px of chip (sandbox S3)
+            DefaultRect: new WindowRect(0f, 16f, 960f, 0f),   // 960: the id fly hint with "(scene stays)" and Ctrl+Shift+F10 needs 844 px of chip (sandbox, 2026-10-02)
             Category: WindowCategory.HUD,
             Style: WindowPanelStyle.Borderless)
         {
