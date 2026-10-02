@@ -175,3 +175,20 @@ Earlier steps stay on F8, off in auto. `R5_face_self` ran in 5a only. Results: d
 | `R5_npc_generate` | `R5 npc generate` (`LuaAsyncBridge.GenerateNormalModelAsyncByLua` + `ApplyModelBaseIdleByLua`), `gen visibility`, the R4 pose suite on `npcgen`, `R5 npc REAL after` |
 | `R5_npc_live_reset` | `R5 npclive keeper` + `r0` / `r3` reset attempts vs idle |
 | `R5_other_clone` | bounded 25 s wait for a still player ≤ 15 m, then clone + action + face + refresh |
+
+## Run 7 steps (2026-10-02: monster freeze undone in combat — root-cause probe; earlier steps off in auto)
+
+Prereq: TEST prefix on framework 2.15.0 (probe builds against `Stellar.Abstractions 2.15.0-posing-dev`). The scenario copy
+must drop `\[AutoNav\] CLICK FAILED` from MUST_NOT_SEE (the probe teleports and AutoNav re-tries close-newbie on every
+world entry) — filter the array, never blank the entry (an empty grep pattern matches every line). `TIMEOUT_S=540`,
+`STELLAR_DIAGNOSTICS=1` for the framework's `[FreeCam] freeze …` lines. Results: freecam worktree
+`docs/recon/free-camera-recon.md` § Run 7 and `.superpowers/sdd/posing/monster-freeze-rootcause.md`.
+
+| Step | Verdict lines |
+|---|---|
+| `R7_setup` | `R7 MAP … callerCount=` (interop CallerCount per writer / skill-stage entry point); `R7 TP …` (game map teleport `MapVM.AsyncUserTp` to the highest unlocked field point; skipped when a monster is within 80 m) |
+| `R7_combat` | `R7 WALK …` (game path-finding to the nearest monster), `R7 AUTOBATTLE on`, `R7 wait-combat …` census; per cycle `R7C<n> FREEZE applied` (real `ISceneFreeze`), `R7S c<n> <phase> f<frame> <Kind>:<uuid> fac= animSpd= bfs= drawn= skill= act= st= dVis= dAttr=` (one line per change), `R7SUM` per entity, `R7H …` hook lines (cycles 2-3) |
+| `R7_return` / `R7_summary` | auto-battle setting restored, teleport home (Asterleeds 50801), `R7 HITS` |
+
+**Do not re-arm as is:** a Harmony patch on `EntityAttrExtensions.tryCalculateAnimSpeed` hangs the main thread the first
+time it is invoked (runs 7c and 7d); Il2CppInterop's runtime `XrefScanner.UsedBy` hung it too (run 7a).

@@ -121,9 +121,13 @@ public sealed partial class FreeCamProbe : IStellarPlugin
         ("R5_other_clone", StepOtherClone5, false),
         ("R5_end", StepEnd5, false),
         ("R4_summary", StepSummary4, false),
-        ("R6_setup", StepSetup6, true),          // run 6 (2026-10-02): CloneModelForPhoto NRE root cause
-        ("R6_window", StepWindow6, true),
-        ("R6_summary", StepSummary6, true),
+        ("R6_setup", StepSetup6, false),          // run 6 (2026-10-02): CloneModelForPhoto NRE root cause
+        ("R6_window", StepWindow6, false),
+        ("R6_summary", StepSummary6, false),
+        ("R7_setup", StepSetup7, true),          // run 7 (2026-10-02): monster freeze undone in combat — root cause
+        ("R7_combat", StepCombat7, true),
+        ("R7_return", StepReturn7, true),
+        ("R7_summary", StepSummary7, true),
     };
 
     internal void Log(string msg)
