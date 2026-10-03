@@ -47,6 +47,9 @@ internal sealed partial class FreeCamSession : IDisposable
     /// <summary>Raised whenever something the HUD / panel shows changed (active, mode, freeze, subject, combat).</summary>
     public event Action? StateChanged;
 
+    /// <summary>L pressed in the free camera (lights spec § 2): false = drop a lamp here, true = move the selected lamp here.</summary>
+    public event Action<bool>? LampKey;
+
     public bool Active => _control is not null;
     public FreeCamMode Mode { get; private set; }
     /// <summary>The scene's freeze (it outlives the free camera — <see cref="StudioScene.Frozen"/>).</summary>

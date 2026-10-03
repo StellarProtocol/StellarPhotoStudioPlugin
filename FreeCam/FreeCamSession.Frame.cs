@@ -100,6 +100,7 @@ internal sealed partial class FreeCamSession
         if (e.ToggleFreeze) ToggleFreeze();
         if (e.Reset) ResetPose();
         if (e.ToggleHint) _settings.SetHintHidden(!_settings.HintHidden);
+        if (e.DropLamp || e.MoveLamp) LampKey?.Invoke(e.MoveLamp);   // lights spec § 2 — the plugin owns the lamps
         if (e.BackToSelf) SetSubject(_p.Snapshot.LocalEntityId);
         if (e.Click is not { } at || Mode != FreeCamMode.Orbit || _host.PointerOverOwnWindow(at.X, at.Y)) return;
         if (_p.Picker.TryPickEntity(at.X, at.Y, out var picked)) SetSubject(picked);

@@ -30,6 +30,29 @@ public sealed class StudioSettingsTests
         Assert.Equal(LookGroups.Color, s.OpenGroups);
     }
 
+    // Lights spec (2026-10-03): the Lights tab is inserted at 3, so Presets moves to 4. A 1.1/1.2 user who left the panel on
+    // Presets ("ui.tab2" = 3) must land on Presets, not Lights; the new value is stored under "ui.tab3".
+    [Theory]
+    [InlineData(0, StudioTabs.Capture)]
+    [InlineData(2, StudioTabs.Camera)]
+    [InlineData(3, StudioTabs.Presets)]
+    public void A_v11_saved_tab_migrates_past_the_new_Lights_tab(int savedTab2, int expected)
+    {
+        var cfg = new MemSection();
+        cfg.Values["ui.tab2"] = savedTab2;
+        Assert.Equal(expected, new StudioSettings(cfg).Tab);
+    }
+
+    [Fact]
+    public void The_Lights_tab_is_stored_under_the_new_key()
+    {
+        var cfg = new MemSection();
+        new StudioSettings(cfg).SetTab(StudioTabs.Lights);
+        Assert.Equal(StudioTabs.Lights, cfg.Values["ui.tab3"]);
+        Assert.False(cfg.Values.ContainsKey("ui.tab2"));
+        Assert.Equal(StudioTabs.Lights, new StudioSettings(cfg).Tab);
+    }
+
     [Fact]
     public void Stellar_overlay_hide_is_never_persisted()
     {

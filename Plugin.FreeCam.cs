@@ -22,6 +22,7 @@ public sealed partial class Plugin
         var host = new FreeCamHost(OnFreeCamNotice, PointerOverOwnWindow, DismissHelpTip, msg => _services.Log.Warning(msg));
         _freeCam = new FreeCamSession(ports, _fcSettings, host, _scene);
         _freeCam.StateChanged += OnFreeCamStateChanged;
+        _freeCam.LampKey += OnLampKey;
         _onFreeCamCombatEvent = OnFreeCamCombatEvent;
         _services.CombatEvents.CombatEventOccurred += _onFreeCamCombatEvent;
         _onEmotesChanged = () => _emoteListDirty = true;
@@ -33,9 +34,12 @@ public sealed partial class Plugin
         _services.CombatEvents.CombatEventOccurred -= _onFreeCamCombatEvent;
         _services.Emotes.UnlockedChanged -= _onEmotesChanged;
         _freeCam.StateChanged -= OnFreeCamStateChanged;
+        _freeCam.LampKey -= OnLampKey;
         _freeCam.Dispose();
         _fcSettings.SaveSliders();
     }
+
+    private void OnLampKey(bool move) => LampToast(move ? MoveLampToCamera() : DropLampAtCamera());   // Plugin.Panel.Lights.cs
 
     private void ToggleFreeCamera()
     {

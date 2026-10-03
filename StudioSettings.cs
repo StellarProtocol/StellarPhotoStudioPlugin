@@ -29,6 +29,8 @@ internal sealed class StudioSettings
         PresetName = cfg.Get("look.presetName", "Natural") ?? "Natural";
         WorkingJson = cfg.Get<string?>("look.working", null);
         Tab = ReadTab(cfg);
+        LampsOpen = cfg.Get("ui.lights.lampsOpen", true);
+        PersonLightOpen = cfg.Get("ui.lights.personOpen", true);
         OpenGroups = (LookGroups)cfg.Get("ui.openGroups", (int)LookGroups.Color);
         DockedAuto = cfg.Get("docked.auto", true);
         Supersample = Mode(cfg.Get("quality.supersample", 0));
@@ -101,16 +103,24 @@ internal sealed class StudioSettings
     public void SetPinned(bool p) { Pinned = p; Store("look.pinned", p); }
     public void SetPresetName(string n) { PresetName = n; Store("look.presetName", n); }
     public void SetWorkingJson(string? j) { WorkingJson = j; Store("look.working", j); }
-    // 1.1.0 stores the tab under "ui.tab2" (0..3) and never writes "ui.tab", so a 1.0.0 rollback keeps its own value.
-    public void SetTab(int t) { Tab = Math.Clamp(t, StudioTabs.Capture, StudioTabs.Presets); Store("ui.tab2", Tab); }
+    // 1.3.0 stores the tab under "ui.tab3" (0..4, Lights inserted at 3); "ui.tab2" (1.1.0, 0..3) and "ui.tab" (1.0.0) are
+    // read once for migration and never written, so a rollback keeps its own value.
+    public void SetTab(int t) { Tab = Math.Clamp(t, StudioTabs.Capture, StudioTabs.Presets); Store("ui.tab3", Tab); }
 
     private static int ReadTab(IConfigSection cfg)
     {
-        var current = cfg.Get("ui.tab2", -1);
-        if (current >= 0) return Math.Clamp(current, StudioTabs.Capture, StudioTabs.Presets);
+        var now = cfg.Get("ui.tab3", -1);
+        if (now >= 0) return Math.Clamp(now, StudioTabs.Capture, StudioTabs.Presets);
+        var v11 = cfg.Get("ui.tab2", -1);   // 1.1.0: 0 Capture, 1 Look, 2 Camera, 3 Presets
+        if (v11 >= 0) return v11 >= 3 ? StudioTabs.Presets : v11;
         var old = Math.Clamp(cfg.Get("ui.tab", 0), 0, 2);   // 1.0.0: 0 Capture, 1 Look, 2 Presets
         return old == 2 ? StudioTabs.Presets : old;
     }
+
+    public bool LampsOpen { get; private set; } = true;
+    public bool PersonLightOpen { get; private set; } = true;
+    public void SetLampsOpen(bool open) { LampsOpen = open; Store("ui.lights.lampsOpen", open); }
+    public void SetPersonLightOpen(bool open) { PersonLightOpen = open; Store("ui.lights.personOpen", open); }
 
     public void SetGroupOpen(LookGroups g, bool open)
     {
@@ -128,8 +138,8 @@ internal sealed class StudioSettings
     private static int Normalize(int s) => s is 1 or 2 or 4 ? s : 2;
 }
 
-/// <summary>Panel tab indices (1.1.0 order: Capture · Look · Camera · Presets).</summary>
+/// <summary>Panel tab indices (1.3.0 order: Capture · Look · Camera · Lights · Presets).</summary>
 internal static class StudioTabs
 {
-    public const int Capture = 0, Look = 1, Camera = 2, Presets = 3;
+    public const int Capture = 0, Look = 1, Camera = 2, Lights = 3, Presets = 4;
 }

@@ -22,6 +22,11 @@ public sealed class PosingLangTests
         "sc.group", "sc.help", "sc.freeze", "sc.unfreeze", "sc.reset", "sc.status.empty", "sc.status.frozen",
         "sc.status.posed", "sc.pill.title", "sc.pill.posed", "sc.pill.back", "fc.status.kept", "pz.hint.selectOff", "sc.status.frozenOnly",
         "ps.cap.shape", "ps.cap.shape.screen", "ps.cap.frameGuide", "ps.help.frameGuide", "ps.guide.title", "ps.toast.shapeCapped",
+        "ps.tab.lights", "lt.group.lamps", "lt.help.lamps", "lt.group.person", "lt.help.person", "lt.addAtCamera", "lt.count",
+        "lt.lightPeople", "lt.lightPeople.note", "lt.color", "lt.strength", "lt.range", "lt.around", "lt.height", "lt.distance",
+        "lt.noPerson", "lt.moveHere", "lt.duplicate", "lt.sub.key", "lt.keyOn", "lt.help.key", "lt.keyDirection", "lt.keyHeight",
+        "lt.sub.rim", "lt.rimOn", "lt.help.rim", "lt.rimColor", "lt.rimStrength", "lt.resetPerson", "lt.lampRole", "lt.lamp",
+        "lt.role.key", "lt.role.fill", "lt.role.back", "lt.toast.full", "lt.toast.noCamera",
     };
 
     [Theory]
