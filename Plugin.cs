@@ -1,0 +1,238 @@
+using System;
+using System.IO;
+using Stellar.Abstractions.Domain;
+using Stellar.Abstractions.Plugins;
+using Stellar.Abstractions.Services;
+using Stellar.PhotoStudio.Presets;
+
+namespace Stellar.PhotoStudio;
+
+/// <summary>
+/// Photo Studio — hide the HUD/nameplates/other players, capture a supersampled screenshot, and
+/// grade the shot with a look built from the game's own render-pipeline volumes (depth of field,
+/// colour, white balance, LUT, bloom, vignette, film grain). UI, presets and orchestration only;
+/// the actual capture/look/visibility mechanics live in the framework.
+/// </summary>
+public sealed partial class Plugin : IStellarPlugin
+{
+    private readonly IPluginServices _services;
+    private readonly ILocalization _loc;
+    private readonly LookController _look;
+    private readonly LookEditor _editor = new();
+    private readonly PresetStore _presets;
+    private readonly StudioSettings _settings;
+    private readonly StudioSession _session;
+    private readonly IStudioView _view;
+    private readonly PanelOpenState _panel;
+    private readonly PhotoModeAttach _photoModeAttach;
+    private readonly CapturePlanCache _planCache;   // PlannedSize()/EffectiveScale() — rebuilt only on shape/scale/window change
+    private readonly Action<float> _onFrameworkUpdate;
+    private readonly Action<bool> _onCutsceneChanged;
+    private readonly Action _onLanguageChanged;
+
+    private IDisposable? _hideAllToken;
+    private readonly string _screenshotFolder;
+    private readonly string _studioFolder;
+
+    public Plugin(IPluginServices services)
+    {
+        _services = services;
+        _loc = services.Localization;
+        _planCache = new CapturePlanCache(services.ScreenCapture);
+        LogBootDiag(); // Plugin.Diagnostics.cs — gated on StellarDiagnostics.IsEnabled
+
+        var assemblyDir = Path.GetDirectoryName(typeof(Plugin).Assembly.Location) ?? "";
+        var root = GameRootLocator.Resolve(AppContext.BaseDirectory, assemblyDir, Directory.Exists);
+        _screenshotFolder = Path.Combine(root.Path, "stellar", "screenshots");
+        _studioFolder = Path.Combine(root.Path, "stellar", "photostudio");
+        // Not diagnostic spam — a plain, always-on boot line so the resolved path is visible in a normal log.
+        services.Log.Info($"[PhotoStudio] game root resolved: {root.Path} (verified={root.Verified})");
+
+        _settings = new StudioSettings(services.Config.GetSection("photostudio"));
+        StartScene();                            // Plugin.Scene.cs — the freeze + posing lifetime (outlives the free camera)
+        StartFreeCamera();                       // Plugin.FreeCam.cs
+        StartPosing();                           // Plugin.Posing.cs — needs the free camera session + settings
+        _look = new LookController(services.RenderLook);
+        _look.SetPinned(_settings.Pinned);
+        _presets = new PresetStore(new DataStorePresetFiles(services.Data), m => services.Log.Warning(m));
+        StartPresetSession();                    // Plugin.Studio.cs
+        StartLights();                           // Plugin.Lights.cs — needs the scene selection + the preset session
+        StartRenderQuality();                    // Plugin.Panel.Quality.cs
+        _editor.Changed += OnEditorChanged;
+
+        _session = new StudioSession(services.ScreenCapture, BuildRequest, OnCaptureResult, services.Log.Warning);
+        RegisterWindows();                       // Plugin.Studio.cs — panel, docked strip, toast, tip, flash
+        _view = new WindowStudioView(this);
+        _panel = new PanelOpenState(_view, _look);
+
+        RunHideAllMigration();                   // Plugin.Hotkeys.cs — spec D7, once per install, before any declare
+        DeclareHotkeys();
+        RegisterLauncherTile();                  // Plugin.Launcher.cs
+
+        _photoModeAttach = new PhotoModeAttach(services.PhotoMode, SetDockedForGamePhotoMode);
+        _onCutsceneChanged = suspended => _look.SetSuspended(suspended);
+        services.PhotoMode.CutsceneChanged += _onCutsceneChanged;
+        // A (re)load mid-cutscene or inside the game's photo mode must start in the right state, not wait for a change.
+        _look.SetSuspended(services.PhotoMode.InCutscene);
+        SetDockedForGamePhotoMode(services.PhotoMode.IsActive);
+
+        _onFrameworkUpdate = OnUpdate;
+        services.Framework.Update += _onFrameworkUpdate;
+        _onLanguageChanged = () => { _lutOptionsCache = null; _importOptionsCache = null; };
+        _loc.LanguageChanged += _onLanguageChanged;
+        ArmSelfTest();                           // Plugin.SelfTest.cs — inert unless the env var is set
+        ArmPosingSelfTest();                     // Plugin.SelfTest.Posing.cs — inert unless the env var is set
+        ArmShapeSelfTest();                      // Plugin.SelfTest.Shapes.cs — inert unless the env var is set
+    }
+
+    public string Name => "Photo Studio";
+
+    public void Dispose()
+    {
+        StopFreeCamera();   // camera, shield, look-at and hides go first (spec § 7)
+        StopPosing();
+        StopLights();       // Plugin.Lights.cs — the scene's Dispose below removes the lamps and restores the people
+        StopScene();        // Plugin.Scene.cs — unfreezes and resets every posed person (the scene ends on unload)
+        _lights.Dispose();  // drops its Released handler (the scene above already cleared the lights)
+        _services.Framework.Update -= _onFrameworkUpdate;
+        _loc.LanguageChanged -= _onLanguageChanged;
+        _services.PhotoMode.CutsceneChanged -= _onCutsceneChanged;
+        RemoveLauncherTile();
+        _photoModeAttach.Dispose();
+        foreach (var h in _hotkeys) h.Dispose();
+        _hotkeys.Clear();
+        _hideAllToken?.Dispose();
+        _hideAllToken = null;
+        FlushWorkingLook();
+        FlushHour();
+        FlushPeopleLevel();
+        _quality.Dispose();
+        ReleaseLiveHides();
+        RemoveWindows();
+        _look.Dispose();
+    }
+
+    private void OnUpdate(float dt)
+    {
+        _look.Tick();
+        TickStudio(dt);                          // Plugin.Studio.cs — toast timer, flash fade, tip reposition
+        TickFreeCamUi(dt);
+        TickFrameGuide();
+        TickLampMarkers();                       // Plugin.LampMarkers.cs — one projection per lamp while shown                        // Plugin.FrameGuide.cs — (re)builds only when shape/toggle/canvas change
+        TickPosing(dt);                          // Plugin.Posing.cs — follows a person's own running emote (~10 Hz)
+        TickLightsSave(dt);                      // Plugin.Lights.cs — saves Light people once its slider settles
+        TickSelfTest(dt);
+        TickPosingSelfTest(dt);
+        TickShapeSelfTest();
+        TickHideAllNotice();
+    }
+
+    private CaptureRequest BuildRequest()
+    {
+        var folder = EffectiveFolder(out _folderFellBack);
+        // Camera-render capture never contains UI or nameplates, so only world layers need hiding for it — hiding
+        // the HUD too would just flicker it for two frames on every capture.
+        var worldLayers = _settings.Hides & (VisibilityLayers.OtherPlayers | VisibilityLayers.KeepParty);
+        // A shaped capture sizes from the REQUESTED scale (the framework shrinks both sides equally to fit); Screen keeps
+        // passing the already-lowered scale, as before.
+        var aspect = PhotoShapes.Aspect(_settings.Shape);
+        var scale = aspect is null ? EffectiveScale() : _settings.Scale;
+        var s = new CaptureSettings(scale, _settings.Format, _settings.JpgQuality, folder, worldLayers, aspect);
+        var request = CaptureController.BuildRequest(s, DateTime.Now, _screenshotFolder);
+        _lastPlan = new CapturePlan(_settings.Shape, _services.ScreenCapture.PlanSize(request), _settings.Scale);
+        return request;
+    }
+
+    /// <summary>What the last request expected, for the toast's "why is it smaller" check.</summary>
+    private CapturePlan _lastPlan;
+
+    private readonly record struct CapturePlan(PhotoShape Shape, CaptureSize Planned, int RequestedScale);
+
+    /// <summary>UI binding (spec § 4/6): the REAL output size for the current Scale + Shape on this window — the
+    /// framework's own plan, GPU texture limit included. Shown next to Resolution and under Capture.</summary>
+    internal CaptureSize PlannedSize() =>
+        _planCache.Size(_settings.Shape, _settings.Scale, _services.Framework.ScreenWidth, _services.Framework.ScreenHeight);
+
+    private void OnCaptureResult(CaptureResult r)
+    {
+        SelfTestCaptured(r);
+        PosingSelfTestCaptured(r);
+        _quality.SetCapturing(false);   // the capture-only shadow boost ends with the capture
+        if (!r.Success)
+        {
+            _services.Notifications.Notify(_loc.TFormat("toast.failed", r.Error ?? ""), NotificationKind.Error);
+            return;
+        }
+        WriteSidecar(r);
+        _view.ShowSavedToast(r);
+    }
+
+    private void WriteSidecar(CaptureResult r)
+    {
+        if (r.Path is null) return; // Success is true only when CaptureResult.Ok wrote a path; defensive only.
+        try
+        {
+            var json = CaptureController.SidecarJson(r, _activePresetName, MapName(), CapturedScale(r), _look.Draft);
+            File.WriteAllText(Path.ChangeExtension(r.Path, ".json"), json);
+        }
+        catch (Exception ex)
+        {
+            _services.Log.Warning("[PhotoStudio] sidecar write failed: " + ex);
+        }
+    }
+
+    private void TogglePanel()
+    {
+        // Both overlay hides (the Capture-tab toggle and hide-all) also hide this panel — the panel hotkey is the
+        // way back, so it releases them first instead of toggling a panel nobody can see.
+        if (_overlayHidden || _hideAllToken is not null)
+        {
+            _overlayHidden = false;
+            _hideAllToken?.Dispose();
+            _hideAllToken = null;
+            ApplyLiveHides();
+            _panel.Set(true);
+            return;
+        }
+        _panel.Toggle();
+    }
+
+    private void ToggleHideAll()
+    {
+        // Anything hiding the overlay counts as "hidden": pressing hide-all again must bring everything back.
+        if (_hideAllToken is not null || _overlayHidden)
+        {
+            _hideAllToken?.Dispose();
+            _hideAllToken = null;
+            _overlayHidden = false;
+            ApplyLiveHides();
+            return;
+        }
+        _hideAllToken = _services.SceneVisibility.Hide(VisibilityLayers.GameHud | VisibilityLayers.StellarOverlay | VisibilityLayers.Nameplates);
+    }
+
+    /// <summary>The scale the image was ACTUALLY captured at — the framework lowers 4× to 2× on the pixel cap or a
+    /// memory fallback, so the requested setting would be wrong in the sidecar.</summary>
+    private int EffectiveScale() =>
+        _planCache.EffectiveScale(_settings.Shape, _settings.Scale, _services.Framework.ScreenWidth, _services.Framework.ScreenHeight);
+
+    private int CapturedScale(CaptureResult r) => ShapeFrame.CapturedScale(new CaptureSize(r.Width, r.Height),
+        _services.Framework.ScreenWidth, _services.Framework.ScreenHeight, _settings.Scale);
+
+    /// <summary>The map's display name for the sidecar; <c>CurrentSceneName</c> is a numeric scene id.</summary>
+    private string MapName()
+    {
+        var id = _services.ClientState.CurrentSceneName;
+        if (int.TryParse(id, out var sceneId) && _services.GameData.World.GetScene(sceneId) is { } scene && scene.Name.Length > 0)
+            return scene.Name;
+        return id ?? "";
+    }
+
+    private void NextPreset()
+    {
+        var all = _presets.All;
+        if (all.Count == 0) return;
+        var i = IndexOfPreset(_activePresetName);
+        ApplyPreset(all[(i + 1) % all.Count]);
+    }
+}

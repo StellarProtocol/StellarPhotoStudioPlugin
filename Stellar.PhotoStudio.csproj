@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="$(MSBuildThisFileDirectory)Local.props" Condition="Exists('$(MSBuildThisFileDirectory)Local.props')" />
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <NoWarn>CS8632;CS8765</NoWarn>
+    <RootNamespace>Stellar.PhotoStudio</RootNamespace>
+    <AssemblyName>Stellar.PhotoStudio</AssemblyName>
+    <Version>1.3.0</Version>
+    <Deterministic>true</Deterministic>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Photo Studio 1.3.0 (free camera, posing, scene freeze, photo shapes, lights) needs framework 2.15.0. -->
+    <PackageReference Include="Stellar.Abstractions" Version="2.15.0" />
+    <PackageReference Include="Stellar.PluginContracts"    Version="2.0.0" />
+    <PackageReference Include="Stellar.Plugin.InteropRefs" Version="2.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Lang/en.json" LogicalName="Stellar.PhotoStudio.Lang.en.json" />
+    <EmbeddedResource Include="Lang/ja.json" LogicalName="Stellar.PhotoStudio.Lang.ja.json" />
+    <EmbeddedResource Include="Lang/th.json" LogicalName="Stellar.PhotoStudio.Lang.th.json" />
+    <EmbeddedResource Include="Lang/id.json" LogicalName="Stellar.PhotoStudio.Lang.id.json" />
+    <EmbeddedResource Include="Lang/fil.json" LogicalName="Stellar.PhotoStudio.Lang.fil.json" />
+    <!-- Launcher-tile icon (camera + sparkles, owner-supplied 2026-10-01). -->
+    <EmbeddedResource Include="Resources/photostudio-icon.png" LogicalName="Stellar.PhotoStudio.photostudio-icon.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="tests/**/*.cs" />
+    <InternalsVisibleTo Include="Stellar.PhotoStudio.Tests" />
+  </ItemGroup>
+</Project>
