@@ -15,6 +15,10 @@ internal sealed partial class FreeCamSession
     private Vector3 _subjectPos;
     private bool _rmbDown, _lookFromOwnWindow;
 
+    /// <summary>Where the free camera is now and which way it looks (lights: drop / move a lamp at the camera); null while
+    /// the free camera is off.</summary>
+    internal (Vector3 Position, float Yaw)? ShownPose => Active ? (_shownPos, _shownYaw) : null;
+
     /// <summary>Scene-stays spec § 8: while frozen the leash centre stays the scene's freeze centre.</summary>
     private Vector3 LeashCentre => _scene.FreezeCentre ?? _subjectPos;
 

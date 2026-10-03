@@ -8,7 +8,7 @@ namespace Stellar.PhotoStudio;
 /// <summary>
 /// The scene Photo Studio has set up (spec 2026-10-02-photo-studio-scene-stays-design.md § 1–2, 4, 8): the freeze token,
 /// the freeze centre (the free camera's leash centre while frozen) and the posing lifetime. It belongs to the scene, not
-/// to the free camera: leaving the free camera keeps it. It ends on <see cref="Reset"/> (the Reset scene button), on the
+/// to the free camera: leaving the free camera keeps it; the lights (Lights tab) belong to it too. It ends on <see cref="Reset"/> (the Reset scene button), on the
 /// framework's own reasons (the freeze's <see cref="ISceneFreeze.Changed"/>(false) on a zone change / cutscene; posing
 /// targets released by the framework) and on <see cref="Dispose"/> (Photo Studio unloading) — in general whenever
 /// <see cref="IsSet"/> goes from true to false. While set it also keeps the free camera's entry hides once the camera has
@@ -22,6 +22,8 @@ internal sealed class StudioScene : IDisposable
     private readonly IPosing? _posing;
     private readonly Action<bool> _onFreezeChanged;
     private Func<int> _posedCount = () => 0;
+    private Func<int> _lightsCount = () => 0;
+    private Action _clearLights = () => { };
     private IDisposable? _token;
     private IDisposable? _entryHide;
     private VisibilityLayers _entryHideLayers;
@@ -52,7 +54,10 @@ internal sealed class StudioScene : IDisposable
 
     /// <summary>Anything set up: frozen, or anyone posed. While set, re-entering the free camera returns it to its last
     /// pose (spec § 6) and the off-camera SCENE pill shows (spec § 7).</summary>
-    public bool IsSet => Frozen || PosedCount > 0;
+    public bool IsSet => Frozen || PosedCount > 0 || LightsCount > 0;
+
+    /// <summary>Lamps + lit people (lights spec § 4: lights belong to the scene).</summary>
+    public int LightsCount => _lightsCount();
 
     /// <summary>Counts scene ends (set → not set, Reset scene, unload). A free-camera pose remembered under an older
     /// generation belongs to a scene that is gone, so re-entry starts from the game camera (review I-3).</summary>
@@ -66,6 +71,17 @@ internal sealed class StudioScene : IDisposable
 
     /// <summary>Wires the posed-people count (the Person group's controller); called once at start.</summary>
     public void TrackPoses(Func<int> posedCount) => _posedCount = posedCount;
+
+    /// <summary>Wires the lights (the Lights tab's controller): their count makes the scene set; Reset scene and unload
+    /// clear them. Called once at start.</summary>
+    public void TrackLights(Func<int> count, Action clear)
+    {
+        _lightsCount = count;
+        _clearLights = clear;
+    }
+
+    /// <summary>The lights changed (added, removed, or ended by the framework); forwards one <see cref="Changed"/>.</summary>
+    public void NotifyLightsChanged() => Raise();
 
     /// <summary>The Person group's posed set changed; forwards one <see cref="Changed"/>.</summary>
     public void NotifyPosesChanged() => Raise();
@@ -121,6 +137,7 @@ internal sealed class StudioScene : IDisposable
         if (_disposed) return;
         EndFreeze();
         _posing?.ResetAll();
+        _clearLights();
         if (_wasSet || _entryHide is not null) EndScene();
         _wasSet = IsSet;
         Changed?.Invoke();
@@ -142,6 +159,7 @@ internal sealed class StudioScene : IDisposable
         _freeze.Changed -= _onFreezeChanged;
         EndFreeze();
         _posing?.ResetAll();
+        _clearLights();
         EndScene();
     }
 

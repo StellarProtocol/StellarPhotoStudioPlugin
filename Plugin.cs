@@ -56,6 +56,7 @@ public sealed partial class Plugin : IStellarPlugin
         _look.SetPinned(_settings.Pinned);
         _presets = new PresetStore(new DataStorePresetFiles(services.Data), m => services.Log.Warning(m));
         StartPresetSession();                    // Plugin.Studio.cs
+        StartLights();                           // Plugin.Lights.cs — needs the scene selection + the preset session
         StartRenderQuality();                    // Plugin.Panel.Quality.cs
         _editor.Changed += OnEditorChanged;
 
@@ -90,7 +91,9 @@ public sealed partial class Plugin : IStellarPlugin
     {
         StopFreeCamera();   // camera, shield, look-at and hides go first (spec § 7)
         StopPosing();
+        StopLights();       // Plugin.Lights.cs — the scene's Dispose below removes the lamps and restores the people
         StopScene();        // Plugin.Scene.cs — unfreezes and resets every posed person (the scene ends on unload)
+        _lights.Dispose();  // drops its Released handler (the scene above already cleared the lights)
         _services.Framework.Update -= _onFrameworkUpdate;
         _loc.LanguageChanged -= _onLanguageChanged;
         _services.PhotoMode.CutsceneChanged -= _onCutsceneChanged;

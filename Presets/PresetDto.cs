@@ -5,7 +5,8 @@ namespace Stellar.PhotoStudio.Presets;
 // framework's LookSettings record ever changes shape — only PresetDto.From/ToLook need to move.
 // Shape (spec 2026-10-03 photo shapes): null = the preset sets no shape (built-ins, files saved before shapes) and
 // applying it leaves the current shape alone.
-internal sealed record Preset(string Name, bool BuiltIn, LookSettings Look, PhotoShape? Shape = null);
+// Lights (spec 2026-10-03 lights § 5): null = the preset carries no lights and applying it leaves the scene's lights alone.
+internal sealed record Preset(string Name, bool BuiltIn, LookSettings Look, PhotoShape? Shape = null, Lights.LightsPreset? Lights = null);
 
 internal sealed class PresetDto
 {
@@ -22,10 +23,13 @@ internal sealed class PresetDto
     // Photo shape key ("screen", "9:16", …; PhotoShapes.Key). Absent/null = no shape. Additive: an older build's
     // reader ignores the unknown property, so a rollback keeps reading these files.
     public string? Shape { get; set; }
+    // Lights (lamps relative to the selected person, Light people, key + rim). Absent/null = no lights. Additive.
+    public Lights.LightsPresetDto? Lights { get; set; }
 
-    public static PresetDto From(string name, LookSettings s, PhotoShape? shape = null) => new()
+    public static PresetDto From(string name, LookSettings s, PhotoShape? shape = null, Lights.LightsPreset? lights = null) => new()
     {
         Name = name,
+        Lights = lights is null ? null : Stellar.PhotoStudio.Lights.LightsPresetDto.From(lights),
         Shape = shape is { } sh ? PhotoShapes.Key(sh) : null,
         Dof = s.Dof is { } d ? new[] { d.FocusDistance, d.Aperture, d.FocalLength, d.FocusOnLocalPlayer ? 1f : 0f } : null,
         Color = s.Color is { } c ? new[] { c.PostExposure, c.Contrast, c.Saturation, c.Filter.R, c.Filter.G, c.Filter.B } : null,
@@ -42,6 +46,9 @@ internal sealed class PresetDto
 
     /// <summary>The preset's shape; null when it sets none (or names a shape this build does not know).</summary>
     public PhotoShape? ToShape() => PhotoShapes.TryParse(Shape);
+
+    /// <summary>The preset's lights; null when it carries none.</summary>
+    public Lights.LightsPreset? ToLights() => Lights?.ToPreset();
 
     public LookSettings ToLook() => new()
     {

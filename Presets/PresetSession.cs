@@ -7,6 +7,11 @@ namespace Stellar.PhotoStudio.Presets;
 /// <summary>How a preset reads and sets the panel's photo shape (spec 2026-10-03: presets carry Shape).</summary>
 internal sealed record PresetShapeLink(Func<PhotoShape> Current, Action<PhotoShape> Apply);
 
+/// <summary>How a preset reads and sets the scene's lights (spec 2026-10-03 lights § 5). <paramref name="Capture"/> returns
+/// null when there are no lights to save. Lights are scene objects, not part of the look: changing them never marks the
+/// preset modified and the "Unsaved look" stash does not carry them.</summary>
+internal sealed record PresetLightsLink(Func<Lights.LightsPreset?> Capture, Action<Lights.LightsPreset> Apply);
+
 /// <summary>One set-aside "Unsaved look" row: the look, the preset it came from, the photo shape it was framed in
 /// (null = no shape link), and the shape the preset state started from (so re-saving after a restore knows whether the
 /// shape was the player's change).</summary>
@@ -49,6 +54,9 @@ internal sealed class PresetSession
         _editor.Changed += OnEdited;
     }
 
+    /// <summary>Set once at start: presets save and apply the scene's lights through it (null = they do not).</summary>
+    public PresetLightsLink? Lights { get; set; }
+
     public string ActiveName { get; private set; }
     public bool Modified { get; private set; }
     /// <summary>Set-aside edits, newest first.</summary>
@@ -58,12 +66,16 @@ internal sealed class PresetSession
     /// <summary>Raised when the active preset, the modified flag or the stash changes (not on every edit).</summary>
     public event Action? StateChanged;
 
-    public void Apply(Preset p)
+    public void Apply(Preset p) => Apply(p, withLights: true);
+
+    // Reset all re-applies the look only: the lights are scene objects the player placed, not edits of the look.
+    private void Apply(Preset p, bool withLights)
     {
         if (Modified) PushStash();
         ActiveName = p.Name;
         Load(p.Look);
         if (p.Shape is { } shape) ApplyShape(shape);   // a preset without a shape leaves the current one alone
+        if (withLights && p.Lights is { } lights) Lights?.Apply(lights);   // a preset without lights leaves the scene's alone
         _baseShape = _shape?.Current();
         Modified = false;
         StateChanged?.Invoke();
@@ -89,7 +101,7 @@ internal sealed class PresetSession
         var preset = Find(ActiveName) ?? _store.All[0];
         var revert = preset.Shape is null ? _baseShape : null;   // a shapeless preset: undo the player's shape change
         Modified = false;
-        Apply(preset);
+        Apply(preset, withLights: false);
         if (revert is not { } r) return;
         ApplyShape(r);
         _baseShape = r;
@@ -99,7 +111,7 @@ internal sealed class PresetSession
     {
         if (ActiveIsBuiltIn) return;
         var keepsShape = Find(ActiveName)?.Shape is not null || ShapeChanged;
-        _store.Save(ActiveName, _editor.Build(), keepsShape ? _shape?.Current() : null);
+        _store.Save(ActiveName, _editor.Build(), keepsShape ? _shape?.Current() : null, Lights?.Capture());
         _baseShape = _shape?.Current();
         Modified = false;
         StateChanged?.Invoke();
@@ -107,7 +119,7 @@ internal sealed class PresetSession
 
     public void SaveAs(string name)
     {
-        _store.Save(name, _editor.Build(), _shape?.Current());   // a new preset captures the shape as it is
+        _store.Save(name, _editor.Build(), _shape?.Current(), Lights?.Capture());   // a new preset captures the shape as it is
         _baseShape = _shape?.Current();
         ActiveName = Find(name)?.Name ?? name;
         Modified = false;
