@@ -125,4 +125,21 @@ public sealed class StudioSettingsTests
         cfg.Values["quality.supersample"] = 9;
         Assert.Equal(QualityMode.Off, new StudioSettings(cfg).Supersample);
     }
+
+    [Fact]
+    public void ReShade_fold_states_default_and_persist()
+    {
+        var cfg = new MemSection();
+        var s = new StudioSettings(cfg);
+        Assert.True(s.ReShadeOpen);
+        Assert.True(s.PacksOpen);
+        Assert.False(s.AllFxOpen);
+        s.SetAllFxOpen(true);
+        s.SetPacksOpen(false);
+        s.SetReShadeOpen(false);
+        var again = new StudioSettings(cfg);
+        Assert.True(again.AllFxOpen);
+        Assert.False(again.PacksOpen);
+        Assert.False(again.ReShadeOpen);
+    }
 }

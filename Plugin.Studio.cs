@@ -3,6 +3,7 @@ using System.IO;
 using Stellar.Abstractions.Domain;
 using Stellar.Abstractions.Services;
 using Stellar.PhotoStudio.Presets;
+using Stellar.PhotoStudio.ReShade;
 
 namespace Stellar.PhotoStudio;
 
@@ -159,6 +160,7 @@ public sealed partial class Plugin
         _presetSession = new PresetSession(_presets, _editor, _settings.PresetName, ParseLook(_settings.WorkingJson),
             new PresetShapeLink(() => _settings.Shape, _settings.SetShape));
         _presetSession.StateChanged += OnPresetStateChanged;
+        _presetSession.ReShadeLink = new PresetReShadeLink(_rs.Current, _rs.Apply);   // R8: looks remember ReShade
         _settings.ShapeChanged += _presetSession.OnShapeChanged;   // a shape change marks the preset modified
         _look.SetDraft(DraftFromEditor());
     }
@@ -211,26 +213,22 @@ public sealed partial class Plugin
 
     // ── capture ──────────────────────────────────────────────────────────────────────────────────────────────
 
-    // A capture-only shadow boost reallocates the shadow map; give it a couple of frames before the grab.
+    // A capture-only shadow boost reallocates the shadow map; give it a couple of frames before the grab. A ReShade
+    // switch (Look preset, preset, on/off, effect) must be applied first too — R1 / D8 (CaptureGate, Plugin.ReShade.cs).
     private const int BoostSettleTicks = 2;
-    private int _captureInTicks = -1;
 
     private void CaptureNow()
     {
-        if (Capturing || _captureInTicks >= 0) return;
+        if (Capturing || _captureGate.Armed) return;
         _flash = 0.6f;
         _flashWin.SetRect(new WindowRect(0f, 0f, _services.Framework.ScreenWidth, _services.Framework.ScreenHeight));
         _flashWin.SetVisible(true);
         _quality.SetCapturing(true);
-        if (_quality.BoostingForCapture) { _captureInTicks = BoostSettleTicks; return; }
-        _ = _session.CaptureAsync();
-    }
-
-    private void TickPendingCapture()
-    {
-        if (_captureInTicks < 0) return;
-        if (_captureInTicks-- > 0) return;
-        _captureInTicks = -1;
+        if (_quality.BoostingForCapture || _rs.Pending)
+        {
+            _captureGate.Arm(_quality.BoostingForCapture ? BoostSettleTicks : 0);
+            return;
+        }
         _ = _session.CaptureAsync();
     }
 
@@ -277,7 +275,6 @@ public sealed partial class Plugin
             if (_workingSaveIn <= 0f) { _workingSaveIn = 0f; FlushWorkingLook(); }
         }
         TickHourSave(dt);
-        TickPendingCapture();
         TipRepositionTick();
     }
 

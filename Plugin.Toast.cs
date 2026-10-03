@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using Stellar.Abstractions.Domain;
 using Stellar.Abstractions.Services;
+using Stellar.PhotoStudio.ReShade;
 
 namespace Stellar.PhotoStudio;
 
@@ -59,7 +60,7 @@ public sealed partial class Plugin
             case CaptureShortfall.Retried2x: warning = T("ps.toast.retried2x"); break;
             case CaptureShortfall.ShapeCapped: warning = T("ps.toast.shapeCapped"); break;
         }
-        _toastWarning = warning;
+        _toastWarning = ReShadeInfo.JoinWarnings(warning, r.Notes, T);   // R2: capture notes reach the player
         ShowFileToast(T("ps.toast.saved"), r.Path ?? "", $"{r.Width} × {r.Height} · {FormatName()}{size}");
     }
 

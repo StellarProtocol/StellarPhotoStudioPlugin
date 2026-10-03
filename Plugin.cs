@@ -43,6 +43,7 @@ public sealed partial class Plugin : IStellarPlugin
 
         var assemblyDir = Path.GetDirectoryName(typeof(Plugin).Assembly.Location) ?? "";
         var root = GameRootLocator.Resolve(AppContext.BaseDirectory, assemblyDir, Directory.Exists);
+        _gameRoot = root.Path;
         _screenshotFolder = Path.Combine(root.Path, "stellar", "screenshots");
         _studioFolder = Path.Combine(root.Path, "stellar", "photostudio");
         // Not diagnostic spam — a plain, always-on boot line so the resolved path is visible in a normal log.
@@ -55,6 +56,7 @@ public sealed partial class Plugin : IStellarPlugin
         _look = new LookController(services.RenderLook);
         _look.SetPinned(_settings.Pinned);
         _presets = new PresetStore(new DataStorePresetFiles(services.Data), m => services.Log.Warning(m));
+        StartReShade();                          // Plugin.ReShade.cs — before the preset session links to it
         StartPresetSession();                    // Plugin.Studio.cs
         StartLights();                           // Plugin.Lights.cs — needs the scene selection + the preset session
         StartRenderQuality();                    // Plugin.Panel.Quality.cs
@@ -97,6 +99,7 @@ public sealed partial class Plugin : IStellarPlugin
         _services.Framework.Update -= _onFrameworkUpdate;
         _loc.LanguageChanged -= _onLanguageChanged;
         _services.PhotoMode.CutsceneChanged -= _onCutsceneChanged;
+        StopReShade();                    // Plugin.ReShade.cs
         RemoveLauncherTile();
         _photoModeAttach.Dispose();
         foreach (var h in _hotkeys) h.Dispose();
@@ -115,6 +118,7 @@ public sealed partial class Plugin : IStellarPlugin
     private void OnUpdate(float dt)
     {
         _look.Tick();
+        TickReShade(dt);                         // Plugin.ReShade.cs — R1 settle + the capture gate, before TickStudio
         TickStudio(dt);                          // Plugin.Studio.cs — toast timer, flash fade, tip reposition
         TickFreeCamUi(dt);
         TickFrameGuide();
@@ -141,6 +145,7 @@ public sealed partial class Plugin : IStellarPlugin
         var s = new CaptureSettings(scale, _settings.Format, _settings.JpgQuality, folder, worldLayers, aspect);
         var request = CaptureController.BuildRequest(s, DateTime.Now, _screenshotFolder);
         _lastPlan = new CapturePlan(_settings.Shape, _services.ScreenCapture.PlanSize(request), _settings.Scale);
+        SnapshotReShadeForShot();
         return request;
     }
 
@@ -173,7 +178,7 @@ public sealed partial class Plugin : IStellarPlugin
         if (r.Path is null) return; // Success is true only when CaptureResult.Ok wrote a path; defensive only.
         try
         {
-            var json = CaptureController.SidecarJson(r, new SidecarInfo(_activePresetName, MapName(), CapturedScale(r), _look.Draft, null));
+            var json = CaptureController.SidecarJson(r, new SidecarInfo(_activePresetName, MapName(), CapturedScale(r), _look.Draft, ShotFor(r)));
             File.WriteAllText(Path.ChangeExtension(r.Path, ".json"), json);
         }
         catch (Exception ex)

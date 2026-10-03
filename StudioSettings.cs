@@ -42,6 +42,9 @@ internal sealed class StudioSettings
         TimeMode = Mode(cfg.Get("time.mode", 0));
         TimeHour = Math.Clamp(cfg.Get("time.hour", 12f), 0f, 24f);
         QualityOpen = cfg.Get("ui.qualityOpen", true);
+        ReShadeOpen = cfg.Get("ui.reshade.open", true);
+        PacksOpen = cfg.Get("ui.reshade.packsOpen", true);
+        AllFxOpen = cfg.Get("ui.reshade.allFx", false);
     }
 
     public QualityMode Supersample { get; private set; }
@@ -50,12 +53,18 @@ internal sealed class StudioSettings
     public QualityMode TimeMode { get; private set; }
     public float TimeHour { get; private set; }
     public bool QualityOpen { get; private set; }
+    public bool ReShadeOpen { get; private set; }
+    public bool PacksOpen { get; private set; }
+    public bool AllFxOpen { get; private set; }
 
     public void SetSupersample(QualityMode m) { Supersample = m; Store("quality.supersample", (int)m); }
     public void SetShadows(QualityMode m) { Shadows = m; Store("quality.shadows", (int)m); }
     public void SetBoostForCapture(bool on) { BoostForCapture = on; Store("quality.boostCapture", on); }
     public void SetTimeMode(QualityMode m) { TimeMode = m; Store("time.mode", (int)m); }
     public void SetQualityOpen(bool open) { QualityOpen = open; Store("ui.qualityOpen", open); }
+    public void SetReShadeOpen(bool open) { ReShadeOpen = open; Store("ui.reshade.open", open); }
+    public void SetPacksOpen(bool open) { PacksOpen = open; Store("ui.reshade.packsOpen", open); }
+    public void SetAllFxOpen(bool open) { AllFxOpen = open; Store("ui.reshade.allFx", open); }
 
     /// <summary>The hour slider fires every frame while dragged: <paramref name="save"/> false keeps it in memory
     /// only, and the owner saves once the drag settles (a config save is a main-thread file write).</summary>
