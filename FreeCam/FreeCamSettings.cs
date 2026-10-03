@@ -17,7 +17,8 @@ internal sealed class FreeCamSettings
 
     /// <summary>Spec §§ 3/5: the layers entry may hide, and the default (game HUD + nameplates).</summary>
     internal const VisibilityLayers EntryHideChoices =
-        VisibilityLayers.GameHud | VisibilityLayers.Nameplates | VisibilityLayers.OtherPlayers;
+        VisibilityLayers.GameHud | VisibilityLayers.Nameplates | VisibilityLayers.OtherPlayers | VisibilityLayers.Self |
+        VisibilityLayerSets.Effects;
     internal const VisibilityLayers DefaultEntryHides = VisibilityLayers.GameHud | VisibilityLayers.Nameplates;
     private const string EntryHidesKey = "freecam.entryHideLayers";
     private const string LegacyEntryHidesKey = "freecam.entryHides";   // 1.1.0 dev builds: one bool over the default set

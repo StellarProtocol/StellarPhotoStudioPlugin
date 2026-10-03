@@ -49,7 +49,7 @@ internal sealed partial class FreeCamSession
     private void TakeEntryHides()
     {
         var kept = _scene.TakeEntryHide(out var keptLayers);
-        var want = _settings.EntryHides;
+        var want = EntryHidePlan.Resolve(_settings.EntryHides, _host.CaptureHides?.Invoke() ?? VisibilityLayers.None);
         if (kept is not null && keptLayers == want)
         {
             (_hide, _hideLayers) = (kept, keptLayers);

@@ -20,9 +20,11 @@ internal sealed record FreeCamPorts(
 /// <param name="DismissModalUi">Closes Photo Studio's open modal UI (the "?" help popover) if one is open and returns
 /// true when it did — Esc then closes that instead of leaving the free camera.</param>
 /// <param name="Warn">Writes a warning to the plugin log.</param>
+/// <param name="CaptureHides">The Capture tab's current hide layers, read lazily on entry — resolves "hide effects"
+/// to the Capture tab's effect switches (<see cref="EntryHidePlan"/>, spec § 4).</param>
 internal sealed record FreeCamHost(
     Action<FreeCamNotice, CameraReleaseReason> Notify, Func<float, float, bool> PointerOverOwnWindow,
-    Func<bool> DismissModalUi, Action<string> Warn);
+    Func<bool> DismissModalUi, Action<string> Warn, Func<VisibilityLayers>? CaptureHides = null);
 
 internal enum FreeCamMode { Orbit, Fly }
 

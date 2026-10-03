@@ -52,12 +52,14 @@ public sealed partial class Plugin
         HideToggle("hide.hud", VisibilityLayers.GameHud, "ps.hide.hud"),
         HideToggle("hide.overlay", VisibilityLayers.StellarOverlay, "ps.hide.overlay"),
         HideToggle("hide.names", VisibilityLayers.Nameplates, "ps.hide.names"),
+        HideToggle("hide.me", VisibilityLayers.Self, "ps.hide.me"),
         HideToggle("hide.others", VisibilityLayers.OtherPlayers, "ps.hide.others"),
-        new RowElement(new HudElement[]
-        {
-            new SpacerElement(Width: 22f),
-            new CellElement(KeepPartyToggle(), Weight: 1f),
-        }),
+        Indented(KeepPartyToggle()),
+        new TextElement(() => T("ps.hide.fx"), Color: Muted, FontSize: SubFont),
+        Indented(HideToggle("hide.fx.mine", VisibilityLayers.EffectsMine, "ps.hide.fx.mine")),
+        Indented(HideToggle("hide.fx.party", VisibilityLayers.EffectsParty, "ps.hide.fx.party")),
+        Indented(HideToggle("hide.fx.others", VisibilityLayers.EffectsOthers, "ps.hide.fx.others")),
+        Indented(HideToggle("hide.fx.monsters", VisibilityLayers.EffectsMonsters, "ps.hide.fx.monsters")),
         new SpacerElement(Height: 6f),
         new SeparatorElement(),
         new TextElement(() => T("ps.cap.gamePhoto"), Emphasis: true),
@@ -163,6 +165,13 @@ public sealed partial class Plugin
             ? _loc.TFormat("ps.help." + key, BindingText("photostudio.panel"))
             : T("ps.help." + key);
     }
+
+    /// <summary>A sub-option row: the same 22 px indent the party row has always used.</summary>
+    private static HudElement Indented(HudElement e) => new RowElement(new HudElement[]
+    {
+        new SpacerElement(Width: 22f),
+        new CellElement(e, Weight: 1f),
+    });
 
     private HudElement KeepPartyToggle() => HelpToggle("hide.party",
         get: () => IsHidden(VisibilityLayers.KeepParty),

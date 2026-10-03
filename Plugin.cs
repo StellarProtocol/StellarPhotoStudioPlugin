@@ -132,7 +132,8 @@ public sealed partial class Plugin : IStellarPlugin
         var folder = EffectiveFolder(out _folderFellBack);
         // Camera-render capture never contains UI or nameplates, so only world layers need hiding for it — hiding
         // the HUD too would just flicker it for two frames on every capture.
-        var worldLayers = _settings.Hides & (VisibilityLayers.OtherPlayers | VisibilityLayers.KeepParty);
+        var worldLayers = _settings.Hides & (VisibilityLayers.OtherPlayers | VisibilityLayers.KeepParty | VisibilityLayers.Self |
+            VisibilityLayerSets.Effects);
         // A shaped capture sizes from the REQUESTED scale (the framework shrinks both sides equally to fit); Screen keeps
         // passing the already-lowered scale, as before.
         var aspect = PhotoShapes.Aspect(_settings.Shape);
