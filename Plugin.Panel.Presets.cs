@@ -99,7 +99,7 @@ public sealed partial class Plugin
     private void ClickRow(int slot)
     {
         _nameMode = NameMode.None;
-        if (IsUnsavedRow(slot)) { _presetSession.RestoreUnsaved(_presetOffset + slot); return; }
+        if (IsUnsavedRow(slot)) { LampToast(_presetSession.RestoreUnsaved(_presetOffset + slot)); return; }
         if (RowPreset(slot) is { } p) ApplyPreset(p);
     }
 

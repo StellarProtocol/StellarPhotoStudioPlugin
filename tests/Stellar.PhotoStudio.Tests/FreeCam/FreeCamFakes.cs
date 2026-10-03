@@ -50,6 +50,7 @@ internal sealed class FakeCamera : ICameraOverride
         return !Busy;
     }
     public IDisposable LookAtCamera() { var h = new FakeHandle(); LookAts.Add(h); return h; }
+    public bool TryProjectToScreen(Position3D world, out ScreenPoint point) { point = default; return false; }
     public void FrameworkRelease(CameraReleaseReason reason) { Control.IsActive = false; Released?.Invoke(reason); }
 }
 

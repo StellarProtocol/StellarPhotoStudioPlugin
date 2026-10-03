@@ -186,7 +186,7 @@ internal sealed partial class FreeCamSession : IDisposable
         ReleaseStep(() => { _shield?.Dispose(); _shield = null; });
         ReleaseStep(() => { if (!frameworkEnded) c.Dispose(); });
         ReleaseStep(() => { _look?.Dispose(); _look = null; });
-        ReleaseStep(() => ReleaseEntryHides(keep: reason != CameraReleaseReason.PluginUnloaded && _scene.IsSet));
+        ReleaseStep(() => ReleaseEntryHides(keep: reason != CameraReleaseReason.PluginUnloaded && _scene.KeepsCamera));
 
         ScriptedIntent = null;
         StateChanged?.Invoke();

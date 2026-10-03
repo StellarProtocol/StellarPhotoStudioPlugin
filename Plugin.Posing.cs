@@ -63,6 +63,7 @@ public sealed partial class Plugin
         if (_posePollIn > 0f) return;
         _posePollIn = PosePollInterval;
         var gone = !_freeCam.Active && _posingCtl.FallBackIfGone(_isSeen);
+        PruneLitPeople();                        // Plugin.Lights.cs — raises its own change (marks the panel dirty)
         if (_posingCtl.PollCurrentAction() | gone) _panelWin.MarkDirty();
     }
 
@@ -78,6 +79,7 @@ public sealed partial class Plugin
     private void OnPosingChanged()
     {
         _posingCtl.OnPosingChanged();
+        PruneLitPeople();                        // Plugin.Lights.cs — a lit person whose model left stops counting
         _panelWin.MarkDirty();
     }
 

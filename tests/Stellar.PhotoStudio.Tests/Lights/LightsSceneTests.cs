@@ -72,9 +72,12 @@ public sealed class LightsSceneTests
         r.Cam.Session.Enter();
         r.Ctl.AddAtCamera();
         r.Cam.Session.Exit();
-        var gen = r.Cam.Scene.Generation;
         r.Lights.EndScene();
         Assert.False(r.Cam.Scene.IsSet);
-        Assert.True(r.Cam.Scene.Generation > gen);
+        Assert.Equal(0, r.Ctl.Count);
+        // Owner ruling 2026-10-03 ("Come back"): lamps alone hold no camera state — no kept hides, no remembered pose — so
+        // there is no camera generation to end here (pinned in LightsReviewFixTests.I6_*).
+        Assert.False(r.Cam.Scene.HoldsEntryHide);
+        Assert.False(r.Cam.Session.HasLastPose);
     }
 }

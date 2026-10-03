@@ -63,11 +63,14 @@ internal sealed partial class LightsController : IDisposable
         public LampSettings Settings;
     }
 
-    public LightsController(LightsPorts ports)
+    /// <param name="ports">The game reads.</param>
+    /// <param name="peopleLevel">The stored Light-people level (StudioSettings — a setting, kept across sessions).</param>
+    public LightsController(LightsPorts ports, float peopleLevel = DefaultPeopleLevel)
     {
         _p = ports;
         _onReleased = OnReleased;
         _p.Lights.Released += _onReleased;
+        PeopleLevel = Math.Clamp(float.IsFinite(peopleLevel) ? peopleLevel : DefaultPeopleLevel, 0f, LightLimits.MaxPeopleLevel);
         _p.Lights.PeopleLevel = PeopleLevel;
     }
 
@@ -92,6 +95,10 @@ internal sealed partial class LightsController : IDisposable
     }
 
     public LampView? SelectedLamp => SelectedIndex >= 0 ? View(SelectedIndex) : null;
+
+    /// <summary>One lamp row without building the whole list (the panel reads each row's colour / on state per frame —
+    /// lights review minor); null past the end.</summary>
+    public LampView? LampAt(int index) => index >= 0 && index < _lamps.Count ? View(index) : null;
 
     /// <summary>How strongly lamps tint characters (0–20; framework-clamped). Kept across scenes — a setting.</summary>
     public float PeopleLevel { get; private set; } = DefaultPeopleLevel;

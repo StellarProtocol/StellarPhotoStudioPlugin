@@ -150,7 +150,8 @@ public sealed partial class Plugin
     private bool _modified => _presetSession.Modified;
     private bool ActiveIsBuiltIn => _presetSession.ActiveIsBuiltIn;
     private Preset? FindPreset(string name) => _presetSession.Find(name);
-    private void ApplyPreset(Preset p) => _presetSession.Apply(p);
+    // The lights' result reaches the lamp toast (Unavailable = the preset's lamps could not be placed — lights review).
+    private void ApplyPreset(Preset p) => LampToast(_presetSession.Apply(p));
 
     private void StartPresetSession()
     {

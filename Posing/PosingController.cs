@@ -137,6 +137,11 @@ internal sealed class PosingController
         return true;
     }
 
+    /// <summary>Degrees <paramref name="person"/>'s shown model is turned from the facing they had when first posed (the
+    /// Face slider); 0 when they are not posed. Lamps placed around a posed person follow it (lights review minor).</summary>
+    public float PosedYaw(EntityId person) =>
+        _targets.TryGetValue(person.Value, out var t) && IsPosed(t.State) ? t.Yaw : 0f;
+
     private bool HasLiveTarget(EntityId person) =>
         _targets.TryGetValue(person.Value, out var t) && t.State != PoseTargetState.Released;
 

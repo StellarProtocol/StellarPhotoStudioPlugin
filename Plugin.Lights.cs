@@ -21,11 +21,12 @@ public sealed partial class Plugin
     /// itself on a zone change, cutscene or disconnect (<c>ILights.Released</c>).</summary>
     private void StartLights()
     {
-        _lights = new LightsController(new LightsPorts(_services.Lights, SelectedPerson, LightAnchorOf, () => _freeCam.ShownPose));
+        _lights = new LightsController(new LightsPorts(_services.Lights, SelectedPerson, LightAnchorOf, () => _freeCam.ShownPose),
+            _settings.PeopleLevel);
         _onLightsChanged = OnLightsChanged;
         _lights.Changed += _onLightsChanged;
         _scene.TrackLights(() => _lights.SceneCount, _lights.Clear);
-        _presetSession.Lights = new PresetLightsLink(_lights.Capture, p => _lights.Apply(p));
+        _presetSession.Lights = new PresetLightsLink(_lights.Capture, _lights.Apply);
     }
 
     /// <summary>Before the scene ends on unload: the scene's own Dispose clears the lights through the tracked clear.</summary>
@@ -41,13 +42,38 @@ public sealed partial class Plugin
     {
         _scene.NotifyLightsChanged();
         _panelWin?.MarkDirty();
+        if (_lights.PeopleLevel == _settings.PeopleLevel) return;
+        _settings.SetPeopleLevel(_lights.PeopleLevel, save: false);   // the slider fires every frame: save once it settles
+        _peopleLevelSaveIn = PeopleLevelSaveDelay;
     }
 
-    /// <summary>Where a person is seen (posed copy / stand-in, else the entity) and which way the entity faces.</summary>
+    private const float PeopleLevelSaveDelay = 0.5f;
+    private float _peopleLevelSaveIn = -1f;
+
+    /// <summary>From OnUpdate: saves Light people once its slider has settled.</summary>
+    private void TickLightsSave(float dt)
+    {
+        if (_peopleLevelSaveIn < 0f) return;
+        _peopleLevelSaveIn -= dt;
+        if (_peopleLevelSaveIn <= 0f) FlushPeopleLevel();
+    }
+
+    private void FlushPeopleLevel()
+    {
+        if (_peopleLevelSaveIn < 0f) return;
+        _peopleLevelSaveIn = -1f;
+        _settings.SetPeopleLevel(_settings.PeopleLevel, save: true);
+    }
+
+    /// <summary>Lit people the game no longer shows are forgotten (IPosing.Changed and the panel's poll).</summary>
+    private void PruneLitPeople() => _lights.PrunePeople(_isSeen);
+
+    /// <summary>Where a person is seen (posed copy / stand-in, else the entity) and which way that model faces: the entity's
+    /// facing plus the Face turn of a posed copy (lights review minor — lamps placed around a turned copy follow it).</summary>
     private LightAnchor? LightAnchorOf(EntityId person)
     {
         if (person.IsNone || _selection.PositionOf(person) is not { } at) return null;
         var yaw = _services.EntityTransforms.TryGetTransform(person, out _, out var y) ? y : 0f;
-        return new LightAnchor(at, yaw);
+        return new LightAnchor(at, LightsMath.Wrap(yaw + _posingCtl.PosedYaw(person)));
     }
 }

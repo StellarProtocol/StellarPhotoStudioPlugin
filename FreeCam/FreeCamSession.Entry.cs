@@ -9,8 +9,10 @@ internal sealed partial class FreeCamSession
 {
     private SavedPose? _lastPose;
 
-    /// <summary>A pose is remembered for the scene that is set now (the camera left it and it has not ended since).</summary>
-    internal bool HasLastPose => _lastPose is { } last && last.Generation == _scene.Generation && _scene.IsSet;
+    /// <summary>A pose is remembered for the scene that is set now (the camera left it and it has not ended since). Lamps
+    /// alone do not count (owner ruling 2026-10-03, "Come back"): with nothing frozen or posed, entry starts from the game
+    /// camera.</summary>
+    internal bool HasLastPose => _lastPose is { } last && last.Generation == _scene.Generation && _scene.KeepsCamera;
 
     private void PlaceForEntry()
     {
@@ -33,11 +35,11 @@ internal sealed partial class FreeCamSession
         return _p.Transforms.TryGetTransform(requested, out _, out _) ? requested : self;
     }
 
-    /// <summary>Remembered only while the scene is set, tagged with the scene's generation: a scene that ends (Reset scene,
+    /// <summary>Remembered only while the scene keeps the camera (frozen / posed), tagged with the scene's generation: a scene that ends (Reset scene,
     /// the framework unfreezing, the posed set emptying) makes the pose stale, so a NEW scene starts from the game camera
     /// (review I-3).</summary>
     private void RememberPose() =>
-        _lastPose = _scene.IsSet
+        _lastPose = _scene.KeepsCamera
             ? new SavedPose(Mode, _orbit, _fly, new FlyState(_shownPos, _shownYaw, _shownPitch), (Roll, Fov), _scene.Generation)
             : null;
 
@@ -57,7 +59,8 @@ internal sealed partial class FreeCamSession
         kept?.Dispose();
     }
 
-    /// <summary>Release: the hides go to the scene when it is set (it releases them when it ends), else they end now.</summary>
+    /// <summary>Release: the hides go to the scene when it keeps the camera (frozen / posed — it releases them when that ends),
+    /// else they end now (lamps alone never keep them — owner ruling 2026-10-03).</summary>
     private void ReleaseEntryHides(bool keep)
     {
         if (_hide is not { } hide) return;

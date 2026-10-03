@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Stellar.Abstractions.Domain;
+using Stellar.PhotoStudio.Lights;
 
 namespace Stellar.PhotoStudio.Presets;
 
@@ -8,14 +9,19 @@ namespace Stellar.PhotoStudio.Presets;
 internal sealed record PresetShapeLink(Func<PhotoShape> Current, Action<PhotoShape> Apply);
 
 /// <summary>How a preset reads and sets the scene's lights (spec 2026-10-03 lights § 5). <paramref name="Capture"/> returns
-/// null when there are no lights to save. Lights are scene objects, not part of the look: changing them never marks the
-/// preset modified and the "Unsaved look" stash does not carry them.</summary>
-internal sealed record PresetLightsLink(Func<Lights.LightsPreset?> Capture, Action<Lights.LightsPreset> Apply);
+/// null when there are no lights to save; <paramref name="Apply"/> says whether the lamps could be placed
+/// (<see cref="LightsResult.Unavailable"/> when the selected person cannot be read). Lights are scene objects, not part of
+/// the look: changing them never marks the preset modified — but lights that differ from the active preset's enable Save
+/// (<see cref="PresetSession.CanSave"/>), and applying a preset over hand-placed lights sets them aside in the stash.</summary>
+internal sealed record PresetLightsLink(Func<LightsPreset?> Capture, Func<LightsPreset, LightsResult> Apply);
 
 /// <summary>One set-aside "Unsaved look" row: the look, the preset it came from, the photo shape it was framed in
 /// (null = no shape link), and the shape the preset state started from (so re-saving after a restore knows whether the
-/// shape was the player's change).</summary>
-internal sealed record UnsavedLook(string Origin, LookSettings Look, PhotoShape? Shape, PhotoShape? BaseShape);
+/// shape was the player's change). <paramref name="Lights"/>: the hand-placed lights a preset's lights replaced (owner
+/// ruling 2026-10-03, "Replace, with undo" — null when none were set aside); <paramref name="LookEdited"/>: whether the
+/// look itself had been changed (a lights-only row restores an unmodified look).</summary>
+internal sealed record UnsavedLook(string Origin, LookSettings Look, PhotoShape? Shape, PhotoShape? BaseShape,
+    LightsPreset? Lights = null, bool LookEdited = true);
 
 /// <summary>
 /// Which preset is active, whether the look in the editor has been changed since, and the edits the player set
@@ -66,33 +72,49 @@ internal sealed class PresetSession
     /// <summary>Raised when the active preset, the modified flag or the stash changes (not on every edit).</summary>
     public event Action? StateChanged;
 
-    public void Apply(Preset p) => Apply(p, withLights: true);
+    /// <summary>Lights in the scene that differ from the active preset's (hand-placed or moved since it was applied /
+    /// saved). No lights in the scene never differ: Save keeps the stored ones then (lights review I-5).</summary>
+    public bool LightsDiffer => Lights?.Capture() is { } now && !now.Equivalent(Find(ActiveName)?.Lights);
+
+    /// <summary>Save has something to store: a user preset whose look was changed or whose lights differ.</summary>
+    public bool CanSave => !ActiveIsBuiltIn && (Modified || LightsDiffer);
+
+    /// <summary>Applies <paramref name="p"/>; the result is the lights' (<see cref="LightsResult.Ok"/> when the preset
+    /// carries none) — <see cref="LightsResult.Unavailable"/> means its lamps could not be placed.</summary>
+    public LightsResult Apply(Preset p) => Apply(p, withLights: true);
 
     // Reset all re-applies the look only: the lights are scene objects the player placed, not edits of the look.
-    private void Apply(Preset p, bool withLights)
+    private LightsResult Apply(Preset p, bool withLights)
     {
-        if (Modified) PushStash();
+        var replacesLights = withLights && p.Lights is not null && Lights is not null;
+        var setAside = replacesLights && LightsDiffer;   // owner ruling 2026-10-03: hand-placed lights go to the stash
+        if (Modified || setAside) PushStash(setAside);
         ActiveName = p.Name;
         Load(p.Look);
         if (p.Shape is { } shape) ApplyShape(shape);   // a preset without a shape leaves the current one alone
-        if (withLights && p.Lights is { } lights) Lights?.Apply(lights);   // a preset without lights leaves the scene's alone
+        var result = replacesLights ? Lights!.Apply(p.Lights!) : LightsResult.Ok;   // without lights: the scene's stay
         _baseShape = _shape?.Current();
         Modified = false;
         StateChanged?.Invoke();
+        return result;
     }
 
-    public void RestoreUnsaved(int index = 0)
+    /// <summary>Puts a stash row back (its look, shape and — when it carries them — its lights).</summary>
+    public LightsResult RestoreUnsaved(int index = 0)
     {
-        if (index < 0 || index >= _stash.Count) return;
+        if (index < 0 || index >= _stash.Count) return LightsResult.Ok;
         var u = _stash[index];
         _stash.RemoveAt(index);
-        if (Modified) PushStash();   // swap: the edits being replaced are kept too
+        var swapLights = u.Lights is not null && Lights is not null && LightsDiffer;
+        if (Modified || swapLights) PushStash(swapLights);   // swap: the edits being replaced are kept too
         ActiveName = Find(u.Origin)?.Name ?? _store.All[0].Name;
         Load(u.Look);
         if (u.Shape is { } shape) ApplyShape(shape);
+        var result = u.Lights is { } lights && Lights is not null ? Lights.Apply(lights) : LightsResult.Ok;
         _baseShape = u.BaseShape;
-        Modified = true;
+        Modified = u.LookEdited;
         StateChanged?.Invoke();
+        return result;
     }
 
     /// <summary>Throws away the edits on purpose (Reset all) — nothing is stashed.</summary>
@@ -111,7 +133,9 @@ internal sealed class PresetSession
     {
         if (ActiveIsBuiltIn) return;
         var keepsShape = Find(ActiveName)?.Shape is not null || ShapeChanged;
-        _store.Save(ActiveName, _editor.Build(), keepsShape ? _shape?.Current() : null, Lights?.Capture());
+        // Lights review I-5: a scene with no lights keeps the preset's stored lights (as an untouched shape keeps none).
+        var lights = Lights?.Capture() ?? Find(ActiveName)?.Lights;
+        _store.Save(ActiveName, _editor.Build(), keepsShape ? _shape?.Current() : null, lights);
         _baseShape = _shape?.Current();
         Modified = false;
         StateChanged?.Invoke();
@@ -152,9 +176,10 @@ internal sealed class PresetSession
         return null;
     }
 
-    private void PushStash()
+    private void PushStash(bool withLights = false)
     {
-        _stash.Insert(0, new UnsavedLook(ActiveName, _editor.Build(), _shape?.Current(), _baseShape));
+        var lights = withLights ? Lights?.Capture() : null;
+        _stash.Insert(0, new UnsavedLook(ActiveName, _editor.Build(), _shape?.Current(), _baseShape, lights, Modified));
         if (_stash.Count > MaxStash) _stash.RemoveAt(_stash.Count - 1);
     }
 

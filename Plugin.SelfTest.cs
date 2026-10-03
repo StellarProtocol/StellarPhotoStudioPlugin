@@ -81,7 +81,7 @@ public sealed partial class Plugin
     /// kept the scene — still frozen in the framework, or people still posed, with the entry hides kept by the scene.</summary>
     private void LogSceneKept(Action<string, bool, string> log)
     {
-        var kept = !_freeCam.Active && _scene.IsSet && (!_scene.Frozen || _services.SceneFreeze.IsFrozen);
+        var kept = !_freeCam.Active && _scene.KeepsCamera && (!_scene.Frozen || _services.SceneFreeze.IsFrozen);
         log("scene-kept", kept, $"frozen={_scene.Frozen} fwFrozen={_services.SceneFreeze.IsFrozen} posed={_scene.PosedCount} " +
                                 $"entryHidesKept={_scene.HoldsEntryHide} layers={_scene.EntryHideLayers}");
     }

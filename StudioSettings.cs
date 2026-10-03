@@ -31,6 +31,7 @@ internal sealed class StudioSettings
         Tab = ReadTab(cfg);
         LampsOpen = cfg.Get("ui.lights.lampsOpen", true);
         PersonLightOpen = cfg.Get("ui.lights.personOpen", true);
+        PeopleLevel = ClampLevel(cfg.Get("lights.peopleLevel", Lights.LightsController.DefaultPeopleLevel));
         OpenGroups = (LookGroups)cfg.Get("ui.openGroups", (int)LookGroups.Color);
         DockedAuto = cfg.Get("docked.auto", true);
         Supersample = Mode(cfg.Get("quality.supersample", 0));
@@ -119,6 +120,19 @@ internal sealed class StudioSettings
 
     public bool LampsOpen { get; private set; } = true;
     public bool PersonLightOpen { get; private set; } = true;
+    /// <summary>Light people (lights review minor: persisted, a setting not a scene object). The slider fires every frame:
+    /// <paramref name="save"/> false keeps it in memory and the owner saves once the drag settles.</summary>
+    public float PeopleLevel { get; private set; }
+
+    public void SetPeopleLevel(float level, bool save)
+    {
+        PeopleLevel = ClampLevel(level);
+        if (save) Store("lights.peopleLevel", PeopleLevel);
+    }
+
+    private static float ClampLevel(float v) =>
+        float.IsFinite(v) ? Math.Clamp(v, 0f, LightLimits.MaxPeopleLevel) : Lights.LightsController.DefaultPeopleLevel;
+
     public void SetLampsOpen(bool open) { LampsOpen = open; Store("ui.lights.lampsOpen", open); }
     public void SetPersonLightOpen(bool open) { PersonLightOpen = open; Store("ui.lights.personOpen", open); }
 

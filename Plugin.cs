@@ -105,6 +105,7 @@ public sealed partial class Plugin : IStellarPlugin
         _hideAllToken = null;
         FlushWorkingLook();
         FlushHour();
+        FlushPeopleLevel();
         _quality.Dispose();
         ReleaseLiveHides();
         RemoveWindows();
@@ -118,6 +119,7 @@ public sealed partial class Plugin : IStellarPlugin
         TickFreeCamUi(dt);
         TickFrameGuide();                        // Plugin.FrameGuide.cs — (re)builds only when shape/toggle/canvas change
         TickPosing(dt);                          // Plugin.Posing.cs — follows a person's own running emote (~10 Hz)
+        TickLightsSave(dt);                      // Plugin.Lights.cs — saves Light people once its slider settles
         TickSelfTest(dt);
         TickPosingSelfTest(dt);
         TickShapeSelfTest();

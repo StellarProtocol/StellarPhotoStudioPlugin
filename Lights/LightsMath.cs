@@ -14,8 +14,14 @@ internal readonly record struct LightAnchor(Vector3 Position, float Yaw);
 /// <summary>Relative placement ↔ world (Unity axes: +Y up, yaw 0 = +Z, 90 = +X). Pure.</summary>
 internal static class LightsMath
 {
+    // The ONE source of the placement ranges (lights review minor): the Around / Height / Distance sliders bind these, so a
+    // slider can never show or set a value the maths would clamp away.
+    internal const float MinAround = -180f, MaxAround = 180f;
     internal const float MinHeight = -2f, MaxHeight = 10f;
     internal const float MinDistance = 0.3f, MaxDistance = 20f;
+
+    /// <summary>Person key-light height, degrees (the controller and preset files clamp to it; the slider binds it).</summary>
+    internal const float MinKeyHeight = -89f, MaxKeyHeight = 89f;
 
     /// <summary>The world position of <paramref name="p"/> around <paramref name="a"/> (clamped to the slider ranges).</summary>
     public static Vector3 ToWorld(LightAnchor a, LampPlacement p)

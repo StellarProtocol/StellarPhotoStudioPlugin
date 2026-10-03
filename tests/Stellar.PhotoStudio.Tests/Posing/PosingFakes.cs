@@ -98,8 +98,12 @@ internal sealed class FakePosing : IPosing
     /// <summary>The framework's Changed after a target's state moved on its own (a model loaded or failed).</summary>
     public void RaiseChanged() => Changed?.Invoke();
 
+    /// <summary>Runs first inside <see cref="ResetAll"/> (lights review I-3 pins what is already gone at that moment).</summary>
+    public Action? OnResetAll;
+
     public void ResetAll()
     {
+        OnResetAll?.Invoke();
         ResetAllCalls++;
         foreach (var t in Targets.Values) t.State = PoseTargetState.Released;
         Changed?.Invoke();

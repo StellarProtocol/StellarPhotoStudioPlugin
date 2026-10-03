@@ -40,7 +40,7 @@ internal sealed partial class LightsController
 
     public LightsResult SetKeyOn(bool on) => Change(s => s with { KeyOn = on });
     public LightsResult SetKeyDirection(float degrees) => Change(s => s with { KeyOn = true, KeyDirection = LightsMath.Wrap(degrees) });
-    public LightsResult SetKeyHeight(float degrees) => Change(s => s with { KeyOn = true, KeyHeight = System.Math.Clamp(degrees, -89f, 89f) });
+    public LightsResult SetKeyHeight(float degrees) => Change(s => s with { KeyOn = true, KeyHeight = System.Math.Clamp(degrees, LightsMath.MinKeyHeight, LightsMath.MaxKeyHeight) });
     public LightsResult SetRimOn(bool on) => Change(s => s with { RimOn = on });
     public LightsResult SetRimColor(RgbColor color) => Change(s => s with { RimOn = true, RimColor = color });
 
@@ -72,6 +72,25 @@ internal sealed partial class LightsController
         _peopleChanged = true;
         Raise();
         return LightsResult.Ok;
+    }
+
+    /// <summary>Forgets the lit people the game no longer shows (<paramref name="seen"/> false — they left, or their copy /
+    /// model is gone), so <see cref="LitCount"/> and the scene stop counting them (lights review minor). The framework is
+    /// told too (its write-back checks every material live). Call on <c>IPosing.Changed</c> and the panel's poll. True when
+    /// anyone was dropped.</summary>
+    public bool PrunePeople(System.Func<EntityId, bool> seen)
+    {
+        List<EntityId>? gone = null;
+        foreach (var person in _people.Keys)
+            if (!seen(person)) (gone ??= new List<EntityId>()).Add(person);
+        if (gone is null) return false;
+        foreach (var person in gone)
+        {
+            _people.Remove(person);
+            _p.Lights.SetPersonLight(person, PersonLight.None);
+        }
+        Raise();
+        return true;
     }
 
     private void ClearPeople(bool restore)

@@ -10,10 +10,12 @@ namespace Stellar.PhotoStudio;
 /// the freeze centre (the free camera's leash centre while frozen) and the posing lifetime. It belongs to the scene, not
 /// to the free camera: leaving the free camera keeps it; the lights (Lights tab) belong to it too. It ends on <see cref="Reset"/> (the Reset scene button), on the
 /// framework's own reasons (the freeze's <see cref="ISceneFreeze.Changed"/>(false) on a zone change / cutscene; posing
-/// targets released by the framework) and on <see cref="Dispose"/> (Photo Studio unloading) — in general whenever
-/// <see cref="IsSet"/> goes from true to false. While set it also keeps the free camera's entry hides once the camera has
-/// left (spec § 1, review I-1: <see cref="KeepEntryHide"/> / <see cref="TakeEntryHide"/>) and releases them when the scene
-/// ends; each end bumps <see cref="Generation"/> so a pose remembered for an older scene is never restored (review I-3).
+/// targets released by the framework) and on <see cref="Dispose"/> (Photo Studio unloading). While frozen or posed
+/// (<see cref="KeepsCamera"/>) it also keeps the free camera's entry hides once the camera has left (spec § 1, review I-1:
+/// <see cref="KeepEntryHide"/> / <see cref="TakeEntryHide"/>) and releases them when that ends; each end bumps
+/// <see cref="Generation"/> so a pose remembered for an older scene is never restored (review I-3). Lamps alone make the
+/// scene set (<see cref="IsSet"/>: the SCENE pill, Reset scene) but keep neither the hides nor the camera pose (owner
+/// ruling 2026-10-03, "Come back").
 /// Main thread.
 /// </summary>
 internal sealed class StudioScene : IDisposable
@@ -27,7 +29,7 @@ internal sealed class StudioScene : IDisposable
     private IDisposable? _token;
     private IDisposable? _entryHide;
     private VisibilityLayers _entryHideLayers;
-    private bool _wasSet;
+    private bool _wasKept;
     private bool _disposed;
 
     public StudioScene(ISceneFreeze freeze, IPosing? posing)
@@ -52,9 +54,14 @@ internal sealed class StudioScene : IDisposable
     /// <summary>How many people are posed (touched through the Person group and not yet reset or released).</summary>
     public int PosedCount => _posedCount();
 
-    /// <summary>Anything set up: frozen, or anyone posed. While set, re-entering the free camera returns it to its last
-    /// pose (spec § 6) and the off-camera SCENE pill shows (spec § 7).</summary>
-    public bool IsSet => Frozen || PosedCount > 0 || LightsCount > 0;
+    /// <summary>Anything set up: frozen, anyone posed, or any light. While set, the off-camera SCENE pill shows (spec § 7)
+    /// and Reset scene has something to reset.</summary>
+    public bool IsSet => KeepsCamera || LightsCount > 0;
+
+    /// <summary>Frozen or anyone posed: while true the scene keeps the free camera's entry hides after it leaves and
+    /// re-entry returns the camera to its last pose (spec § 6). Lamps alone keep only the lights (owner ruling 2026-10-03,
+    /// "Come back"): the hides come back and re-entry starts from the game camera.</summary>
+    public bool KeepsCamera => Frozen || PosedCount > 0;
 
     /// <summary>Lamps + lit people (lights spec § 4: lights belong to the scene).</summary>
     public int LightsCount => _lightsCount();
@@ -90,14 +97,14 @@ internal sealed class StudioScene : IDisposable
     /// § 1). With nothing set (or once disposed) the hide is released at once — nothing would ever release it later.</summary>
     public void KeepEntryHide(IDisposable hide, VisibilityLayers layers)
     {
-        if (_disposed || !IsSet)
+        if (_disposed || !KeepsCamera)
         {
             hide.Dispose();
             return;
         }
         var old = _entryHide;
         (_entryHide, _entryHideLayers) = (hide, layers);
-        _wasSet = true;
+        _wasKept = true;
         if (!ReferenceEquals(old, hide)) old?.Dispose();
     }
 
@@ -130,16 +137,18 @@ internal sealed class StudioScene : IDisposable
         if (_token is not null) FreezeCentre = centre;
     }
 
-    /// <summary>The Reset scene button: ends the freeze and returns every posed person to normal (copies removed, real
-    /// players shown again).</summary>
+    /// <summary>The Reset scene button: ends the freeze, removes the lights and returns every posed person to normal
+    /// (copies removed, real players shown again). The lights go BEFORE the posing reset (lights review I-3): a lit posed
+    /// copy is written back while it still exists.</summary>
     public void Reset()
     {
         if (_disposed) return;
         EndFreeze();
-        _posing?.ResetAll();
+        var hadLights = LightsCount > 0;
         _clearLights();
-        if (_wasSet || _entryHide is not null) EndScene();
-        _wasSet = IsSet;
+        _posing?.ResetAll();
+        if (_wasKept || _entryHide is not null || hadLights) EndScene();
+        _wasKept = KeepsCamera;
         Changed?.Invoke();
     }
 
@@ -158,8 +167,8 @@ internal sealed class StudioScene : IDisposable
         _disposed = true;
         _freeze.Changed -= _onFreezeChanged;
         EndFreeze();
+        _clearLights();      // before the posing reset (review I-3): lit copies are written back while they exist
         _posing?.ResetAll();
-        _clearLights();
         EndScene();
     }
 
@@ -182,12 +191,14 @@ internal sealed class StudioScene : IDisposable
         Raise();
     }
 
-    /// <summary>Every change notification goes through here: a set → not-set transition is the scene ending.</summary>
+    /// <summary>Every change notification goes through here: the camera-keeping part ending (frozen / posed → neither)
+    /// ends the scene's camera state — the remembered pose goes stale and the kept entry hides are released — even while
+    /// lamps remain (owner ruling 2026-10-03).</summary>
     private void Raise()
     {
-        var set = IsSet;
-        if (_wasSet && !set) EndScene();
-        _wasSet = set;
+        var kept = KeepsCamera;
+        if (_wasKept && !kept) EndScene();
+        _wasKept = kept;
         Changed?.Invoke();
     }
 
@@ -195,7 +206,7 @@ internal sealed class StudioScene : IDisposable
     private void EndScene()
     {
         Generation++;
-        _wasSet = false;
+        _wasKept = false;
         var hide = _entryHide;
         _entryHide = null;
         hide?.Dispose();
