@@ -95,7 +95,7 @@ public sealed partial class Plugin
             Directory.CreateDirectory(ReShadePresetFolder);
             _rsPresetFiles = ReShadePresets.List(Directory.EnumerateFiles(ReShadePresetFolder, "*.ini"));
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
         {
             _rsPresetFiles = Array.Empty<string>();
         }

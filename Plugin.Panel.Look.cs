@@ -46,6 +46,8 @@ public sealed partial class Plugin
         BloomGroup(),
         VignetteGroup(),
         FilmGrainGroup(),
+        new SeparatorElement(),
+        ReShadeGroup(),             // Plugin.Panel.ReShade.cs — spec 2026-10-03 reshade § 6
     }, Gap: 8f);
 
     private void SetPinned(bool on)

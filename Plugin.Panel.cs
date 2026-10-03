@@ -64,14 +64,19 @@ public sealed partial class Plugin
 
     private string StatusLine()
     {
+        if (_captureGate.Armed && _rs.Pending) return T("ps.rs.status.applying");   // R1: waiting for a ReShade switch
         if (Capturing)
             return _settings.Scale == 4 ? T("ps.status.capturing4x") : T("ps.capturing");
         var scale = EffectiveScale();
+        string line;
         if (_settings.Shape != PhotoShape.Screen)   // a shape keeps its scale and shrinks both sides; the size is real
-            return ShapeFrame.StatusText(_settings.Scale, FormatName(), PlannedSize(), _settings.Shape);
-        return scale < _settings.Scale
-            ? _loc.TFormat("ps.status.capped", _settings.Scale, scale, FormatName(), ResolutionText())
-            : $"{scale}× · {FormatName()} · {ResolutionText()}";
+            line = ShapeFrame.StatusText(_settings.Scale, FormatName(), PlannedSize(), _settings.Shape);
+        else
+            line = scale < _settings.Scale
+                ? _loc.TFormat("ps.status.capped", _settings.Scale, scale, FormatName(), ResolutionText())
+                : $"{scale}× · {FormatName()} · {ResolutionText()}";
+        // Mockup footer "4× · PNG · 7680 × 4320 · ReShade on".
+        return _services.ReShade.State == ReShadeState.Ready && _rs.Enabled ? line + " · " + T("ps.rs.status.on") : line;
     }
 
     private string FormatName() => _settings.Format == CaptureFormat.Jpg ? "JPG" : "PNG";

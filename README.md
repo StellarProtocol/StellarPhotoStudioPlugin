@@ -5,10 +5,19 @@ StellarResonance plugin for screenshots: hide the HUD, nameplates and other play
 LUT, bloom, vignette, film grain); raise render quality (supersampling, high shadows) and pin the time of day; keep
 presets. A compact strip appears beside the game's own photo/selfie mode.
 
-Requires **Stellar framework ≥ 2.15.0** (capture, scene-visibility, look, photo-mode, render-quality and time-of-day
+Requires **Stellar framework ≥ 2.17.0** (capture, scene-visibility, look, photo-mode, render-quality and time-of-day
 services; 2.14.0 adds the free-camera services — camera override, input shield, scene freeze, emotes, entity picker —
 and `IHotkeys.MigrateSavedBinding` for the hide-all key move; 2.15.0 adds `IPosing`, posing a person inside the free
-camera — you live, other players as a local copy, NPCs as a stand-in model).
+camera — you live, other players as a local copy, NPCs as a stand-in model; 2.17.0 adds `IReShade` and checked
+plugin downloads).
+
+**ReShade (1.5.0).** Optional. The Stellar launcher installs ReShade 6.8.0 (add-on build, BSD-3-Clause) as the game
+folder's `dxgi.dll` and the Stellar ReShade bridge add-on (MIT) beside it, for Modded launches only (Photo Studio's page →
+Dependencies). Photo Studio's Look tab turns ReShade on/off, switches presets and effects, and downloads shader packs
+from each pack's own GitHub at a pinned commit (sha256-checked, never re-hosted): ReShade standard
+(`crosire/reshade-shaders`, licence per file), SweetFX (`CeeJayDK/SweetFX`, MIT), prod80 (`prod80/prod80-ReShade-Repository`,
+MIT). qUINT is not offered: its licence reserves all rights. Packs and Photo Studio's ReShade presets live in
+`stellar/plugindata/stellar.photostudio.data/reshade/`.
 
 ```bash
 dotnet build -c Release
