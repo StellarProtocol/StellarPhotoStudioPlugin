@@ -14,9 +14,7 @@
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
   <ItemGroup>
-    <!-- Photo Studio 1.4.0 (hide me + effects layers) needs framework 2.16.0 — built here against the local dev
-         package 2.16.0-hide-dev until the framework release flips this to 2.16.0 (dev-workflow.md § unreleased members). -->
-    <PackageReference Include="Stellar.Abstractions" Version="2.16.0-hide-dev" />
+    <PackageReference Include="Stellar.Abstractions" Version="2.16.0" />
     <PackageReference Include="Stellar.PluginContracts"    Version="2.0.0" />
     <PackageReference Include="Stellar.Plugin.InteropRefs" Version="2.0.0" />
   </ItemGroup>
