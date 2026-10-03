@@ -66,12 +66,15 @@ public sealed partial class Plugin
             EntryHideToggle("fc.entryHide.hud", VisibilityLayers.GameHud),
             EntryHideToggle("fc.entryHide.names", VisibilityLayers.Nameplates),
             EntryHideToggle("fc.entryHide.others", VisibilityLayers.OtherPlayers),
+            EntryHideToggle("fc.entryHide.me", VisibilityLayers.Self),
+            EntryHideToggle("fc.entryHide.fx", VisibilityLayerSets.Effects, "fc.help.entryHide.fx"),
         });
 
-    /// <summary>One entry-hide layer (spec §§ 3/5: which hide layers entry applies), the HelpToggle recipe.</summary>
-    private HudElement EntryHideToggle(string key, VisibilityLayers layer) => HelpToggle(key,
+    /// <summary>One entry-hide layer (spec §§ 3/5: which hide layers entry applies), the HelpToggle recipe. The effects
+    /// switch stores the whole effects group as a marker meaning "the Capture tab's Effects switches" (EntryHidePlan).</summary>
+    private HudElement EntryHideToggle(string key, VisibilityLayers layer, string helpKey = "fc.help.entryHides") => HelpToggle(key,
         () => _fcSettings.EntryHidesLayer(layer), on => _fcSettings.SetEntryHide(layer, on),
-        new HelpText(() => T(key), () => T("fc.help.entryHides")));
+        new HelpText(() => T(key), () => T(helpKey)));
 
     /// <summary>The foldable group header QualityGroup uses: ▾/▸ title … "?".</summary>
     private HudElement FoldGroup(string titleKey, string helpKey, Func<bool> open, Action<bool> setOpen, HudElement[] rows) =>
