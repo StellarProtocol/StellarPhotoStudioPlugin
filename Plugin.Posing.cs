@@ -62,6 +62,7 @@ public sealed partial class Plugin
         _posePollIn -= dt;
         if (_posePollIn > 0f) return;
         _posePollIn = PosePollInterval;
+        RefreshCanSave();   // Plugin.Panel.Lights.cs — Save enable incl. a lights compare, at this ~10 Hz poll
         var gone = !_freeCam.Active && _posingCtl.FallBackIfGone(_isSeen);
         PruneLitPeople();                        // Plugin.Lights.cs — raises its own change (marks the panel dirty)
         if (_posingCtl.PollCurrentAction() | gone) _panelWin.MarkDirty();

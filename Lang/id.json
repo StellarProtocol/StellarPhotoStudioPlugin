@@ -172,8 +172,8 @@
   "fc.hud.line": "{0} · {1} · {2} / {3} m · FOV {4}° · Miring {5}°",
   "fc.badge.frozen": "❄ DIBEKUKAN",
   "fc.badge.combat": "⚔ DALAM PERTARUNGAN",
-  "fc.hint.orbit": "Klik kanan putar · WASD gerak · Space bekukan · Tab terbang · Esc / {0} keluar (adegan tetap) · L lampu · H sembunyikan",
-  "fc.hint.fly": "Klik kanan lihat · WASD gerak · Q/E turun/naik · Space bekukan · Tab orbit · Esc / {0} keluar (adegan tetap) · L lampu · H sembunyikan",
+  "fc.hint.orbit": "Klik kanan putar · WASD gerak · Space bekukan · Tab terbang · Esc / {0} keluar (adegan tetap) · L / Shift+L lampu · H sembunyikan",
+  "fc.hint.fly": "Klik kanan lihat · WASD gerak · Q/E turun/naik · Space bekukan · Tab orbit · Esc / {0} keluar (adegan tetap) · L / Shift+L lampu · H sembunyikan",
   "fc.group.movement": "Gerakan",
   "fc.group.pose": "Pose",
   "fc.speed": "Kecepatan",
@@ -298,5 +298,9 @@
   "lt.role.fill": "fill",
   "lt.role.back": "back",
   "lt.toast.full": "Maksimal 8 lampu — hapus satu dulu.",
-  "lt.toast.noCamera": "Nyalakan kamera bebas untuk menaruh lampu di sana."
+  "lt.toast.noCamera": "Nyalakan kamera bebas untuk menaruh lampu di sana.",
+  "lt.toast.unavailable": "Game tidak menerima perubahan cahaya itu.",
+  "lt.marker.title": "Penanda lampu",
+  "lt.showMarkers": "Tampilkan penanda lampu",
+  "lt.help.markers": "Penanda bernomor menunjukkan posisi tiap lampu saat kamera bebas aktif atau tab ini terbuka. Tidak pernah ikut di foto."
 }

@@ -117,7 +117,8 @@ public sealed partial class Plugin : IStellarPlugin
         _look.Tick();
         TickStudio(dt);                          // Plugin.Studio.cs — toast timer, flash fade, tip reposition
         TickFreeCamUi(dt);
-        TickFrameGuide();                        // Plugin.FrameGuide.cs — (re)builds only when shape/toggle/canvas change
+        TickFrameGuide();
+        TickLampMarkers();                       // Plugin.LampMarkers.cs — one projection per lamp while shown                        // Plugin.FrameGuide.cs — (re)builds only when shape/toggle/canvas change
         TickPosing(dt);                          // Plugin.Posing.cs — follows a person's own running emote (~10 Hz)
         TickLightsSave(dt);                      // Plugin.Lights.cs — saves Light people once its slider settles
         TickSelfTest(dt);

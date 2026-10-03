@@ -55,6 +55,7 @@ public sealed partial class Plugin
         foreach (var w in new[] { _panelWin, _dockedWin, _toastWin, _tipWindow, _flashWin, _freeCamHudWin })
             w?.Remove();
         HideGuide();   // Plugin.FrameGuide.cs
+        RemoveMarkers();   // Plugin.LampMarkers.cs
     }
 
     // ── panel / docked open state ────────────────────────────────────────────────────────────────────────────

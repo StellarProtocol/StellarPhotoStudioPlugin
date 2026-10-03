@@ -48,7 +48,7 @@ public sealed partial class Plugin
             // taller (D5, measured in game); auto-sized buttons never wrap and also fit every locale.
             new RowElement(new HudElement[]
             {
-                new ButtonElement(() => T("ps.pre.save"), OnClick: _presetSession.Save, Enabled: () => !ActiveIsBuiltIn && _modified),
+                new ButtonElement(() => T("ps.pre.save"), OnClick: _presetSession.Save, Enabled: () => _canSaveCached),   // lights review I-5: also when lights differ
                 new ButtonElement(() => T("ps.pre.saveAs"), OnClick: () => BeginName(NameMode.SaveAs, _activePresetName + T("ps.pre.mineSuffix"))),
                 new ButtonElement(() => T("ps.pre.rename"), OnClick: () => BeginName(NameMode.Rename, _activePresetName), Enabled: () => !ActiveIsBuiltIn),
                 new ButtonElement(() => T("ps.pre.delete"), OnClick: () => _nameMode = NameMode.ConfirmDelete, Enabled: () => !ActiveIsBuiltIn),

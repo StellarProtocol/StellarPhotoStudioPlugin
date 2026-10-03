@@ -172,8 +172,8 @@
   "fc.hud.line": "{0} · {1} · {2} / {3} m · FOV {4}° · Tagilid {5}°",
   "fc.badge.frozen": "❄ NAKAHINTO",
   "fc.badge.combat": "⚔ NASA LABAN",
-  "fc.hint.orbit": "RMB iikot · WASD galaw · Space ihinto · Tab lipad · Esc / {0} labas (nananatili ang eksena) · L lampara · H itago",
-  "fc.hint.fly": "RMB tingin · WASD galaw · Q/E baba/taas · Space ihinto · Tab ikot · Esc / {0} labas (nananatili ang eksena) · L lampara · H itago",
+  "fc.hint.orbit": "RMB iikot · WASD galaw · Space ihinto · Tab lipad · Esc / {0} labas (nananatili ang eksena) · L / Shift+L lampara · H itago",
+  "fc.hint.fly": "RMB tingin · WASD galaw · Q/E baba/taas · Space ihinto · Tab ikot · Esc / {0} labas (nananatili ang eksena) · L / Shift+L lampara · H itago",
   "fc.group.movement": "Galaw",
   "fc.group.pose": "Pose",
   "fc.speed": "Bilis ng galaw",
@@ -298,5 +298,9 @@
   "lt.role.fill": "fill",
   "lt.role.back": "back",
   "lt.toast.full": "8 lampara ang pinakamarami — magtanggal muna ng isa.",
-  "lt.toast.noCamera": "Simulan ang free camera para maglagay ng lampara roon."
+  "lt.toast.noCamera": "Simulan ang free camera para maglagay ng lampara roon.",
+  "lt.toast.unavailable": "Hindi tinanggap ng laro ang pagbabago sa ilaw.",
+  "lt.marker.title": "Marka ng lampara",
+  "lt.showMarkers": "Ipakita ang marka ng lampara",
+  "lt.help.markers": "Ipinapakita ng may-numerong marka kung nasaan ang bawat lampara habang naka-on ang free camera o bukas ang tab na ito. Hindi ito kasama sa litrato."
 }

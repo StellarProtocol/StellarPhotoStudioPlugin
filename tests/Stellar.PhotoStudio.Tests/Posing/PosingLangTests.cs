@@ -26,7 +26,7 @@ public sealed class PosingLangTests
         "lt.lightPeople", "lt.lightPeople.note", "lt.color", "lt.strength", "lt.range", "lt.around", "lt.height", "lt.distance",
         "lt.noPerson", "lt.moveHere", "lt.duplicate", "lt.sub.key", "lt.keyOn", "lt.help.key", "lt.keyDirection", "lt.keyHeight",
         "lt.sub.rim", "lt.rimOn", "lt.help.rim", "lt.rimColor", "lt.rimStrength", "lt.resetPerson", "lt.lampRole", "lt.lamp",
-        "lt.role.key", "lt.role.fill", "lt.role.back", "lt.toast.full", "lt.toast.noCamera",
+        "lt.role.key", "lt.role.fill", "lt.role.back", "lt.toast.full", "lt.toast.noCamera", "lt.toast.unavailable", "lt.marker.title", "lt.showMarkers", "lt.help.markers",
     };
 
     [Theory]

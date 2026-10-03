@@ -172,8 +172,8 @@
   "fc.hud.line": "{0} · {1} · {2} / {3} m · 視野角 {4}° · 傾き {5}°",
   "fc.badge.frozen": "❄ 停止中",
   "fc.badge.combat": "⚔ 戦闘中",
-  "fc.hint.orbit": "右ドラッグ 回転 · WASD 移動 · Space 停止 · Tab 飛行 · Esc / {0} 終了（シーンは維持） · L ランプ · H 非表示",
-  "fc.hint.fly": "右ドラッグ 視点 · WASD 移動 · Q/E 下/上 · Space 停止 · Tab 周回 · Esc / {0} 終了（シーンは維持） · L ランプ · H 非表示",
+  "fc.hint.orbit": "右ドラッグ 回転 · WASD 移動 · Space 停止 · Tab 飛行 · Esc / {0} 終了（シーンは維持） · L / Shift+L ランプ · H 非表示",
+  "fc.hint.fly": "右ドラッグ 視点 · WASD 移動 · Q/E 下/上 · Space 停止 · Tab 周回 · Esc / {0} 終了（シーンは維持） · L / Shift+L ランプ · H 非表示",
   "fc.group.movement": "移動",
   "fc.group.pose": "ポーズ",
   "fc.speed": "移動速度",
@@ -298,5 +298,9 @@
   "lt.role.fill": "フィル",
   "lt.role.back": "バック",
   "lt.toast.full": "ランプは最大8個です。先に1個削除してください。",
-  "lt.toast.noCamera": "ランプを置くにはフリーカメラを開始してください。"
+  "lt.toast.noCamera": "ランプを置くにはフリーカメラを開始してください。",
+  "lt.toast.unavailable": "ゲームがそのライトの変更を受け付けませんでした。",
+  "lt.marker.title": "ランプマーカー",
+  "lt.showMarkers": "ランプマーカーを表示",
+  "lt.help.markers": "フリーカメラ中またはこのタブを開いている間、番号付きのマーカーで各ランプの位置を示します。写真には写りません。"
 }

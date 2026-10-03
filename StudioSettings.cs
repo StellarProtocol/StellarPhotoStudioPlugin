@@ -30,6 +30,7 @@ internal sealed class StudioSettings
         WorkingJson = cfg.Get<string?>("look.working", null);
         Tab = ReadTab(cfg);
         LampsOpen = cfg.Get("ui.lights.lampsOpen", true);
+        ShowLampMarkers = cfg.Get("lights.markers", true);
         PersonLightOpen = cfg.Get("ui.lights.personOpen", true);
         PeopleLevel = ClampLevel(cfg.Get("lights.peopleLevel", Lights.LightsController.DefaultPeopleLevel));
         OpenGroups = (LookGroups)cfg.Get("ui.openGroups", (int)LookGroups.Color);
@@ -119,6 +120,8 @@ internal sealed class StudioSettings
     }
 
     public bool LampsOpen { get; private set; } = true;
+    public bool ShowLampMarkers { get; private set; } = true;
+    public void SetShowLampMarkers(bool on) { ShowLampMarkers = on; Store("lights.markers", on); }
     public bool PersonLightOpen { get; private set; } = true;
     /// <summary>Light people (lights review minor: persisted, a setting not a scene object). The slider fires every frame:
     /// <paramref name="save"/> false keeps it in memory and the owner saves once the drag settles.</summary>

@@ -44,6 +44,8 @@ public sealed partial class Plugin
             new SliderElement(() => _lights.PeopleLevel, v => _lights.SetPeopleLevel(v), 0f, 20f),
             () => F(_lights.PeopleLevel, "0.0"), () => _lights.SetPeopleLevel(LightsController.DefaultPeopleLevel)));
         rows.Add(new TextElement(() => T("lt.lightPeople.note"), Color: Muted, FontSize: SubFont));
+        rows.Add(HelpToggle("lights.markers", () => _settings.ShowLampMarkers, on => _settings.SetShowLampMarkers(on),
+            new HelpText(() => T("lt.showMarkers"), () => T("lt.help.markers"))));
         return rows.ToArray();
     }
 
@@ -52,7 +54,7 @@ public sealed partial class Plugin
         new SwatchElement(() => LampColor(i), Size: 14f),
         new CellElement(new SelectableElement(new TextElement(() => LampName(i), Color: () => _lights.SelectedIndex == i ? Accent() : Normal()),
             () => _lights.Select(i)), Weight: 1f),
-        new ToggleElement(() => "", () => i < _lights.Count && _lights.Lamps[i].On, on => LampToast(_lights.SetOn(i, on))),
+        new ToggleElement(() => "", () => _lights.LampAt(i)?.On ?? false, on => LampToast(_lights.SetOn(i, on))),
         new ButtonElement(() => "✕", OnClick: () => _lights.Remove(i), Width: 28f),
     }, Gap: 6f));
 
@@ -67,9 +69,9 @@ public sealed partial class Plugin
         SliderRow(() => T("lt.range"),
             new SliderElement(() => _lights.SelectedLamp?.Range ?? 0f, v => _lights.SetRange(v), LightLimits.MinRange, LightLimits.MaxRange),
             () => _loc.TFormat("fc.unit.metres", F(_lights.SelectedLamp?.Range ?? 0f, "0.0")), () => _lights.SetRange(LightsController.DefaultRange)),
-        PlacementRow("lt.around", p => p.Around, v => _lights.SetAround(v), -180f, 180f, v => F(v, "+0;-0;0") + "°", 0f),
-        PlacementRow("lt.height", p => p.Height, v => _lights.SetHeight(v), -1f, 5f, v => _loc.TFormat("fc.unit.metres", F(v, "0.0")), 1.8f),
-        PlacementRow("lt.distance", p => p.Distance, v => _lights.SetDistance(v), 0.3f, 15f, v => _loc.TFormat("fc.unit.metres", F(v, "0.0")), 2f),
+        PlacementRow("lt.around", p => p.Around, v => _lights.SetAround(v), LightsMath.MinAround, LightsMath.MaxAround, v => F(v, "+0;-0;0") + "°", 0f),
+        PlacementRow("lt.height", p => p.Height, v => _lights.SetHeight(v), LightsMath.MinHeight, LightsMath.MaxHeight, v => _loc.TFormat("fc.unit.metres", F(v, "0.0")), 1.8f),
+        PlacementRow("lt.distance", p => p.Distance, v => _lights.SetDistance(v), LightsMath.MinDistance, LightsMath.MaxDistance, v => _loc.TFormat("fc.unit.metres", F(v, "0.0")), 2f),
         new ConditionalElement(() => _lights.SelectedPlacement is null, new TextElement(() => T("lt.noPerson"), Color: Muted, FontSize: SubFont)),
         new RowElement(new HudElement[]
         {
@@ -95,7 +97,7 @@ public sealed partial class Plugin
             new SliderElement(() => _lights.SelectedPersonLight.KeyDirection, v => _lights.SetKeyDirection(v), -180f, 180f),
             () => F(_lights.SelectedPersonLight.KeyDirection, "+0;-0;0") + "°", () => _lights.SetKeyDirection(PersonLightState.Default.KeyDirection)),
         SliderRow(() => T("lt.keyHeight"),
-            new SliderElement(() => _lights.SelectedPersonLight.KeyHeight, v => _lights.SetKeyHeight(v), -60f, 80f),
+            new SliderElement(() => _lights.SelectedPersonLight.KeyHeight, v => _lights.SetKeyHeight(v), LightsMath.MinKeyHeight, LightsMath.MaxKeyHeight),
             () => F(_lights.SelectedPersonLight.KeyHeight, "+0;-0;0") + "°", () => _lights.SetKeyHeight(PersonLightState.Default.KeyHeight)),
         new TextElement(() => T("lt.sub.rim"), Color: Muted, FontSize: SubFont),
         HelpToggle("lt.rimOn", () => _lights.SelectedPersonLight.RimOn, on => _lights.SetRimOn(on),
@@ -117,7 +119,7 @@ public sealed partial class Plugin
             new ButtonElement(() => editing() ? T("ps.done") : T("ps.edit"), OnClick: () => setEditing(!editing()), Width: 56f),
             new ButtonElement(() => "↺", OnClick: () => set(reset), Width: 28f)),
         new RowElement(QuickSwatches(set), Gap: 4f),
-        new ConditionalElement(editing, new ColorPickerElement(() => ToRgba(get()), c => set(new RgbColor(c.R, c.G, c.B)))),
+        new ConditionalElement(editing, new ColorPickerElement(() => ToRgba(get()), c => set(new RgbColor(c.R, c.G, c.B))) { ShowAlpha = false }),   // lights have no alpha (review I-7)
     }, Gap: 4f);
 
     private static HudElement[] QuickSwatches(Func<RgbColor, LightsResult> set)
@@ -134,7 +136,13 @@ public sealed partial class Plugin
 
     private static ColorRgba ToRgba(RgbColor c) => new(c.R, c.G, c.B, 1f);
 
-    private ColorRgba LampColor(int i) => i < _lights.Count ? ToRgba(_lights.Lamps[i].Color) : new ColorRgba(0f, 0f, 0f, 0f);
+    private ColorRgba LampColor(int i) => _lights.LampAt(i) is { } l ? ToRgba(l.Color) : new ColorRgba(0f, 0f, 0f, 0f);   // one row, no list rebuild
+
+    /// <summary>Save's enabled state, refreshed at the panel's ~10 Hz poll (Plugin.Posing.cs) — CanSave reads the game
+    /// (lights compare), so the Enabled lambda must not call it every refresh.</summary>
+    private bool _canSaveCached;
+
+    private void RefreshCanSave() => _canSaveCached = _presetSession.CanSave;
 
     private string LampName(int i)
     {
@@ -151,7 +159,13 @@ public sealed partial class Plugin
     /// <summary>Toasts the two results the player can act on (spec § 2); the rest are silent.</summary>
     private void LampToast(LightsResult r)
     {
-        var key = r switch { LightsResult.Full => "lt.toast.full", LightsResult.NoCamera => "lt.toast.noCamera", _ => null };
+        var key = r switch
+        {
+            LightsResult.Full => "lt.toast.full",
+            LightsResult.NoCamera => "lt.toast.noCamera",
+            LightsResult.Unavailable => "lt.toast.unavailable",
+            _ => null,
+        };
         if (key is not null) _services.Notifications.Notify(T(key), NotificationKind.Warning);
         _panelWin.MarkDirty();
     }

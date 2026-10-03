@@ -172,8 +172,8 @@
   "fc.hud.line": "{0} · {1} · {2} / {3} m · FOV {4}° · Roll {5}°",
   "fc.badge.frozen": "❄ FROZEN",
   "fc.badge.combat": "⚔ IN COMBAT",
-  "fc.hint.orbit": "RMB rotate · WASD move · Space freeze · Tab fly · Esc / {0} exit (scene stays) · L lamp · H hide",
-  "fc.hint.fly": "RMB look · WASD move · Q/E down/up · Space freeze · Tab orbit · Esc / {0} exit (scene stays) · L lamp · H hide",
+  "fc.hint.orbit": "RMB rotate · WASD move · Space freeze · Tab fly · Esc / {0} exit (scene stays) · L / Shift+L lamp · H hide",
+  "fc.hint.fly": "RMB look · WASD move · Q/E down/up · Space freeze · Tab orbit · Esc / {0} exit (scene stays) · L / Shift+L lamp · H hide",
   "fc.group.movement": "Movement",
   "fc.group.pose": "Pose",
   "fc.speed": "Move speed",
@@ -298,5 +298,9 @@
   "lt.role.fill": "fill",
   "lt.role.back": "back",
   "lt.toast.full": "8 lamps is the most — remove one first.",
-  "lt.toast.noCamera": "Start the free camera to place a lamp at it."
+  "lt.toast.noCamera": "Start the free camera to place a lamp at it.",
+  "lt.toast.unavailable": "The game didn’t accept that light change.",
+  "lt.marker.title": "Lamp marker",
+  "lt.showMarkers": "Show lamp markers",
+  "lt.help.markers": "Numbered markers show where each lamp is while the free camera is on or this tab is open. They are never in the photo."
 }
