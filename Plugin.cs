@@ -173,7 +173,7 @@ public sealed partial class Plugin : IStellarPlugin
         if (r.Path is null) return; // Success is true only when CaptureResult.Ok wrote a path; defensive only.
         try
         {
-            var json = CaptureController.SidecarJson(r, _activePresetName, MapName(), CapturedScale(r), _look.Draft);
+            var json = CaptureController.SidecarJson(r, new SidecarInfo(_activePresetName, MapName(), CapturedScale(r), _look.Draft, null));
             File.WriteAllText(Path.ChangeExtension(r.Path, ".json"), json);
         }
         catch (Exception ex)
