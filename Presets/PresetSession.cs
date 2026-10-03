@@ -151,7 +151,7 @@ internal sealed class PresetSession
         var revertReShade = preset.ReShade is null && _reShadeEdited ? _baseReShade : null;
         Modified = false;
         Apply(preset, withLights: false);
-        if (revertReShade is { } rs) ReShadeLink?.Apply(rs);
+        if (revertReShade is { } rs) { ReShadeLink?.Apply(rs); _baseReShade = rs; }
         if (revert is not { } r) return;
         ApplyShape(r);
         _baseShape = r;

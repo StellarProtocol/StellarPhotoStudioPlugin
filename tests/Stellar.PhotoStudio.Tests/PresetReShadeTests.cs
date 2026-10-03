@@ -147,8 +147,9 @@ public sealed class PresetReShadeTests
         Assert.Equal(PhotoShapes.TryParse("screen"), reloaded.Shape);
     }
 
-    /// <summary>Stand-in for the pre-task (1.4.0) on-disk DTO: same shape as <see cref="PresetDto"/> minus the new
-    /// <c>ReShade</c> property — what an older build's own type still looks like after this change ships.</summary>
+    /// <summary>A MINIMAL legacy-shaped stand-in for an older build's on-disk DTO — NOT the exact 1.4.0
+    /// <see cref="PresetDto"/> (that also carried a <c>Lights</c> property); only enough fields to prove an
+    /// older reader ignores the new <c>ReShade</c> key rather than throwing or losing other data.</summary>
     private sealed class LegacyPresetDto
     {
         public int Version { get; set; } = 1;
@@ -162,6 +163,33 @@ public sealed class PresetReShadeTests
         public float[]? Vignette { get; set; }
         public float[]? FilmGrain { get; set; }
         public string? Shape { get; set; }
+    }
+
+    // Fix round 1: ResetToSaved must restore the ORIGINAL baseline on every call, not the previous reset's
+    // discarded edit — Apply(preset) stamps _baseReShade from the still-live (not-yet-reverted) value, so
+    // without re-stamping it from the just-applied revert choice, a second Reset regresses to the first
+    // discarded edit instead of the true baseline.
+    [Fact]
+    public void Reset_all_twice_reverts_to_the_original_baseline_not_the_first_discarded_edit()
+    {
+        var (s, store) = Make();
+        var natural = store.All.Single(p => p.Name == "Natural");   // carries no ReShade choice
+
+        _live = new ReShadeChoice("A.ini", true);
+        s.Apply(natural);                                            // establishes the baseline: A
+
+        _live = new ReShadeChoice("B.ini", true);
+        s.OnReShadeEdited();
+        _applied.Clear();
+        s.ResetToSaved();
+        Assert.Equal(new ReShadeChoice("A.ini", true), _applied.Single());   // first reset: back to A
+
+        _live = new ReShadeChoice("C.ini", true);
+        s.OnReShadeEdited();
+        _applied.Clear();
+        s.ResetToSaved();
+        // Must revert to the ORIGINAL baseline A, not the first discarded edit B.
+        Assert.Equal(new ReShadeChoice("A.ini", true), _applied.Single());
     }
 
     [Fact]
