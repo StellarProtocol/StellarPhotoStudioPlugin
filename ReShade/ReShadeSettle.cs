@@ -31,10 +31,15 @@ internal sealed class ReShadeSettle
     public void Expect(Func<bool> applied)
     {
         if (_rs.State == ReShadeState.NotInstalled) return;
-        _expect.Add(applied);
-        _waited = 0f;
-        TimedOut = false;
-    }
+        // The 3 s cap (R1) runs from the OLDEST still-pending request: the clock starts only when the list goes from
+        // empty to non-empty, so a stream of later requests can never push a stuck one past the cap. A new request
+        // still waits at least one Tick, because expectations are only checked from Tick.
+        if (_expect.Count == 0)
+        {
+            _waited = 0f;
+            TimedOut = false;
+        }
+        _expect.Add(applied);    }
 
     public void Tick(float dt)
     {

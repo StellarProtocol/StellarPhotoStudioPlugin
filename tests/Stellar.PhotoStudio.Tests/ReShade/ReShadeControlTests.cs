@@ -69,6 +69,37 @@ public sealed class ReShadeControlTests
         Assert.False(c.IsOn(Mxao));                              // the wish is dropped with the timeout
     }
 
+    // R1 cap pin (Task 3 review): the 3 s cap runs from the OLDEST pending request — a later request must not restart
+    // the clock and push a stuck switch out to ~6 s.
+    [Fact]
+    public void A_later_request_does_not_restart_the_three_second_cap()
+    {
+        var c = Make();
+        c.SetTechnique(Mxao, true);                              // A: never lands
+        for (var i = 0; i < 29; i++) c.Tick(0.1f);               // ~2.9 s
+        Assert.True(c.Pending);
+        c.SetEnabled(true);                                      // B: already satisfied (EnabledNow is true)
+        c.Tick(0.2f);                                            // ~3.1 s since A
+        Assert.False(c.Pending);
+        Assert.True(c.TimedOut);
+    }
+
+    [Fact]
+    public void Two_requests_that_both_land_release_one_tick_after_the_later_one()
+    {
+        var c = Make();
+        c.SetTechnique(Mxao, true);                              // A
+        c.Tick(1f);
+        Assert.True(c.Pending);
+        c.SetEnabled(false);                                     // B
+        _fake.List[0] = Mxao with { Enabled = true };            // both applied by ReShade
+        _fake.EnabledNow = false;
+        Assert.True(c.Pending);                                  // still waits for a tick after B
+        c.Tick(Frame);
+        Assert.False(c.Pending);
+        Assert.False(c.TimedOut);
+    }
+
     [Fact]
     public void Preset_switch_matches_reshade_paths_with_other_separators_and_case()
     {

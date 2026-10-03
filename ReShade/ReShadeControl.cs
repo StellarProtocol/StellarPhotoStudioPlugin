@@ -47,6 +47,8 @@ internal sealed class ReShadeControl
     {
         _settle.Tick(dt);
         if (_settle.Pending) return;
+        // All-or-nothing by design: the wishes are cleared together, only when the whole settle releases (every switch
+        // applied, or the 3 s cap hit). Until then the panel keeps showing every outstanding wish.
         _wantPreset = null;
         _wantEnabled = null;
         _wantTech.Clear();
