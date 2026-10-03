@@ -39,7 +39,8 @@ internal sealed class ReShadeSettle
             _waited = 0f;
             TimedOut = false;
         }
-        _expect.Add(applied);    }
+        _expect.Add(applied);
+    }
 
     public void Tick(float dt)
     {
