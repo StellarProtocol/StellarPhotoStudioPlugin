@@ -143,4 +143,16 @@ public sealed class FreeCamSettingsTests
         cfg.Values["ui.tab"] = 1;
         Assert.Equal(StudioTabs.Look, new StudioSettings(cfg).Tab);
     }
+
+    [Fact]
+    public void Entry_hides_accept_self_and_the_effects_group()
+    {
+        var s = new FreeCamSettings(new MemConfigSection());
+        s.SetEntryHide(VisibilityLayers.Self, true);
+        s.SetEntryHide(VisibilityLayerSets.Effects, true);
+        Assert.True(s.EntryHidesLayer(VisibilityLayers.Self));
+        Assert.True(s.EntryHidesLayer(VisibilityLayerSets.Effects));
+        s.SetEntryHide(VisibilityLayerSets.Effects, false);
+        Assert.False(s.EntryHidesLayer(VisibilityLayers.EffectsMine));
+    }
 }

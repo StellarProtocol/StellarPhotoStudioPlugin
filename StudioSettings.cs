@@ -11,7 +11,8 @@ namespace Stellar.PhotoStudio;
 internal sealed class StudioSettings
 {
     private const VisibilityLayers Persistable =
-        VisibilityLayers.GameHud | VisibilityLayers.Nameplates | VisibilityLayers.OtherPlayers | VisibilityLayers.KeepParty;
+        VisibilityLayers.GameHud | VisibilityLayers.Nameplates | VisibilityLayers.OtherPlayers | VisibilityLayers.KeepParty |
+        VisibilityLayers.Self | VisibilityLayerSets.Effects;
 
     private readonly IConfigSection _cfg;
 
