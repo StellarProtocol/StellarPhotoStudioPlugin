@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Stellar.Abstractions.Domain;
 using Stellar.PhotoStudio.Lights;
+using Stellar.PhotoStudio.ReShade;
 
 namespace Stellar.PhotoStudio.Presets;
 
@@ -15,13 +16,21 @@ internal sealed record PresetShapeLink(Func<PhotoShape> Current, Action<PhotoSha
 /// (<see cref="PresetSession.CanSave"/>), and applying a preset over hand-placed lights sets them aside in the stash.</summary>
 internal sealed record PresetLightsLink(Func<LightsPreset?> Capture, Func<LightsPreset, LightsResult> Apply);
 
+/// <summary>How a preset reads and applies ReShade's preset + on/off (spec 2026-10-03 reshade § 6). <paramref name="Current"/>
+/// is null when ReShade is not installed (then Save keeps the stored choice, like lights review I-5).</summary>
+internal sealed record PresetReShadeLink(Func<ReShadeChoice?> Current, Action<ReShadeChoice> Apply);
+
 /// <summary>One set-aside "Unsaved look" row: the look, the preset it came from, the photo shape it was framed in
 /// (null = no shape link), and the shape the preset state started from (so re-saving after a restore knows whether the
 /// shape was the player's change). <paramref name="Lights"/>: the hand-placed lights a preset's lights replaced (owner
 /// ruling 2026-10-03, "Replace, with undo" — null when none were set aside); <paramref name="LookEdited"/>: whether the
 /// look itself had been changed (a lights-only row restores an unmodified look).</summary>
 internal sealed record UnsavedLook(string Origin, LookSettings Look, PhotoShape? Shape, PhotoShape? BaseShape,
-    LightsPreset? Lights = null, bool LookEdited = true);
+    LightsPreset? Lights = null, bool LookEdited = true)
+{
+    /// <summary>The ReShade choice at the moment the row was set aside (null = none / not installed).</summary>
+    public ReShadeChoice? ReShade { get; init; }
+}
 
 /// <summary>
 /// Which preset is active, whether the look in the editor has been changed since, and the edits the player set
@@ -42,6 +51,8 @@ internal sealed class PresetSession
     private readonly List<UnsavedLook> _stash = new();
     private bool _loading;
     private PhotoShape? _baseShape;   // the shape when the preset state was last clean (loaded / applied / saved)
+    private ReShadeChoice? _baseReShade;   // the ReShade choice when the preset state was last clean
+    private bool _reShadeEdited;           // the player changed ReShade's preset / on-off in Photo Studio since then
 
     /// <summary>Oldest set-aside edits beyond this are dropped (the player has walked away from them many times).</summary>
     public const int MaxStash = 10;
@@ -62,6 +73,17 @@ internal sealed class PresetSession
 
     /// <summary>Set once at start: presets save and apply the scene's lights through it (null = they do not).</summary>
     public PresetLightsLink? Lights { get; set; }
+
+    /// <summary>Set once at start: presets save and apply ReShade's preset + on/off through it (null = they do not).</summary>
+    public PresetReShadeLink? ReShadeLink { get; set; }
+
+    /// <summary>The player changed ReShade's preset or on/off in Photo Studio: marks the look modified, like a shape change.</summary>
+    public void OnReShadeEdited()
+    {
+        if (ReShadeLink is null) return;
+        _reShadeEdited = true;
+        OnEdited();
+    }
 
     public string ActiveName { get; private set; }
     public bool Modified { get; private set; }
@@ -92,8 +114,11 @@ internal sealed class PresetSession
         ActiveName = p.Name;
         Load(p.Look);
         if (p.Shape is { } shape) ApplyShape(shape);   // a preset without a shape leaves the current one alone
+        if (p.ReShade is { } rs && ReShadeLink is not null) ReShadeLink.Apply(rs);   // none: ReShade stays as it is
         var result = replacesLights ? Lights!.Apply(p.Lights!) : LightsResult.Ok;   // without lights: the scene's stay
         _baseShape = _shape?.Current();
+        _baseReShade = p.ReShade ?? ReShadeLink?.Current();   // Apply is asynchronous: the preset's own choice is the truth
+        _reShadeEdited = false;
         Modified = false;
         StateChanged?.Invoke();
         return result;
@@ -110,6 +135,7 @@ internal sealed class PresetSession
         ActiveName = Find(u.Origin)?.Name ?? _store.All[0].Name;
         Load(u.Look);
         if (u.Shape is { } shape) ApplyShape(shape);
+        if (u.ReShade is { } rs && ReShadeLink is not null) ReShadeLink.Apply(rs);
         var result = u.Lights is { } lights && Lights is not null ? Lights.Apply(lights) : LightsResult.Ok;
         _baseShape = u.BaseShape;
         Modified = u.LookEdited;
@@ -122,8 +148,10 @@ internal sealed class PresetSession
     {
         var preset = Find(ActiveName) ?? _store.All[0];
         var revert = preset.Shape is null ? _baseShape : null;   // a shapeless preset: undo the player's shape change
+        var revertReShade = preset.ReShade is null && _reShadeEdited ? _baseReShade : null;
         Modified = false;
         Apply(preset, withLights: false);
+        if (revertReShade is { } rs) ReShadeLink?.Apply(rs);
         if (revert is not { } r) return;
         ApplyShape(r);
         _baseShape = r;
@@ -132,19 +160,27 @@ internal sealed class PresetSession
     public void Save()
     {
         if (ActiveIsBuiltIn) return;
-        var keepsShape = Find(ActiveName)?.Shape is not null || ShapeChanged;
+        var stored = Find(ActiveName);
+        var keepsShape = stored?.Shape is not null || ShapeChanged;
         // Lights review I-5: a scene with no lights keeps the preset's stored lights (as an untouched shape keeps none).
-        var lights = Lights?.Capture() ?? Find(ActiveName)?.Lights;
-        _store.Save(ActiveName, _editor.Build(), keepsShape ? _shape?.Current() : null, lights);
+        var lights = Lights?.Capture() ?? stored?.Lights;
+        var keepsReShade = stored?.ReShade is not null || _reShadeEdited;
+        var reshade = keepsReShade ? ReShadeLink?.Current() ?? stored?.ReShade : null;
+        _store.Save(ActiveName, _editor.Build(), keepsShape ? _shape?.Current() : null, lights, reshade);
         _baseShape = _shape?.Current();
+        _baseReShade = reshade ?? ReShadeLink?.Current();
+        _reShadeEdited = false;
         Modified = false;
         StateChanged?.Invoke();
     }
 
     public void SaveAs(string name)
     {
-        _store.Save(name, _editor.Build(), _shape?.Current(), Lights?.Capture());   // a new preset captures the shape as it is
+        var reshade = ReShadeLink?.Current();
+        _store.Save(name, _editor.Build(), _shape?.Current(), Lights?.Capture(), reshade);   // a new preset captures it all as it is
         _baseShape = _shape?.Current();
+        _baseReShade = reshade;
+        _reShadeEdited = false;
         ActiveName = Find(name)?.Name ?? name;
         Modified = false;
         StateChanged?.Invoke();
@@ -179,7 +215,10 @@ internal sealed class PresetSession
     private void PushStash(bool withLights = false)
     {
         var lights = withLights ? Lights?.Capture() : null;
-        _stash.Insert(0, new UnsavedLook(ActiveName, _editor.Build(), _shape?.Current(), _baseShape, lights, Modified));
+        _stash.Insert(0, new UnsavedLook(ActiveName, _editor.Build(), _shape?.Current(), _baseShape, lights, Modified)
+        {
+            ReShade = _reShadeEdited ? ReShadeLink?.Current() : null,
+        });
         if (_stash.Count > MaxStash) _stash.RemoveAt(_stash.Count - 1);
     }
 

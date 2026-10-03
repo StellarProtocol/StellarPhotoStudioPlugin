@@ -1,0 +1,180 @@
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json;
+using Stellar.Abstractions.Domain;
+using Stellar.PhotoStudio.Presets;
+using Stellar.PhotoStudio.ReShade;
+using Xunit;
+
+namespace Stellar.PhotoStudio.Tests;
+
+public sealed class PresetReShadeTests
+{
+    private sealed class MemFiles : IPresetFiles
+    {
+        public readonly Dictionary<string, string> Files = new();
+        public IEnumerable<string> List() => Files.Keys.ToList();
+        public string? Read(string n) => Files.TryGetValue(n, out var j) ? j : null;
+        public void Write(string n, string j) => Files[n] = j;
+        public void Delete(string n) => Files.Remove(n);
+    }
+
+    private readonly MemFiles _files = new();
+    private ReShadeChoice? _live = new("Noir.ini", true);
+    private readonly List<ReShadeChoice> _applied = new();
+
+    private (PresetSession s, PresetStore store) Make()
+    {
+        var store = new PresetStore(_files, _ => { });
+        var s = new PresetSession(store, new LookEditor(), "Natural", null)
+        {
+            ReShadeLink = new PresetReShadeLink(() => _live, c => { _applied.Add(c); _live = c; }),
+        };
+        return (s, store);
+    }
+
+    [Fact]
+    public void Dto_round_trips_the_choice_as_a_file_name_only()
+    {
+        var dto = PresetDto.From("Mine", new LookSettings(), reshade: new ReShadeChoice(@"C:\x\..\Golden hour.ini", false));
+        var back = JsonSerializer.Deserialize<PresetDto>(JsonSerializer.Serialize(dto))!;
+        Assert.Equal(new ReShadeChoice("Golden hour.ini", false), back.ToReShade());
+    }
+
+    // Rollback safety (process rules § 6): the key is additive — a 1.4.0 file has none and reads as "no choice".
+    [Fact]
+    public void A_preset_file_without_reshade_reads_as_no_choice()
+    {
+        var back = JsonSerializer.Deserialize<PresetDto>("{\"Version\":1,\"Name\":\"Old\"}")!;
+        Assert.Null(back.ToReShade());
+        Assert.Null(PresetDto.From("x", new LookSettings()).ReShade);
+    }
+
+    [Fact]
+    public void Save_as_captures_the_current_choice_and_applying_it_later_restores_it()
+    {
+        var (s, store) = Make();
+        s.SaveAs("Mine");
+        Assert.Equal(new ReShadeChoice("Noir.ini", true), store.All.Single(p => p.Name == "Mine").ReShade);
+        _live = new ReShadeChoice("Other.ini", false);
+        s.Apply(store.All.Single(p => p.Name == "Natural"));     // built-in: no choice, ReShade untouched
+        Assert.Empty(_applied);
+        s.Apply(store.All.Single(p => p.Name == "Mine"));
+        Assert.Equal(new ReShadeChoice("Noir.ini", true), _applied.Single());
+    }
+
+    [Fact]
+    public void A_reshade_edit_marks_the_look_modified_and_save_keeps_it()
+    {
+        var (s, store) = Make();
+        store.Save("Plain", new LookSettings());                  // a pre-1.5 preset: no choice stored
+        s.Apply(store.All.Single(p => p.Name == "Plain"));
+        s.Save();
+        Assert.Null(store.All.Single(p => p.Name == "Plain").ReShade);   // untouched → still none
+        _live = new ReShadeChoice("Golden hour.ini", true);
+        s.OnReShadeEdited();
+        Assert.True(s.Modified);
+        s.Save();
+        Assert.Equal(new ReShadeChoice("Golden hour.ini", true), store.All.Single(p => p.Name == "Plain").ReShade);
+    }
+
+    [Fact]
+    public void Saving_on_a_client_without_reshade_keeps_the_stored_choice()
+    {
+        var (s, store) = Make();
+        store.Save("Mine", new LookSettings(), reshade: new ReShadeChoice("Noir.ini", true));
+        s.Apply(store.All.Single(p => p.Name == "Mine"));
+        _live = null;                                              // NotInstalled
+        s.Save();
+        Assert.Equal(new ReShadeChoice("Noir.ini", true), store.All.Single(p => p.Name == "Mine").ReShade);
+    }
+
+    [Fact]
+    public void The_unsaved_look_stash_carries_the_choice_back()
+    {
+        var (s, store) = Make();
+        _live = new ReShadeChoice("Edited.ini", false);
+        s.OnReShadeEdited();
+        s.Apply(store.All.Single(p => p.Name == "Noir"));          // stashes the edited state
+        Assert.Equal(new ReShadeChoice("Edited.ini", false), s.Stash[0].ReShade);
+        _applied.Clear();
+        s.RestoreUnsaved();
+        Assert.Equal(new ReShadeChoice("Edited.ini", false), _applied.Single());
+    }
+
+    [Fact]
+    public void Rename_export_and_import_keep_the_choice()
+    {
+        var (_, store) = Make();
+        store.Save("A", new LookSettings(), reshade: new ReShadeChoice("Noir.ini", false));
+        store.Rename("A", "B");
+        Assert.Equal(new ReShadeChoice("Noir.ini", false), store.All.Single(p => p.Name == "B").ReShade);
+        var imported = store.Import(store.Export("B"))!;
+        Assert.Equal(new ReShadeChoice("Noir.ini", false), imported.ReShade);
+    }
+
+    // --- Orchestrator-required rollback-safety tests (process rules § 6) ---
+
+    [Fact]
+    public void A_1_4_0_format_preset_file_with_no_reshade_key_loads_unchanged()
+    {
+        // Hand-written: exactly what a real 1.4.0 build wrote to disk — no "ReShade" property at all.
+        _files.Files["Old Style"] = "{\"Version\":1,\"Name\":\"Old Style\",\"Dof\":[1.5,2.8,50,1]," +
+            "\"Color\":[0.1,15.0,-5.0,1.0,1.0,1.0],\"Shape\":\"screen\"}";
+
+        var store = new PresetStore(_files, _ => Assert.Fail("a well-formed 1.4.0 file must not warn"));
+        var loaded = store.All.Single(p => p.Name == "Old Style");
+
+        Assert.Null(loaded.ReShade);
+        Assert.NotNull(loaded.Look.Dof);
+        Assert.Equal(1.5f, loaded.Look.Dof!.FocusDistance);
+        Assert.Equal(PhotoShapes.TryParse("screen"), loaded.Shape);
+    }
+
+    [Fact]
+    public void A_1_5_0_preset_round_trips_through_store_save_and_reload()
+    {
+        var store1 = new PresetStore(_files, _ => { });
+        store1.Save("Round Trip", new LookSettings { Color = new ColorLook { Saturation = -10f } },
+            shape: PhotoShapes.TryParse("screen"), reshade: new ReShadeChoice("Noir.ini", true));
+
+        // Reload from the same backing files as a fresh process would on next launch.
+        var store2 = new PresetStore(_files, _ => { });
+        var reloaded = store2.All.Single(p => p.Name == "Round Trip");
+
+        Assert.Equal(new ReShadeChoice("Noir.ini", true), reloaded.ReShade);
+        Assert.Equal(-10f, reloaded.Look.Color!.Saturation);
+        Assert.Equal(PhotoShapes.TryParse("screen"), reloaded.Shape);
+    }
+
+    /// <summary>Stand-in for the pre-task (1.4.0) on-disk DTO: same shape as <see cref="PresetDto"/> minus the new
+    /// <c>ReShade</c> property — what an older build's own type still looks like after this change ships.</summary>
+    private sealed class LegacyPresetDto
+    {
+        public int Version { get; set; } = 1;
+        public string Name { get; set; } = "";
+        public float[]? Dof { get; set; }
+        public float[]? Color { get; set; }
+        public float[]? WhiteBalance { get; set; }
+        public string? LutFile { get; set; }
+        public float LutContribution { get; set; } = 1f;
+        public float[]? Bloom { get; set; }
+        public float[]? Vignette { get; set; }
+        public float[]? FilmGrain { get; set; }
+        public string? Shape { get; set; }
+    }
+
+    [Fact]
+    public void A_1_5_0_preset_read_by_the_1_4_0_model_ignores_the_new_key()
+    {
+        var json = JsonSerializer.Serialize(PresetDto.From("Mine", new LookSettings { Color = new ColorLook { Saturation = -10f } },
+            shape: PhotoShapes.TryParse("screen"), reshade: new ReShadeChoice("Noir.ini", true)));
+
+        var legacy = JsonSerializer.Deserialize<LegacyPresetDto>(json)!;
+
+        Assert.Equal("Mine", legacy.Name);
+        Assert.Equal("screen", legacy.Shape);
+        Assert.NotNull(legacy.Color);
+        Assert.Equal(-10f, legacy.Color![2]);   // [PostExposure, Contrast, Saturation, R, G, B]
+    }
+}
