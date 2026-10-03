@@ -136,14 +136,20 @@ public sealed partial class FreeCamProbe : IStellarPlugin
         ("R9_setup", StepSetup9, false),          // run 9 (2026-10-02): global time pause (Time.timeScale = 0) feasibility
         ("R9_run", StepRun9, false),
         ("R9_end", StepEnd9, false),
-        ("R10_setup", StepSetup10, true),         // run 10 (2026-10-02): verify the framework time-pause freeze via Photo Studio's panel
-        ("R10_town", StepTown10, true),
-        ("R10_field", StepField10, true),
-        ("R10_end", StepEnd10, true),
+        ("R10_setup", StepSetup10, false),         // run 10 (2026-10-02): verify the framework time-pause freeze via Photo Studio's panel
+        ("R10_town", StepTown10, false),
+        ("R10_field", StepField10, false),
+        ("R10_end", StepEnd10, false),
         ("R11_setup", StepSetup11, false),        // run 11 (2026-10-02): locomotion animating in place under the time pause
         ("R11_remote", StepRemote11, false),
         ("R11_end", StepEnd11, false),
-        ("R12_request", StepRequest12, true),     // run 12: a request re-poses a model with the clock stopped; the gate holds it
+        ("R12_request", StepRequest12, false),     // run 12: a request re-poses a model with the clock stopped; the gate holds it
+        ("R13_inventory", StepInventory13, false),   // run 13 (2026-10-03): real lamps on characters — census + xrefs
+        ("R13_trials", StepTrials13, false),         // lamp paths under a paused front vcam, captured in-process
+        ("R13_xref", StepXref13, false),             // scan-only xrefs, last (13a hung inside an override scan)
+        ("R13b_trials", StepTrials13b, false),       // run 13b: MultiLight lamp sweep (intensity, pointI, two lamps, back, spot)
+        ("R13c_trials", StepTrials13c, false),       // run 13c: pointI-gated lamps — levels, two colours, back, spot, far, frame cost
+        ("R13d_trials", StepTrials13d, true),       // run 13d: is the creature point-light term positional? range edges, above/below, residual decay
     };
 
     internal void Log(string msg)
