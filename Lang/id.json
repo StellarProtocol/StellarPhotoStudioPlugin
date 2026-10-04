@@ -343,7 +343,6 @@
   "ps.rs.pack.update": "Perbarui",
   "ps.rs.pack.retry": "Coba lagi",
   "ps.rs.pack.queued": "menunggu…",
-  "ps.rs.pack.failed": "Unduhan gagal: {0}",
   "ps.rs.pack.mixed": "beragam (per file)",
   "ps.rs.status.on": "ReShade aktif",
   "ps.rs.status.applying": "Menerapkan ReShade…",
@@ -358,7 +357,7 @@
   "ps.rs.preset.byLine": "{0} · oleh {1} · memakai {2}",
   "ps.rs.preset.coverage": "{0} dari {1} efek",
   "ps.rs.preset.downloading": "mengunduh…",
-  "ps.rs.preset.linkLine": "oleh {0} · hanya dari halaman pembuatnya",
+  "ps.rs.preset.linkLine": "oleh {0}",
   "ps.rs.preset.copyLink": "Salin tautan",
   "ps.rs.preset.copied": "Tautan disalin",
   "ps.rs.preset.why.noLicence": "Pembuatnya belum menerbitkan lisensi, jadi Photo Studio tidak bisa mengunduhkannya untukmu.",
@@ -380,5 +379,5 @@
   "ps.rs.fail.changed": "Tidak dipasang: file di halaman sumbernya berubah sejak diuji Photo Studio. Pembaruan Photo Studio akan memperbaikinya.",
   "ps.rs.fail.network": "Gagal mengunduh. Periksa koneksi, lalu tekan Coba lagi.",
   "ps.rs.fail.other": "Gagal mengunduh. Tekan Coba lagi; detailnya ada di ?.",
-  "ps.help.rs.lastError": "Galat terakhir: {0}"
+  "ps.help.rs.lastError": "Error terakhir: {0}"
 }

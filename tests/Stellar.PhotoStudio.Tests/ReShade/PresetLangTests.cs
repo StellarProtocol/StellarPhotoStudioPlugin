@@ -38,7 +38,7 @@ public sealed class PresetLangTests
     }
 
     [Fact]
-    public void The_own_badge_is_the_brand_name_in_every_locale()
+    public void The_own_group_label_is_the_brand_name_in_every_locale()
     {
         foreach (var code in new[] { "en", "ja", "th", "id", "fil" })
             Assert.Equal("Photo Studio", Load(code).GetProperty("ps.rs.preset.ours").GetString());

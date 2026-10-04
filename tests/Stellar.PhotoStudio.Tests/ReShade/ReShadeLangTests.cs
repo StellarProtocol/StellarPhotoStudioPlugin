@@ -16,7 +16,7 @@ public sealed class ReShadeLangTests
         "ps.help.rs.use", "ps.rs.preset", "ps.rs.presetOther", "ps.rs.savedWithLook", "ps.rs.effectsOn", "ps.rs.allEffects",
         "ps.rs.noEffects", "ps.rs.depthTag", "ps.rs.depthSkipped", "ps.rs.depthDetail", "ps.rs.fineTune", "ps.rs.packs",
         "ps.rs.packsFrom", "ps.help.rs.packs", "ps.help.rs.pack", "ps.rs.pack.installed", "ps.rs.pack.download",
-        "ps.rs.pack.update", "ps.rs.pack.retry", "ps.rs.pack.queued", "ps.rs.pack.failed", "ps.rs.pack.mixed",
+        "ps.rs.pack.update", "ps.rs.pack.retry", "ps.rs.pack.queued", "ps.rs.pack.mixed",
         "ps.rs.status.on", "ps.rs.status.applying", "ps.rs.note.notReady", "ps.rs.reloading", "ps.rs.pack.failedDep", "ps.rs.savedOnOff", "ps.rs.moreFx",
     };
 

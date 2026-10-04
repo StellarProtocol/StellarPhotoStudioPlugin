@@ -9,6 +9,8 @@ namespace Stellar.PhotoStudio;
 public sealed partial class Plugin
 {
     private const float PresetRowGap = 10f;
+    private const float PresetGroupGap = 8f;      // + the section's 8 px gap = 16 px above a group: groups read as sections
+    private const float OpenFolderWidth = 120f;   // alone on its row; fil/ja labels outgrew the 104 px status width
     private static readonly TimeSpan CopiedShownFor = TimeSpan.FromSeconds(2.5);
     private static readonly PresetKind[] PresetGroups = { PresetKind.Own, PresetKind.Community, PresetKind.LinkOnly };
     private readonly Dictionary<string, (string Sub, string Cov, string Help)> _presetText = new(StringComparer.Ordinal);
@@ -40,7 +42,7 @@ public sealed partial class Plugin
             new RowElement(new HudElement[]
             {
                 new CellElement(new ButtonElement(() => T("ps.cap.openFolder"), OnClick: () => OpenFolderSafe(ReShadePresetFolder)),
-                    Width: PackStatusWidth),   // fixed: an auto-width button clipped its label (sandbox, en/th)
+                    Width: OpenFolderWidth),   // fixed: an auto-width button clipped its label (sandbox, en/th)
                 new SpacerElement(),
             }),
         }, Gap: 4f))));
@@ -56,13 +58,14 @@ public sealed partial class Plugin
         var count = "(" + entries.Count + ")";
         return new ColumnElement(new HudElement[]
         {
+            new SpacerElement(Height: PresetGroupGap),
             new SelectableElement(new RowElement(new HudElement[]
             {
                 new TextElement(() => _settings.PresetGroupOpen(kind) ? "▾" : "▸", Width: 14f),
                 new TextElement(() => PresetGroupLabel(kind), NoWrap: true),
                 new TextElement(() => count, Color: Muted, NoWrap: true),
             }, Gap: 4f), OnClick: () => _settings.SetPresetGroupOpen(kind, !_settings.PresetGroupOpen(kind))),
-            new ConditionalElement(() => _settings.PresetGroupOpen(kind), new ColumnElement(entries, Gap: PresetRowGap)),
+            new ConditionalElement(() => _settings.PresetGroupOpen(kind), Indent(new ColumnElement(entries, Gap: PresetRowGap))),
         }, Gap: 6f);
     }
 
@@ -87,7 +90,7 @@ public sealed partial class Plugin
         if (e.Kind == PresetKind.Community && e.Partial)   // full coverage needs no badge; a partial one is worth a glance
             lines.Add(new RowElement(new HudElement[]
             {
-                new PillElement(() => PresetTexts(e).Cov, Color: () => _services.Theme.Colors.Gold),
+                new PillElement(() => PresetTexts(e).Cov),   // menu text on the accent tint: Gold was 2.1:1 on Light (ux-ui)
                 new SpacerElement(),
             }));
         lines.Add(new TextElement(() => PresetTexts(e).Sub, Color: Muted));
@@ -127,7 +130,7 @@ public sealed partial class Plugin
     private string? PresetButtonKey(PresetEntry e) => _rsPresets.Status(e) switch
     {
         PresetStatus.NotInstalled => "ps.rs.pack.download",
-        PresetStatus.Failed => "ps.rs.pack.retry",
+        PresetStatus.Failed when _rsPresets.FailureKind(e) != DownloadFailure.Changed => "ps.rs.pack.retry",   // only an update fixes Changed
         _ => null,
     };
 

@@ -256,7 +256,7 @@ public sealed partial class Plugin
 
     // Status/button sit in ONE fixed-width column so every pack row lines up, and the licence goes on its own muted
     // line: on one line the name + a long localized licence + the status overlapped at 400 px (sandbox, th).
-    private const float PackStatusWidth = 104f;
+    private const float PackStatusWidth = 116f;
 
     private HudElement PackRow(ShaderPack p) => new ColumnElement(new HudElement[]
     {
@@ -296,7 +296,7 @@ public sealed partial class Plugin
     {
         PackStatus.NotInstalled => "ps.rs.pack.download",
         PackStatus.UpdateAvailable => "ps.rs.pack.update",
-        PackStatus.Failed => "ps.rs.pack.retry",
+        PackStatus.Failed when _packs.FailureKind(p) != DownloadFailure.Changed => "ps.rs.pack.retry",   // only an update fixes Changed
         _ => null,
     };
 }

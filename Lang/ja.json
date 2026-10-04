@@ -343,7 +343,6 @@
   "ps.rs.pack.update": "更新",
   "ps.rs.pack.retry": "再試行",
   "ps.rs.pack.queued": "待機中…",
-  "ps.rs.pack.failed": "ダウンロードに失敗しました: {0}",
   "ps.rs.pack.mixed": "複数（ファイルごと）",
   "ps.rs.status.on": "ReShade オン",
   "ps.rs.status.applying": "ReShadeを適用中…",
@@ -358,7 +357,7 @@
   "ps.rs.preset.byLine": "{0} · 作者: {1} · 使用: {2}",
   "ps.rs.preset.coverage": "エフェクト {0}/{1}",
   "ps.rs.preset.downloading": "ダウンロード中…",
-  "ps.rs.preset.linkLine": "作者: {0} · 作者のページからのみ入手",
+  "ps.rs.preset.linkLine": "作者: {0}",
   "ps.rs.preset.copyLink": "リンクをコピー",
   "ps.rs.preset.copied": "コピーしました",
   "ps.rs.preset.why.noLicence": "作者がライセンスを公開していないため、Photo Studioから代わりにダウンロードできません。",
@@ -377,8 +376,8 @@
   "ps.rs.moreFx": "このプリセットにあと{0}件",
   "ps.rs.presets.community": "コミュニティ",
   "ps.rs.presets.links": "作者のページから",
-  "ps.rs.fail.changed": "インストールできませんでした：配布元のファイルが、Photo Studioで確認した後に変更されています。Photo Studioの更新で直ります。",
+  "ps.rs.fail.changed": "インストールできませんでした：配布元のファイルが、Photo Studioで確認した後に変更されています。Photo Studioのアップデートで解消されます。",
   "ps.rs.fail.network": "ダウンロードできませんでした。接続を確認して「再試行」を押してください。",
   "ps.rs.fail.other": "ダウンロードできませんでした。「再試行」を押してください。詳しくは ? を見てください。",
-  "ps.help.rs.lastError": "最後のエラー：{0}"
+  "ps.help.rs.lastError": "直近のエラー：{0}"
 }
