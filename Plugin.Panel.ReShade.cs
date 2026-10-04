@@ -145,35 +145,45 @@ public sealed partial class Plugin
                 {
                     new TextElement(() => _settings.PacksOpen ? "▾" : "▸", Width: 14f),
                     new TextElement(() => T("ps.rs.packs"), Emphasis: true),
-                    new TextElement(() => T("ps.rs.packsFrom"), Color: Muted, NoWrap: true),
                 }, Gap: 4f), OnClick: () => _settings.SetPacksOpen(!_settings.PacksOpen)),
                 new SpacerElement(),
                 HelpDot("rs.packs", () => T("ps.rs.packs"), () => T("ps.help.rs.packs")),
             }, Gap: 6f),
+            // Its own wrapping line: on the header row it ran under the "?" at 400 px (sandbox, fil).
+            Indent(new TextElement(() => T("ps.rs.packsFrom"), Color: Muted)),
         };
         foreach (var p in PackCatalog.All)
             rows.Add(new ConditionalElement(() => _settings.PacksOpen, Indent(PackRow(p))));
         return new ColumnElement(rows, Gap: 4f);
     }
 
+    // Status/button sit in ONE fixed-width column so every pack row lines up, and the licence goes on its own muted
+    // line: on one line the name + a long localized licence + the status overlapped at 400 px (sandbox, th).
+    private const float PackStatusWidth = 104f;
+
     private HudElement PackRow(ShaderPack p) => new ColumnElement(new HudElement[]
     {
         new RowElement(new HudElement[]
         {
             new CellElement(new TextElement(() => p.Name, NoWrap: true), Weight: 1f),
-            new TextElement(() => LicenseLabel(p), Color: Muted, NoWrap: true),
-            new ConditionalElement(() => _packs.Status(p) == PackStatus.Installed, new TextElement(() => T("ps.rs.pack.installed"), Color: Muted)),
-            new ConditionalElement(() => _packs.Status(p) == PackStatus.Queued, new TextElement(() => T("ps.rs.pack.queued"), Color: Muted)),
-            new ConditionalElement(() => _packs.Status(p) == PackStatus.Downloading,
-                new TextElement(() => F((float)(_packs.Progress(p) * 100d), "0") + "%", Color: Muted)),
-            new ConditionalElement(() => PackButtonKey(p) is not null,
-                new ButtonElement(() => T(PackButtonKey(p) ?? "ps.rs.pack.download"), OnClick: () => _packs.Request(p))),
+            new CellElement(new ConditionalElement(() => PackButtonKey(p) is not null,
+                new ButtonElement(() => T(PackButtonKey(p) ?? "ps.rs.pack.download"), OnClick: () => _packs.Request(p)),
+                new TextElement(() => PackStatusText(p), Color: Muted, Align: TextAlign.Right, NoWrap: true)), Width: PackStatusWidth),
             HelpDot("rs.pack." + p.Id, () => p.Name,
                 () => _loc.TFormat("ps.help.rs.pack", LicenseLabel(p), p.SourceUrl, p.Commit.Substring(0, 7))),
         }, Gap: 6f),
+        new TextElement(() => LicenseLabel(p), Color: Muted),
         new ConditionalElement(() => _packs.Status(p) == PackStatus.Failed, new TextElement(
             () => _loc.TFormat("ps.rs.pack.failed", _packs.Error(p) ?? ""), Color: () => _services.Theme.Colors.Warning)),
     }, Gap: 2f);
+
+    private string PackStatusText(ShaderPack p) => _packs.Status(p) switch
+    {
+        PackStatus.Installed => T("ps.rs.pack.installed"),
+        PackStatus.Queued => T("ps.rs.pack.queued"),
+        PackStatus.Downloading => F((float)(_packs.Progress(p) * 100d), "0") + "%",
+        _ => "",
+    };
 
     private string LicenseLabel(ShaderPack p) => p.License == PackCatalog.MixedLicense ? T("ps.rs.pack.mixed") : p.License;
 
