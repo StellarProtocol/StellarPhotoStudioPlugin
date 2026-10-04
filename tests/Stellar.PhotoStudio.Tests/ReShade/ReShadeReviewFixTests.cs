@@ -33,10 +33,11 @@ public sealed class ReShadeReviewFixTests
         c.Tick(Frame);
     }
 
-    // ── O1: closing Photo Studio returns ReShade to what it was when Photo Studio opened ──────────────────────────
+    // ── O1: closing Photo Studio returns ReShade's PRESET to what it was when Photo Studio opened; the on/off switch
+    //    stays as the player set it (owner 2026-10-05: "it only disable when photo studio pane appear" → "off stays off")
 
     [Fact]
-    public void Close_restores_the_on_off_and_preset_changed_while_open()
+    public void Close_restores_the_preset_and_keeps_the_on_off_changed_while_open()
     {
         var c = Make();
         c.OnStudioOpened();
@@ -48,7 +49,7 @@ public sealed class ReShadeReviewFixTests
 
         c.OnStudioClosed();
 
-        Assert.Equal(new[] { true }, _fake.EnabledRequests);
+        Assert.Empty(_fake.EnabledRequests);                      // off stays off for normal play
         Assert.Equal(new[] { Own }, _fake.PresetCalls);           // the player's own preset, full path
     }
 
@@ -63,7 +64,7 @@ public sealed class ReShadeReviewFixTests
     }
 
     [Fact]
-    public void Close_restores_only_what_differs()
+    public void Close_after_only_an_on_off_change_sends_nothing()
     {
         var c = Make();
         c.OnStudioOpened();
@@ -71,8 +72,27 @@ public sealed class ReShadeReviewFixTests
         Land(c);
         _fake.EnabledRequests.Clear();
         c.OnStudioClosed();
-        Assert.Equal(new[] { true }, _fake.EnabledRequests);
+        Assert.Empty(_fake.EnabledRequests);
         Assert.Empty(_fake.PresetCalls);
+    }
+
+    [Fact]
+    public void Reopening_after_an_on_off_change_does_not_override_on_off()
+    {
+        var c = Make();
+        c.OnStudioOpened();
+        c.SetPresetPath(Folder + "/Noir.ini");
+        c.SetEnabled(false);
+        Land(c);
+        c.OnStudioClosed();
+        Land(c);
+        c.SetEnabled(true);                                        // turned back on outside the studio
+        Land(c);
+        _fake.EnabledRequests.Clear();
+        _fake.PresetCalls.Clear();
+        c.OnStudioOpened();
+        Assert.Equal(new[] { Folder + "/Noir.ini" }, _fake.PresetCalls);   // the studio's preset comes back
+        Assert.Empty(_fake.EnabledRequests);                               // its old "off" does not
     }
 
     [Fact]
@@ -80,16 +100,16 @@ public sealed class ReShadeReviewFixTests
     {
         var c = Make();
         c.OnStudioOpened();
-        c.SetEnabled(false);
+        c.SetPresetPath(Folder + "/Noir.ini");
         Land(c);
-        _fake.EnabledRequests.Clear();
+        _fake.PresetCalls.Clear();
         _fake.State = ReShadeState.Loading;
         c.OnStudioClosed();
-        Assert.Empty(_fake.EnabledRequests);                      // nothing sent while not Ready
+        Assert.Empty(_fake.PresetCalls);                          // nothing sent while not Ready
         _fake.State = ReShadeState.Ready;
         c.OnStudioOpened();                                       // the kept snapshot is NOT replaced by the edited state
         c.OnStudioClosed();
-        Assert.Equal(new[] { true }, _fake.EnabledRequests);
+        Assert.Equal(new[] { Own }, _fake.PresetCalls);
     }
 
     [Fact]
@@ -97,13 +117,13 @@ public sealed class ReShadeReviewFixTests
     {
         var c = Make();
         c.OnStudioOpened();
-        c.SetEnabled(false);
+        c.SetPresetPath(Folder + "/Noir.ini");
         Land(c);
         c.OnStudioClosed();
         Land(c);
-        _fake.EnabledRequests.Clear();
+        _fake.PresetCalls.Clear();
         c.OnStudioClosed();
-        Assert.Empty(_fake.EnabledRequests);
+        Assert.Empty(_fake.PresetCalls);
     }
 
     // ── qa major: ReShade's own preset (outside our presets folder) is remembered as its FULL path in memory ────────
@@ -239,7 +259,7 @@ public sealed class ReShadeReviewFixTests
 
         c.OnStudioClosed();
         Assert.Equal(new[] { Own }, _fake.PresetCalls);             // the snapshot was taken BEFORE the deferred choice
-        Assert.Equal(new[] { true }, _fake.EnabledRequests);
+        Assert.Empty(_fake.EnabledRequests);                        // the look's "off" stays (on/off is global, 2026-10-05)
     }
 
     // qa re-review: "edits are never lost" — the ReShade change made in Photo Studio comes back when it reopens (the

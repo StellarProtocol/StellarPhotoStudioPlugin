@@ -11,8 +11,9 @@ namespace Stellar.PhotoStudio.ReShade;
 /// <see cref="ReShadeSettle"/> capture gate (R1). Wishes are dropped once everything is applied or the gate times out.
 /// <see cref="Enabled"/> reads a value refreshed on <see cref="OnChanged"/> — IReShade.Enabled costs five add-on calls
 /// per read and the panel polls it every refresh; the settle check reads the same value. Owner ruling O1 (2026-10-04):
-/// <see cref="OnStudioOpened"/> snapshots ReShade's on/off + preset and <see cref="OnStudioClosed"/> puts them back, so
-/// closing Photo Studio returns the game's look. Main thread only.
+/// <see cref="OnStudioOpened"/> snapshots ReShade's preset and <see cref="OnStudioClosed"/> puts it back, so closing Photo
+/// Studio returns the game's look. Owner ruling 2026-10-05 ("off stays off"): the on/off switch is NOT restored — ReShade
+/// turned off (or on) in Photo Studio stays that way for normal play. Main thread only.
 /// </summary>
 internal sealed class ReShadeControl
 {
@@ -22,6 +23,7 @@ internal sealed class ReShadeControl
     private readonly Dictionary<(string Effect, string Name), bool> _wantTech = new();
     private string? _wantPreset;
     private bool? _wantEnabled;
+    private bool _sessionFromClose;          // the session was stored by a close: its on/off is not re-applied at reopen
     private bool _liveEnabled;
     private string? _livePreset;
     private ReShadeChoice? _openSnapshot;   // O1: ReShade as it was when Photo Studio opened (full preset path)
@@ -111,6 +113,7 @@ internal sealed class ReShadeControl
         if (!_open)   // closed (next-preset hotkey): wait for the open, after its snapshot (O1)
         {
             _session = c.Preset is null && _session is { } s ? s with { Enabled = c.Enabled } : c;   // on/off-only keeps the preset
+            _sessionFromClose = false;   // a look's own on/off does apply at the open
             return;
         }
         if (c.Preset is { Length: > 0 } p)
@@ -127,7 +130,8 @@ internal sealed class ReShadeControl
             _openSnapshot = new ReShadeChoice(PresetPath, Enabled);   // with wishes: a restore sent at a quick re-close counts
         if (_session is not { } s) return;
         _session = null;
-        if (Installed) ApplyDiff(s);   // the state the studio had at close (or a look applied while closed) comes back
+        // The preset the studio had at close (or a look applied while closed) comes back; on/off is global (2026-10-05).
+        if (Installed) ApplyDiff(_sessionFromClose ? s with { Enabled = Enabled } : s);
     }
 
     /// <summary>O1: Photo Studio closed (or the plugin unloads). Puts back only what differs from the snapshot; while
@@ -140,8 +144,10 @@ internal sealed class ReShadeControl
         if (_rs.State != ReShadeState.Ready) return;
         _openSnapshot = null;
         var now = new ReShadeChoice(PresetPath, Enabled);
-        _session = Differs(now, snap) ? now : null;   // remembered so a reopen brings the edit back
-        ApplyDiff(snap);
+        var restore = snap with { Enabled = now.Enabled };   // owner 2026-10-05: on/off stays as set ("off stays off")
+        _session = Differs(now, restore) ? now : null;       // remembered so a reopen brings the preset back
+        _sessionFromClose = true;
+        ApplyDiff(restore);
     }
 
     private static bool Differs(ReShadeChoice a, ReShadeChoice b) =>
