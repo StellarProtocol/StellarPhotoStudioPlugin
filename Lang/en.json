@@ -373,7 +373,7 @@
   "ps.rs.preset.desc.soft-anime": "A soft glow on bright areas, gently lifted shadows and a little more color.",
   "ps.rs.preset.desc.cool-night": "Cooler light, blue-tinted shadows with warm highlights, a gentle contrast curve and a darker vignette.",
   "ps.rs.preset.desc.clean-sharpen": "Crisper lines and detail, with nothing else changed.",
-  "ps.rs.preset.desc.dreamy-glow": "A soft, warm glow around lights and bright areas, with a wide, gentle haze of light from the brightest spots.",
+  "ps.rs.preset.desc.dreamy-glow": "A soft glow around lights and bright areas, with a wide, gentle haze of light from the brightest spots.",
   "ps.rs.preset.desc.lens-flare": "Soft hexagonal lens flares from the brightest lights, framed by a gentle dark vignette.",
   "ps.rs.preset.desc.subject-focus": "Keeps what is close to the camera in full color and dims and desaturates the distance behind it. Uses depth, so it only shows in photos with the Screen shape.",
   "ps.rs.savedOnOff": "ReShade's own preset is in use: your Look preset keeps only whether ReShade is on.",

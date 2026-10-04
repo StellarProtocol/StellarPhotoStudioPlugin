@@ -83,7 +83,7 @@ prod80 PD80_06_Film_Grain.fx prod80_06_FilmGrain
 prod80 PD80_06_Luma_Fade.fx prod80_06_LumaFade_Start
 prod80 PD80_06_Luma_Fade.fx prod80_06_LumaFade_End
 prod80 PD80_06_Posterize_Pixelate.fx prod80_06_Posterize_Pixelate
-fxshaders NeoBloom.fx NeoBloom
+fxshaders ArcaneBloom.fx ArcaneBloom
 fxshaders MagicHDR.fx MagicHDR
 fxshaders HexLensFlare.fx HexLensFlare
 fxshaders ArtisticVignette.fx ArtisticVignette
@@ -94,16 +94,14 @@ otisfx Emphasize.fx Emphasize");
     {
         "Curves.fx", "Vibrance.fx", "Vignette.fx", "CAS.fx", "LiftGammaGain.fx",
         "PD80_04_Color_Temperature.fx", "PD80_02_Bloom.fx", "PD80_04_Color_Balance.fx",
-        "MagicHDR.fx", "HexLensFlare.fx", "ArtisticVignette.fx",
+        "ArcaneBloom.fx", "MagicHDR.fx", "HexLensFlare.fx", "ArtisticVignette.fx",
     };
 
     // Own presets that enable a depth-FLAGGED effect (owner-approved looks, 2026-10-05) -> those effect files. Emphasize
-    // reads depth by design. NeoBloom reads depth only under NEO_BLOOM_DEPTH (0 by default; the preset sets no
-    // definitions), but the scanner ORs every #if branch, so it is flagged too: in photos where depth effects are left
-    // out, Dreamy glow keeps only its MagicHDR glow.
+    // reads depth by design. (NeoBloom is flagged too — the scanner ORs its NEO_BLOOM_DEPTH branch — which is why Dreamy
+    // glow uses ArcaneBloom: a depth-flagged effect is left out of non-Screen and capture-runtime photos.)
     private static readonly Dictionary<string, string[]> DepthPresets = new(StringComparer.Ordinal)
     {
-        ["dreamy-glow"] = new[] { "NeoBloom.fx" },
         ["subject-focus"] = new[] { "Emphasize.fx" },
     };
 
@@ -126,11 +124,13 @@ otisfx Emphasize.fx Emphasize");
             ["BloomMix"] = (0, 1, 1), ["BloomLimit"] = (0, 1, 1), ["GreyValue"] = (0, 1, 1), ["bExposure"] = (-1, 5, 1),
             ["BlurSigmaNarrow"] = (10, 40, 1), ["BlurSigma"] = (10, 300, 1), ["BloomSaturation"] = (0, 2, 1),
         },
-        ["NeoBloom.fx"] = new()
+        // Only the uniforms that exist under ArcaneBloom's DEFAULT definitions (adaptation on; dirt, temporal, temperature,
+        // saturation and custom distribution off — their uniforms are not declared, so a preset cannot set them).
+        ["ArcaneBloom.fx"] = new()
         {
-            ["Intensity"] = (0, 1, 1), ["Saturation"] = (0, 3, 1), ["ColorFilter"] = (0, 1, 3), ["BloomBlendMode"] = (0, 2, 1),
-            ["Mean"] = (0, 5, 1), ["Variance"] = (1, 5, 1), ["MaxBrightness"] = (1, 1000, 1), ["NormalizeBrightness"] = (0, 1, 1),
-            ["MagicMode"] = (0, 1, 1), ["Sigma"] = (1, 10, 1), ["Padding"] = (0, 10, 1),
+            ["uBloomIntensity"] = (0, 100, 1), ["uExposure"] = (0.001, 3, 1), ["uMaxBrightness"] = (1, 100, 1),
+            ["uAdapt_Intensity"] = (0, 1, 1), ["uAdapt_Time"] = (0.01, 10, 1), ["uAdapt_Sensitivity"] = (0, 3, 1),
+            ["uAdapt_Precision"] = (0, 11, 1), ["uAdapt_DoLimits"] = (0, 1, 1), ["uAdapt_Limits"] = (0, 1, 2),
         },
         ["MagicHDR.fx"] = new()
         {
@@ -171,7 +171,7 @@ otisfx Emphasize.fx Emphasize");
     [InlineData("soft-anime", "prod80_02_Bloom@PD80_02_Bloom.fx,LiftGammaGain@LiftGammaGain.fx,Vibrance@Vibrance.fx")]
     [InlineData("cool-night", "prod80_04_ColorTemperature@PD80_04_Color_Temperature.fx,prod80_04_ColorBalance@PD80_04_Color_Balance.fx,Curves@Curves.fx,Vignette@Vignette.fx")]
     [InlineData("clean-sharpen", "ContrastAdaptiveSharpen@CAS.fx")]
-    [InlineData("dreamy-glow", "NeoBloom@NeoBloom.fx,MagicHDR@MagicHDR.fx")]
+    [InlineData("dreamy-glow", "ArcaneBloom@ArcaneBloom.fx,MagicHDR@MagicHDR.fx")]
     [InlineData("lens-flare", "HexLensFlare@HexLensFlare.fx,ArtisticVignette@ArtisticVignette.fx")]
     [InlineData("subject-focus", "Emphasize@Emphasize.fx")]
     public void Each_preset_enables_exactly_its_designed_techniques_in_order(string id, string techniques)
@@ -242,6 +242,18 @@ otisfx Emphasize.fx Emphasize");
         var text = OwnPresets.Text(id);
         Assert.All(text, c => Assert.True(c < 128, $"{id}: non-ASCII char U+{(int)c:X4}"));
         Assert.DoesNotContain("\r", text);
+    }
+
+    // Dreamy glow must render in every photo shape and size: none of its effects may read depth (a depth-flagged effect is
+    // left out of non-Screen and capture-runtime photos). ArcaneBloom's eye adaptation is ON by default and needs frame
+    // history the capture runtime does not have, so the preset turns its intensity to 0.
+    [Fact]
+    public void Dreamy_glow_uses_no_depth_effect_and_no_eye_adaptation()
+    {
+        var ini = Parse(OwnPresets.Text("dreamy-glow"));
+        Assert.All(ini.Top["Techniques"].Split(','), t => Assert.Contains(t[(t.IndexOf('@') + 1)..], DepthFree));
+        Assert.False(DepthPresets.ContainsKey("dreamy-glow"));
+        Assert.Equal("0.000000", ini.Sections["ArcaneBloom.fx"]["uAdapt_Intensity"]);
     }
 
     [Fact]

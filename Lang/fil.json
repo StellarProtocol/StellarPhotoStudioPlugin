@@ -373,7 +373,7 @@
   "ps.rs.preset.desc.soft-anime": "Malambot na glow sa maliliwanag na bahagi, bahagyang inangat na anino at kaunting dagdag na kulay.",
   "ps.rs.preset.desc.cool-night": "Mas malamig na liwanag, mala-asul na anino na may mainit na highlight, banayad na contrast at mas madilim na vignette.",
   "ps.rs.preset.desc.clean-sharpen": "Mas malinaw na linya at detalye, nang walang ibang binabago.",
-  "ps.rs.preset.desc.dreamy-glow": "Malambot at mainit na glow sa paligid ng mga ilaw at maliliwanag na bahagi, na may malawak at banayad na ulap ng liwanag mula sa pinakamaliliwanag na bahagi.",
+  "ps.rs.preset.desc.dreamy-glow": "Malambot na glow sa paligid ng mga ilaw at maliliwanag na bahagi, na may malawak at banayad na ulap ng liwanag mula sa pinakamaliliwanag na bahagi.",
   "ps.rs.preset.desc.lens-flare": "Malalambot na hexagonal na lens flare mula sa pinakamaliliwanag na ilaw, na may banayad na madilim na vignette sa gilid.",
   "ps.rs.preset.desc.subject-focus": "Buong kulay ang malapit sa camera, habang dinidimlan at pinapupusyaw ang malayong bahagi sa likod nito. Gumagamit ng depth, kaya lumalabas lang ito sa mga litratong may hugis na Screen.",
   "ps.rs.savedOnOff": "Ginagamit ang sariling preset ng ReShade: on/off lang ng ReShade ang naka-save sa preset ng itsura mo.",
