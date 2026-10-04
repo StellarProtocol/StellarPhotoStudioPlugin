@@ -314,4 +314,44 @@ public sealed class PresetInstallerTests
         Assert.Equal(PresetStatus.Failed, i.Status(c));
         Assert.Equal("SweetFX", i.FailedRequirement(c));
     }
+
+    // Review fix round 2, item 4: FailureKind classifies a Failed preset's error text the same way PackInstaller's
+    // does. Each InlineData string is the framework's own exact error text (PluginDownloadService.cs).
+    // NOTE (deviation, precedented): DownloadFailure is `internal`; a `public` Theory parameter of that type is
+    // CS0051 even with InternalsVisibleTo — indirected through nameof()/ToString() instead.
+    [Theory]
+    [InlineData("checksum mismatch", nameof(DownloadFailure.Changed))]
+    [InlineData("too large", nameof(DownloadFailure.Changed))]
+    [InlineData("network error", nameof(DownloadFailure.Network))]
+    [InlineData("timed out", nameof(DownloadFailure.Network))]
+    [InlineData("bad zip", nameof(DownloadFailure.Other))]
+    public void FailureKind_classifies_a_failed_presets_own_download_error(string error, string expected)
+    {
+        HavePacks(PackCatalog.Standard, PackCatalog.Prod80);
+        var i = Make();
+        var s = PresetCatalog.StellaMedium;
+        i.Request(s);
+        _dl.Calls[0].Done.SetResult(new DownloadResult(false, null, error));
+        Assert.Equal(expected, i.FailureKind(s).ToString());
+    }
+
+    [Fact]
+    public void FailureKind_is_Requirement_when_a_required_pack_failed()
+    {
+        var i = Make();
+        var g = PresetCatalog.StarLuxeGalactic;
+        i.Request(g);
+        // The pack's own error text ("checksum mismatch") would otherwise read as Changed — Requirement must win.
+        _dl.Calls[0].Done.SetResult(new DownloadResult(false, null, "checksum mismatch"));
+        Assert.Equal(DownloadFailure.Requirement, i.FailureKind(g));
+    }
+
+    [Fact]
+    public void FailureKind_is_None_before_any_request_or_while_still_in_progress()
+    {
+        var i = Make();
+        Assert.Equal(DownloadFailure.None, i.FailureKind(PresetCatalog.StellaMedium));
+        i.Request(PresetCatalog.StarLuxeGalactic);
+        Assert.Equal(DownloadFailure.None, i.FailureKind(PresetCatalog.StarLuxeGalactic));   // Queued, not Failed
+    }
 }

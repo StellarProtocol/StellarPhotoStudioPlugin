@@ -179,4 +179,52 @@ public sealed class PackInstallerTests
         Assert.Equal(2, _dl.Calls.Count);   // the pump reached Prod80 despite the throwing subscriber
         Assert.Equal("reshade/packs/prod80", _dl.Calls[1].Request.TargetPath);
     }
+
+    // Review fix round 2, item 4: FailureKind classifies a Failed pack's error text for a player-friendly message.
+    // Every InlineData string is the FRAMEWORK's own, exact error text (PluginDownloadService.cs / MapError), not a
+    // guess — "checksum mismatch" and "too large" both mean the upstream file no longer matches what we pinned
+    // (Changed); "network error" and "timed out" mean the network (Network); everything else, including the
+    // framework's other literal texts, is Other.
+    // NOTE (deviation, precedented in ReShadeViewTests.cs / PresetCatalogTests.cs): DownloadFailure is `internal`; a
+    // `public` xunit Theory method taking it as a parameter is CS0051 even with InternalsVisibleTo. Indirected through
+    // nameof()/ToString(), the same workaround used for LinkReason and ReShadePanel.
+    [Theory]
+    [InlineData("checksum mismatch", nameof(DownloadFailure.Changed))]
+    [InlineData("too large", nameof(DownloadFailure.Changed))]
+    [InlineData("network error", nameof(DownloadFailure.Network))]
+    [InlineData("timed out", nameof(DownloadFailure.Network))]
+    [InlineData("busy", nameof(DownloadFailure.Other))]
+    [InlineData("invalid request", nameof(DownloadFailure.Other))]
+    [InlineData("https only", nameof(DownloadFailure.Other))]
+    [InlineData("invalid size", nameof(DownloadFailure.Other))]
+    [InlineData("bad zip", nameof(DownloadFailure.Other))]
+    [InlineData("could not write to the data folder", nameof(DownloadFailure.Other))]
+    [InlineData("download failed unexpectedly", nameof(DownloadFailure.Other))]
+    public void FailureKind_classifies_the_frameworks_own_error_strings(string error, string expected)
+    {
+        var i = Make();
+        i.Request(PackCatalog.Standard);
+        _dl.Calls[0].Done.SetResult(new DownloadResult(false, null, error));
+        Assert.Equal(expected, i.FailureKind(PackCatalog.Standard).ToString());
+    }
+
+    [Fact]
+    public void FailureKind_is_None_when_the_pack_has_not_failed()
+    {
+        var i = Make();
+        Assert.Equal(DownloadFailure.None, i.FailureKind(PackCatalog.Standard));
+        i.Request(PackCatalog.Standard);
+        Assert.Equal(DownloadFailure.None, i.FailureKind(PackCatalog.Standard));   // Queued, not Failed
+    }
+
+    [Fact]
+    public void FailureKind_is_Requirement_when_it_failed_because_its_own_requirement_failed()
+    {
+        var i = Make();
+        i.Request(PackCatalog.SweetFx);
+        // SweetFX never gets its own download attempt: standard (its requirement) fails first and FailDependents
+        // marks SweetFX Failed directly — Requirement must win even though the underlying text would read as Changed.
+        _dl.Calls[0].Done.SetResult(new DownloadResult(false, null, "checksum mismatch"));
+        Assert.Equal(DownloadFailure.Requirement, i.FailureKind(PackCatalog.SweetFx));
+    }
 }

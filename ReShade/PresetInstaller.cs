@@ -71,6 +71,14 @@ internal sealed class PresetInstaller : IDisposable
     public string? FailedRequirement(PresetEntry e) =>
         _live.TryGetValue(e.Id, out var s) && s.Status == PresetStatus.Failed ? s.FailedRequirement : null;
 
+    /// <summary>A player-friendly classification of why <paramref name="e"/> is Failed (<see cref="DownloadFailure.None"/>
+    /// otherwise); <see cref="Error"/> still carries the raw text.</summary>
+    public DownloadFailure FailureKind(PresetEntry e)
+    {
+        if (Status(e) != PresetStatus.Failed) return DownloadFailure.None;
+        return FailedRequirement(e) is not null ? DownloadFailure.Requirement : DownloadFailureClassifier.Classify(Error(e));
+    }
+
     public void Rescan()
     {
         foreach (var e in _catalog)

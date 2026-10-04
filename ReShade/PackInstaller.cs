@@ -71,6 +71,14 @@ internal sealed class PackInstaller : IDisposable
     public string? FailedRequirement(ShaderPack p) =>
         _live.TryGetValue(p.Id, out var s) && s.Status == PackStatus.Failed ? s.FailedRequirement : null;
 
+    /// <summary>A player-friendly classification of why <paramref name="p"/> is Failed (<see cref="DownloadFailure.None"/>
+    /// otherwise); <see cref="Error"/> still carries the raw text.</summary>
+    public DownloadFailure FailureKind(ShaderPack p)
+    {
+        if (Status(p) != PackStatus.Failed) return DownloadFailure.None;
+        return FailedRequirement(p) is not null ? DownloadFailure.Requirement : DownloadFailureClassifier.Classify(Error(p));
+    }
+
     public void Rescan()
     {
         var root = _downloads.DataFolder;
