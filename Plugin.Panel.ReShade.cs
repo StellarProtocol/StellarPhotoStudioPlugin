@@ -88,6 +88,7 @@ public sealed partial class Plugin
         new ConditionalElement(() => RsDepth() == DepthNote.ScreenDetail, new TextElement(() => T("ps.rs.depthDetail"), Color: Muted)),
         new TextElement(() => T("ps.rs.fineTune"), Color: Muted),
         new SeparatorElement(),
+        PresetsSection(),   // Plugin.Panel.ReShadePresets.cs
         PacksSection(),
     }, Gap: 4f);
 
@@ -137,6 +138,7 @@ public sealed partial class Plugin
         _allFxText = default;
         _moreFxText = default;
         _rsOptionsCache = null;
+        _presetText.Clear();
     }
 
     private (string? Path, bool Own) _ownPreset;

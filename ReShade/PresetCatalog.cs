@@ -103,7 +103,7 @@ internal static class PresetCatalog
     public static readonly PresetEntry IpsuShade = Link("ipsushade", "IpsuShade", "ipsusu", "https://github.com/ipsusu/IpsuShade", LinkReason.AskAuthor);
     public static readonly PresetEntry Steaxs = Link("steaxs-filter-pack", "STEAXS Filter Pack", "steaxss",
         "https://github.com/steaxss/STEAXS-FILTER-PACK", LinkReason.NoLicence);
-    public static readonly PresetEntry NoRange = Link("norange-wuwa", "NoRange (Wuthering Waves)", "No Range",
+    public static readonly PresetEntry NoRange = Link("norange-wuwa", "NoRange (WuWa)", "No Range",
         "https://gamebanana.com/tools/18631", LinkReason.AskAuthor);
     public static readonly PresetEntry EndfieldOfficial = Link("endfield-official-filter", "Official Filter (Endfield)", "Eclyse069",
         "https://gamebanana.com/mods/654035", LinkReason.AskAuthor);
