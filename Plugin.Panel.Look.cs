@@ -46,6 +46,8 @@ public sealed partial class Plugin
         BloomGroup(),
         VignetteGroup(),
         FilmGrainGroup(),
+        new SeparatorElement(),
+        ReShadeGroup(),             // Plugin.Panel.ReShade.cs — spec 2026-10-03 reshade § 6
     }, Gap: 8f);
 
     private void SetPinned(bool on)
@@ -98,15 +100,15 @@ public sealed partial class Plugin
                 new SliderElement(() => _editor.Dof.FocusDistance, v => _editor.EditDof(d => d with { FocusDistance = v }),
                     0.1f, 100f, Enabled: () => !_editor.Dof.FocusOnLocalPlayer),
                 () => _editor.Dof.FocusOnLocalPlayer ? T("ps.look.auto") : F(_editor.Dof.FocusDistance, "0.0") + " m",
-                () => _editor.EditDof(d => d with { FocusDistance = def.FocusDistance })),
+                () => _editor.EditDof(d => d with { FocusDistance = def.FocusDistance }), step: 0.1f, parse: ParseNumber),
             SliderRow(() => T("ps.look.aperture"),
                 new SliderElement(() => _editor.Dof.Aperture, v => _editor.EditDof(d => d with { Aperture = v }), 1f, 22f),
                 () => "f/" + F(_editor.Dof.Aperture, "0.0"),
-                () => _editor.EditDof(d => d with { Aperture = def.Aperture })),
+                () => _editor.EditDof(d => d with { Aperture = def.Aperture }), step: 0.1f, parse: ParseNumber),
             SliderRow(() => T("ps.look.focalLength"),
                 new SliderElement(() => _editor.Dof.FocalLength, v => _editor.EditDof(d => d with { FocalLength = v }), 10f, 300f),
                 () => F(_editor.Dof.FocalLength, "0") + " mm",
-                () => _editor.EditDof(d => d with { FocalLength = def.FocalLength })));
+                () => _editor.EditDof(d => d with { FocalLength = def.FocalLength }), step: 1f, parse: ParseNumber));
     }
 
     private HudElement ColorGroup() => LookGroup(LookGroups.Color, "color", photoOnly: false,

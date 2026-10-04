@@ -59,11 +59,15 @@ public sealed partial class Plugin
             Enabled: () => !Capturing,
             Style: MenuButtonStyle.Filled), Weight: 1f),
         new TextElement(StatusLine, Color: Muted, Align: TextAlign.Center, NoWrap: true),
+        // Mockup "· ReShade on" — its own short line: appended to the status it overflowed the window in fil (ux-ui review).
+        new ConditionalElement(() => _services.ReShade.State == ReShadeState.Ready && _rs.Enabled,
+            new TextElement(() => T("ps.rs.status.on"), Color: () => _services.Theme.Colors.Accent, Align: TextAlign.Center, NoWrap: true)),
         new TextElement(HotkeyHint, Color: Muted, Align: TextAlign.Center, NoWrap: true),
     }, Gap: 4f);
 
     private string StatusLine()
     {
+        if (_captureGate.Armed && _rs.Pending) return T("ps.rs.status.applying");   // R1: waiting for a ReShade switch
         if (Capturing)
             return _settings.Scale == 4 ? T("ps.status.capturing4x") : T("ps.capturing");
         var scale = EffectiveScale();

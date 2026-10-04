@@ -45,7 +45,7 @@ public sealed partial class Plugin
                 SliderRow(() => T("ps.q.hour"),
                     new SliderElement(() => _quality.Hour, SetHour, 0f, 24f, Enabled: () => _services.TimeOfDay.IsAvailable),
                     HourText,
-                    () => SetHour(12f)),
+                    () => SetHour(12f), step: 5f / 60f, parse: ParseHour),   // 5-minute steps
                 new TextElement(LiveQualityText, Color: Muted),
             }, Gap: 4f), Weight: 1f),
         })),

@@ -33,14 +33,27 @@ internal static class PresetNames
     /// <summary>Turns any name (e.g. one read from an imported file) into a usable one.</summary>
     public static string Sanitize(string name)
     {
-        var chars = name.Trim().ToCharArray();
-        var bad = Path.GetInvalidFileNameChars();
-        for (var i = 0; i < chars.Length; i++)
-            if (Array.IndexOf(Extra, chars[i]) >= 0 || Array.IndexOf(bad, chars[i]) >= 0) chars[i] = '_';
-        var s = new string(chars).TrimEnd('.', ' ').Replace("..", "_");
+        var s = ReplaceBadChars(name.Trim()).TrimEnd('.', ' ').Replace("..", "_");
         if (s.Length > MaxLength) s = s.Substring(0, MaxLength).TrimEnd('.', ' ');
         if (s.Length == 0) return "Imported";
         return Array.Exists(Reserved, r => string.Equals(r, s, StringComparison.OrdinalIgnoreCase)) ? s + "_" : s;
+    }
+
+    /// <summary>Whether <paramref name="stem"/> (a file name without its extension, e.g. a ReShade preset's) is one
+    /// <see cref="Sanitize"/> would leave unchanged — valid on Windows and Linux — with no length limit (it is not a
+    /// preset name; the OS limits a path).</summary>
+    public static bool IsSafeFileStem(string stem) =>
+        stem.Length > 0 && stem == stem.Trim() && ReplaceBadChars(stem) == stem
+        && !stem.EndsWith(".", StringComparison.Ordinal) && !stem.Contains("..", StringComparison.Ordinal)
+        && !Array.Exists(Reserved, r => string.Equals(r, stem, StringComparison.OrdinalIgnoreCase));
+
+    private static string ReplaceBadChars(string name)
+    {
+        var chars = name.ToCharArray();
+        var bad = Path.GetInvalidFileNameChars();
+        for (var i = 0; i < chars.Length; i++)
+            if (Array.IndexOf(Extra, chars[i]) >= 0 || Array.IndexOf(bad, chars[i]) >= 0) chars[i] = '_';
+        return new string(chars);
     }
 }
 

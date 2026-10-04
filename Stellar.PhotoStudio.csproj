@@ -9,12 +9,12 @@
     <NoWarn>CS8632;CS8765</NoWarn>
     <RootNamespace>Stellar.PhotoStudio</RootNamespace>
     <AssemblyName>Stellar.PhotoStudio</AssemblyName>
-    <Version>1.4.0</Version>
+    <Version>1.5.0</Version>
     <Deterministic>true</Deterministic>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Stellar.Abstractions" Version="2.16.0" />
+    <PackageReference Include="Stellar.Abstractions" Version="2.17.0" />
     <PackageReference Include="Stellar.PluginContracts"    Version="2.0.0" />
     <PackageReference Include="Stellar.Plugin.InteropRefs" Version="2.0.0" />
   </ItemGroup>
@@ -27,6 +27,13 @@
     <EmbeddedResource Include="Lang/fil.json" LogicalName="Stellar.PhotoStudio.Lang.fil.json" />
     <!-- Launcher-tile icon (camera + sparkles, owner-supplied 2026-10-01). -->
     <EmbeddedResource Include="Resources/photostudio-icon.png" LogicalName="Stellar.PhotoStudio.photostudio-icon.png" />
+    <EmbeddedResource Include="Resources/Presets/cinematic-warm.ini" LogicalName="Stellar.PhotoStudio.Presets.cinematic-warm.ini" />
+    <EmbeddedResource Include="Resources/Presets/soft-anime.ini" LogicalName="Stellar.PhotoStudio.Presets.soft-anime.ini" />
+    <EmbeddedResource Include="Resources/Presets/cool-night.ini" LogicalName="Stellar.PhotoStudio.Presets.cool-night.ini" />
+    <EmbeddedResource Include="Resources/Presets/clean-sharpen.ini" LogicalName="Stellar.PhotoStudio.Presets.clean-sharpen.ini" />
+    <EmbeddedResource Include="Resources/Presets/dreamy-glow.ini" LogicalName="Stellar.PhotoStudio.Presets.dreamy-glow.ini" />
+    <EmbeddedResource Include="Resources/Presets/lens-flare.ini" LogicalName="Stellar.PhotoStudio.Presets.lens-flare.ini" />
+    <EmbeddedResource Include="Resources/Presets/subject-focus.ini" LogicalName="Stellar.PhotoStudio.Presets.subject-focus.ini" />
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="tests/**/*.cs" />

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using Stellar.Abstractions.Domain;
+using Stellar.PhotoStudio.ReShade;
 namespace Stellar.PhotoStudio.Presets;
 
 /// <summary>Built-in looks (read-only) plus user-saved looks (JSON via <see cref="IPresetFiles"/>).
@@ -31,14 +32,16 @@ internal sealed class PresetStore
     /// <paramref name="name"/> only case-insensitively (a case-only re-save), its OLD stored key is
     /// deleted first — otherwise the old and new casings would both persist as separate files. The
     /// new casing becomes the stored name.</summary>
-    public void Save(string name, LookSettings look, PhotoShape? shape = null, Lights.LightsPreset? lights = null)
+    public void Save(string name, LookSettings look, PhotoShape? shape = null, Lights.LightsPreset? lights = null, ReShadeChoice? reshade = null)
     {
         GuardUser(name);
         var existing = _user.FirstOrDefault(p => NameEquals(p.Name, name));
         if (existing is not null && existing.Name != name) _files.Delete(existing.Name);
-        _files.Write(name, JsonSerializer.Serialize(PresetDto.From(name, look, shape, lights)));
+        _files.Write(name, JsonSerializer.Serialize(PresetDto.From(name, look, shape, lights, reshade)));
         _user.RemoveAll(p => NameEquals(p.Name, name));
-        _user.Add(new Preset(name, false, look, shape, lights));
+        // In memory exactly what the file holds (ReShadeDto: our folder's preset as a file name, ReShade's own dropped),
+        // so a preset behaves the same before and after a relaunch.
+        _user.Add(new Preset(name, false, look, shape, lights) { ReShade = reshade is null ? null : ReShadeDto.From(reshade).ToChoice() });
         Invalidate();
     }
 
@@ -66,7 +69,7 @@ internal sealed class PresetStore
         if (All.Any(p => NameEquals(p.Name, to)))
             throw new InvalidOperationException("A preset with that name already exists.");
         var p = _user.Single(x => NameEquals(x.Name, from));
-        Save(to, p.Look, p.Shape, p.Lights);
+        Save(to, p.Look, p.Shape, p.Lights, p.ReShade);
         Delete(from);
     }
 
@@ -76,7 +79,7 @@ internal sealed class PresetStore
     public string Export(string name)
     {
         var p = All.Single(x => NameEquals(x.Name, name));
-        return JsonSerializer.Serialize(PresetDto.From(p.Name, p.Look, p.Shape, p.Lights));
+        return JsonSerializer.Serialize(PresetDto.From(p.Name, p.Look, p.Shape, p.Lights, p.ReShade));
     }
 
     /// <summary>Imports a preset. A name collision (built-in or user, case-insensitive) is resolved
@@ -86,7 +89,7 @@ internal sealed class PresetStore
         var dto = Parse(json);
         if (dto is null) return null;
         var name = UniqueName(PresetNames.Sanitize(dto.Name));
-        Save(name, dto.ToLook(), dto.ToShape(), dto.ToLights());
+        Save(name, dto.ToLook(), dto.ToShape(), dto.ToLights(), dto.ToReShade());
         return _user.Single(p => NameEquals(p.Name, name));
     }
 
@@ -110,7 +113,7 @@ internal sealed class PresetStore
             }
             var dto = Parse(_files.Read(name));
             if (dto is null) { _warn($"Preset '{name}' could not be read and was skipped."); continue; }
-            _user.Add(new Preset(name, false, dto.ToLook(), dto.ToShape(), dto.ToLights()));
+            _user.Add(new Preset(name, false, dto.ToLook(), dto.ToShape(), dto.ToLights()) { ReShade = dto.ToReShade() });
         }
     }
 

@@ -104,14 +104,55 @@ public sealed partial class Plugin
 
     /// <summary>[label] [slider] [value] [↺] — Maestro's slider row without the "?" (the group header carries it).</summary>
     /// <param name="enabled">Optional: also gates the ↺ reset (a disabled slider must not be resettable — sandbox D1).</param>
-    private HudElement SliderRow(Func<string> label, SliderElement slider, Func<string> value, Action reset, Func<bool>? enabled = null)
-        => new RowElement(new HudElement[]
+    /// <summary>[label] [slider] [◂] [value] [▸] [↺]. ◂ ▸ move the value one fine <paramref name="step"/> (player feedback
+    /// 2026-10-05: "can't do precise changes on slider alone"; 0 = 1/100 of the range); with <paramref name="parse"/> the
+    /// value can also be clicked and typed (Enter applies, clamped to the slider's range).</summary>
+    private HudElement SliderRow(Func<string> label, SliderElement slider, Func<string> value, Action reset, Func<bool>? enabled = null,
+        float step = 0f, Func<string, float?>? parse = null)
+    {
+        var fine = new FineStep(slider, step > 0f ? step : (slider.Max - slider.Min) / 100f, enabled ?? slider.Enabled);
+        return new RowElement(new HudElement[]
         {
             new CellElement(new TextElement(label, Color: Muted), Width: LabelW),
             new CellElement(slider with { SquareHandle = true }, Weight: 1f),
-            new CellElement(new TextElement(value, Align: TextAlign.Right), Width: ValueW),
+            new CellElement(new ButtonElement(Label: () => "‹", OnClick: () => fine.Nudge(-1), Enabled: fine.Can), Width: StepW),
+            new CellElement(parse is null ? new TextElement(value, Align: TextAlign.Right) : TypedValue(fine, value, parse), Width: ValueW),
+            new CellElement(new ButtonElement(Label: () => "›", OnClick: () => fine.Nudge(1), Enabled: fine.Can), Width: StepW),
             new CellElement(new ButtonElement(Label: () => "↺", OnClick: reset, Enabled: enabled), Width: 28f),
-        }, Gap: 6f);
+        }, Gap: 4f);
+    }
+
+    private const float StepW = 18f;
+
+    /// <summary>The value text; a click turns it into a text box for this row until Enter (or focus leaves).</summary>
+    private static HudElement TypedValue(FineStep fine, Func<string> value, Func<string, float?> parse) =>
+        new ConditionalElement(() => fine.Editing,
+            new InputElement(value, text => { fine.Editing = false; if (parse(text) is { } v) fine.SetTo(v); }, Width: ValueW),
+            new SelectableElement(new TextElement(value, Align: TextAlign.Right), OnClick: () => fine.Editing = fine.Can()));
+
+    /// <summary>One slider row's fine-step state: its step, whether its value is being typed.</summary>
+    private sealed class FineStep(SliderElement slider, float step, Func<bool>? enabled)
+    {
+        public bool Editing;
+        public bool Can() => enabled?.Invoke() ?? true;
+        public void Nudge(int dir) { if (Can()) SetTo(slider.Get() + dir * step); }
+        public void SetTo(float v) => slider.Set(Math.Clamp(v, slider.Min, slider.Max));
+    }
+
+    /// <summary>The first number in typed text ("1.4", "1,4 m", "f/2.8", "35mm"); null when there is none.</summary>
+    internal static float? ParseNumber(string text)
+    {
+        var m = System.Text.RegularExpressions.Regex.Match(text ?? "", @"-?\d+(?:[.,]\d+)?");
+        return m.Success && float.TryParse(m.Value.Replace(',', '.'), System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : null;
+    }
+
+    /// <summary>A time of day: "17:30" / "17.5" / "17" → hours.</summary>
+    internal static float? ParseHour(string text)
+    {
+        var m = System.Text.RegularExpressions.Regex.Match(text ?? "", @"(\d{1,2})\s*[:h]\s*(\d{1,2})");
+        return m.Success ? int.Parse(m.Groups[1].Value) + int.Parse(m.Groups[2].Value) / 60f : ParseNumber(text ?? "");
+    }
 
     /// <summary>[label] [control…] — a fixed-width muted label followed by the given controls.</summary>
     private HudElement LabeledRow(Func<string> label, params HudElement[] controls)
