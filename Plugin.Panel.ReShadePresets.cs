@@ -82,7 +82,7 @@ public sealed partial class Plugin
         {
             new RowElement(new HudElement[]
             {
-                new CellElement(new TextElement(() => e.Name, NoWrap: true), Weight: 1f),
+                new CellElement(new TextElement(() => e.Name), Weight: 1f),   // wraps: at 400 px "StarLuxe Luminescence" ran into the button
                 new CellElement(PresetAction(e), Width: PackStatusWidth),
                 HelpDot("rs.preset." + e.Id, () => e.Name, () => PresetHelp(e)),
             }, Gap: 6f),
