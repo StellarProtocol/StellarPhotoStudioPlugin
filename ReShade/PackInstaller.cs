@@ -168,7 +168,7 @@ internal sealed class PackInstaller : IDisposable
             state.Status = PackStatus.Installed;   // a late progress value now writes into a detached state
             _live.Remove(p.Id);
             Rescan();
-            PacksChanged?.Invoke();
+            RaisePacksChanged();
             return;
         }
         state.Status = PackStatus.Failed;
@@ -194,6 +194,26 @@ internal sealed class PackInstaller : IDisposable
             catch (Exception ex)
             {
                 _warn($"[PhotoStudio] a PackFailed subscriber threw: {ex.Message}");
+            }
+        }
+    }
+
+    /// <summary>Invokes each <see cref="PacksChanged"/> subscriber in its own try/catch, for the same reason as
+    /// <see cref="RaisePackFailed"/>: this fires from <see cref="InstallOneAsync"/>'s success branch, still inside
+    /// <see cref="PumpAsync"/>'s loop, so an unguarded throw here would stop the pump before the next queued pack.</summary>
+    private void RaisePacksChanged()
+    {
+        var handler = PacksChanged;
+        if (handler is null) return;
+        foreach (var d in handler.GetInvocationList())
+        {
+            try
+            {
+                ((Action)d)();
+            }
+            catch (Exception ex)
+            {
+                _warn($"[PhotoStudio] a PacksChanged subscriber threw: {ex.Message}");
             }
         }
     }

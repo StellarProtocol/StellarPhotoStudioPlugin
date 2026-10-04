@@ -280,4 +280,38 @@ public sealed class PresetInstallerTests
         Assert.DoesNotContain(_warnings, w => w.Contains("install failed"));
         Assert.Contains(_warnings, w => w.Contains("PresetsChanged subscriber threw"));
     }
+
+    // Review fix round 2, item 3: a required pack stuck neither installed nor queued/downloading (e.g. UpdateAvailable)
+    // must fail the waiting preset instead of leaving it Queued forever. A pack can land there if its in-flight
+    // download is cancelled (PackInstaller.Dispose(), e.g. the plugin unloading mid-download): InstallOneAsync's
+    // OperationCanceledException catch removes the live entry WITHOUT raising PackFailed, so Status() falls back to
+    // the stale disk read taken at construction. Nothing re-evaluates the now-stuck preset automatically — until
+    // StartReady runs again for ANY reason (here, requesting a second, unrelated, already-installed-packs preset),
+    // since it always re-walks the WHOLE catalog, not just the one just requested.
+    [Fact]
+    public void A_required_pack_stuck_neither_installed_nor_progressing_fails_the_waiting_preset()
+    {
+        _dirs.Add(PackCatalog.EffectsFolder("/data", PackCatalog.Standard));
+        _dirs.Add(PackCatalog.PackFolder("/data", PackCatalog.SweetFx));   // a stale/partial folder -> UpdateAvailable
+        _dirs.Add(PackCatalog.EffectsFolder("/data", PackCatalog.Prod80));
+        SynchronizationContext.SetSynchronizationContext(null);
+        var serial = new SerialDownloads(_dl);
+        var packs = new PackInstaller(serial, PackCatalog.All, _dirs.Contains, _warnings.Add);
+        var i = new PresetInstaller(serial, packs, PresetCatalog.All, _files, _warnings.Add);
+        var c = PresetCatalog.CleanSharpen;   // needs [standard, sweetfx]; standard installed, sweetfx UpdateAvailable
+        i.Request(c);
+        // Request() itself re-queues SweetFX immediately (UpdateAvailable != Installed) — not stuck yet.
+        Assert.Equal(PackStatus.Downloading, packs.Status(PackCatalog.SweetFx));
+        Assert.Equal(PresetStatus.Queued, i.Status(c));
+        // The plugin unloads mid-download: cancel SweetFX's in-flight download without ever raising PackFailed.
+        packs.Dispose();
+        Assert.Equal(PackStatus.UpdateAvailable, packs.Status(PackCatalog.SweetFx));   // reverted to the stale disk read
+        Assert.Equal(PresetStatus.Queued, i.Status(c));   // nothing has told it yet
+        // Requesting an unrelated preset whose packs are ALL already installed re-walks the whole catalog in
+        // StartReady, which must now notice SweetFX is stuck and fail c instead of leaving it Queued forever.
+        var other = PresetCatalog.StellaMedium;   // needs [standard, prod80] only — never touches sweetfx
+        i.Request(other);
+        Assert.Equal(PresetStatus.Failed, i.Status(c));
+        Assert.Equal("SweetFX", i.FailedRequirement(c));
+    }
 }

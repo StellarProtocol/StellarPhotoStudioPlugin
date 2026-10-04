@@ -160,4 +160,23 @@ public sealed class PackInstallerTests
         Assert.Equal(2, _dl.Calls.Count);   // the pump reached Prod80 despite the throwing subscriber
         Assert.Equal("reshade/packs/prod80", _dl.Calls[1].Request.TargetPath);
     }
+
+    // Review fix round 2, item 3: PacksChanged (the SUCCESS event) needs the same per-subscriber try/catch as
+    // PackFailed already has — a throwing subscriber here used to propagate out of InstallOneAsync's success branch,
+    // straight into PumpAsync's catch(Exception), which stops the pump (_pumping=false) before the next queued pack
+    // (Prod80, already sitting in the queue) is ever reached.
+    [Fact]
+    public void A_throwing_PacksChanged_subscriber_does_not_stop_the_pump_from_reaching_the_next_pack()
+    {
+        _dirs.Add(PackCatalog.EffectsFolder("/data", PackCatalog.Standard));
+        var i = Make();
+        i.PacksChanged += () => throw new InvalidOperationException("boom");
+        i.Request(PackCatalog.SweetFx);
+        i.Request(PackCatalog.Prod80);
+        Assert.Single(_dl.Calls);   // only SweetFX has started; Prod80 is queued behind it
+        Succeed(0, PackCatalog.SweetFx);
+        Assert.Equal(PackStatus.Installed, i.Status(PackCatalog.SweetFx));
+        Assert.Equal(2, _dl.Calls.Count);   // the pump reached Prod80 despite the throwing subscriber
+        Assert.Equal("reshade/packs/prod80", _dl.Calls[1].Request.TargetPath);
+    }
 }

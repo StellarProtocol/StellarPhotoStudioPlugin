@@ -102,12 +102,38 @@ internal sealed class PresetInstaller : IDisposable
         return true;
     }
 
-    /// <summary>After a request and on every PacksChanged: start each waiting preset whose packs are all installed.</summary>
+    /// <summary>After a request and on every PacksChanged: start each waiting preset whose packs are all installed, and
+    /// fail any waiting preset stuck on a required pack that is neither installed nor actively progressing (queued or
+    /// downloading) — e.g. UpdateAvailable: a pack whose in-flight download was cancelled (PackInstaller.Dispose())
+    /// reverts to its stale disk status without ever raising PackFailed, so nothing else would ever notice.</summary>
     private void StartReady()
     {
         foreach (var e in _catalog)
-            if (_live.TryGetValue(e.Id, out var s) && s.Status == PresetStatus.Queued && PacksReady(e))
-                _ = InstallAsync(e, s);
+        {
+            if (!_live.TryGetValue(e.Id, out var s) || s.Status != PresetStatus.Queued) continue;
+            if (PacksReady(e)) { _ = InstallAsync(e, s); continue; }
+            if (StuckRequirement(e) is { } stuck)
+            {
+                s.Status = PresetStatus.Failed;
+                s.Error = _packs.Error(stuck) ?? "";
+                s.FailedRequirement = stuck.Name;
+            }
+        }
+    }
+
+    /// <summary>The first required pack that is neither installed nor actively progressing (queued/downloading), or
+    /// null while every not-yet-installed requirement is still making progress. A fresh Request() call always pushes
+    /// every requirement before StartReady ever runs, so this only ever finds something on a LATER StartReady call,
+    /// once a pack that was progressing has since reverted (e.g. a cancelled in-flight download).</summary>
+    private ShaderPack? StuckRequirement(PresetEntry e)
+    {
+        foreach (var p in PresetCatalog.PacksWithRequires(e))
+        {
+            var status = _packs.Status(p);
+            if (status is PackStatus.Installed or PackStatus.Queued or PackStatus.Downloading) continue;
+            return p;
+        }
+        return null;
     }
 
     /// <summary>A pack's own download failed: fail every preset waiting on it, via <see cref="PresetCatalog.PacksWithRequires"/>
