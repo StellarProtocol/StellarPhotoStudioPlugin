@@ -96,4 +96,34 @@ public sealed class PresetOverridesTests
     }
 
     private static string Sha(string s) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(s)));
+
+    // 2026-10-04 (AcerolaFX Mask UI): a per-entry value override sets "Key=Value" lines at column 0 in whichever section
+    // they appear; nothing else changes, and a text whose values already match comes back as the same instance.
+    private static readonly System.Collections.Generic.KeyValuePair<string, string>[] MaskOff =
+        { new("_MaskUI", "0") };
+
+    [Fact]
+    public void Sets_a_value_in_every_section_where_the_key_appears()
+    {
+        var text = "Techniques=A@A.fx\r\n\r\n[A.fx]\r\n_MaskUI=1\r\n_MaskUIx=1\r\nx_MaskUI=1\r\n\r\n[B.fx]\r\n_MaskUI=1\r\nOther=1\r\n";
+        Assert.Equal("Techniques=A@A.fx\r\n\r\n[A.fx]\r\n_MaskUI=0\r\n_MaskUIx=1\r\nx_MaskUI=1\r\n\r\n[B.fx]\r\n_MaskUI=0\r\nOther=1\r\n",
+            PresetOverrides.Apply(text, Array.Empty<string>(), MaskOff));
+    }
+
+    [Fact]
+    public void A_value_that_already_matches_keeps_the_same_instance()
+    {
+        var text = "[End.fx]\n_MaskUI=0\n";
+        Assert.Same(text, PresetOverrides.Apply(text, Array.Empty<string>(), MaskOff));
+        var noKey = "[End.fx]\nOther=1";   // no trailing newline either
+        Assert.Same(noKey, PresetOverrides.Apply(noKey, Array.Empty<string>(), MaskOff));
+    }
+
+    [Fact]
+    public void Sets_values_and_drops_definitions_in_one_pass()
+    {
+        var text = "PreprocessorDefinitions=RESHADE_DEPTH_INPUT_IS_REVERSED=1,KEEP=1\n[End.fx]\n_MaskUI=1";
+        Assert.Equal("PreprocessorDefinitions=KEEP=1\n[End.fx]\n_MaskUI=0",
+            PresetOverrides.Apply(text, Array.Empty<string>(), MaskOff));
+    }
 }

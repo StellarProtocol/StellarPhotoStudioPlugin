@@ -355,4 +355,96 @@ public sealed class PresetInstallerTests
         i.Request(PresetCatalog.StarLuxeGalactic);
         Assert.Equal(DownloadFailure.None, i.FailureKind(PresetCatalog.StarLuxeGalactic));   // Queued, not Failed
     }
+
+    // 2026-10-04 AcerolaFX Mask UI fix. The installed copy sets _MaskUI=0 (PresetEntry.SetValues). A copy written by the
+    // earlier transform (then: the download itself) that the player never changed is brought up to date when the
+    // installer starts; any other copy is the player's and stays untouched ("edits are never lost") — logged instead.
+    private const string AcerolaSource = "Techniques=AcerolaFXStart@AcerolaFX_Start.fx,AcerolaFXEnd@AcerolaFX_End.fx\n\n[AcerolaFX_End.fx]\n_MaskUI=1\n";
+    private const string AcerolaFixed = "Techniques=AcerolaFXStart@AcerolaFX_Start.fx,AcerolaFXEnd@AcerolaFX_End.fx\n\n[AcerolaFX_End.fx]\n_MaskUI=0\n";
+
+    [Fact]
+    public void A_fresh_AcerolaFx_install_writes_the_copy_with_Mask_UI_off_and_keeps_the_download()
+    {
+        HavePacks(PackCatalog.AcerolaFx);
+        var i = Make();
+        var a = PresetCatalog.AcerolaDraft;
+        i.Request(a);
+        PresetDone(0, a, AcerolaSource);
+        Assert.Equal(AcerolaSource, _files.Files[Source(a)]);
+        Assert.Equal(AcerolaFixed, _files.Files[Installed(a)]);
+    }
+
+    [Fact]
+    public void An_unedited_copy_from_the_earlier_transform_is_updated_at_start()
+    {
+        var a = PresetCatalog.AcerolaGoldenAge;
+        _files.Files[Source(a)] = AcerolaSource;
+        _files.Files[Installed(a)] = AcerolaSource;   // what the earlier transform wrote: the download, byte for byte
+        var i = Make();
+        Assert.Equal(AcerolaFixed, _files.Files[Installed(a)]);
+        Assert.Equal(new[] { Installed(a) }, _files.Replaces);
+        Assert.Equal(AcerolaSource, _files.Files[Source(a)]);   // the checked download is never rewritten
+        Assert.Equal(PresetStatus.Installed, i.Status(a));
+        Assert.Empty(_files.Writes);
+        Assert.Empty(_warnings);
+    }
+
+    [Fact]
+    public void An_edited_copy_is_never_touched_and_the_skipped_fix_is_logged()
+    {
+        var a = PresetCatalog.AcerolaDistantPast;
+        _files.Files[Source(a)] = AcerolaSource;
+        const string edited = "[AcerolaFX_End.fx]\n_MaskUI=1\nSomethingTheyChanged=2\n";   // e.g. ReShade autosaved a toggle
+        _files.Files[Installed(a)] = edited;
+        Make();
+        Assert.Equal(edited, _files.Files[Installed(a)]);
+        Assert.Empty(_files.Replaces);
+        Assert.Contains(_warnings, w => w.Contains("acerolafx-distant-past") && w.Contains("Mask UI"));
+    }
+
+    [Fact]
+    public void An_up_to_date_copy_or_a_missing_download_changes_nothing()
+    {
+        var done = PresetCatalog.AcerolaGameplay;
+        _files.Files[Source(done)] = AcerolaSource;
+        _files.Files[Installed(done)] = AcerolaFixed;
+        var noSource = PresetCatalog.AcerolaDraft;
+        _files.Files[Installed(noSource)] = AcerolaSource;   // its preset-sources file is gone: nothing to compare against
+        var cleanSharpen = PresetCatalog.CleanSharpen;
+        _files.Files[Installed(cleanSharpen)] = "own preset, untouched";   // entries without SetValues are never examined
+        Make();
+        Assert.Empty(_files.Replaces);
+        Assert.Equal(AcerolaFixed, _files.Files[Installed(done)]);
+        Assert.Equal(AcerolaSource, _files.Files[Installed(noSource)]);
+        Assert.DoesNotContain(_warnings, w => w.Contains("acerolafx-gameplay"));
+        Assert.Contains(_warnings, w => w.Contains("acerolafx-draft"));
+    }
+
+    // Owner's real case 2026-10-04: ReShade autosaved the installed AcerolaFX Draft copy after Mask UI was unticked in its
+    // menu. It differs from the earlier transform's output, so it is the player's copy and stays untouched — and since it
+    // already has every Mask UI off, there is nothing to report either.
+    [Fact]
+    public void A_ReShade_autosaved_copy_that_already_has_Mask_UI_off_is_left_alone_without_a_warning()
+    {
+        var a = PresetCatalog.AcerolaDraft;
+        _files.Files[Source(a)] = AcerolaSource;
+        const string autosaved = "PreprocessorDefinitions=\nTechniques=AcerolaFXStart@AcerolaFX_Start.fx,AcerolaFXEnd@AcerolaFX_End.fx\n\n[AcerolaFX_End.fx]\n_MaskUI=0\n";
+        _files.Files[Installed(a)] = autosaved;
+        Make();
+        Assert.Equal(autosaved, _files.Files[Installed(a)]);
+        Assert.Empty(_files.Replaces);
+        Assert.Empty(_warnings);
+    }
+
+    [Fact]
+    public void An_edited_copy_with_Mask_UI_off_in_only_some_sections_still_reports_the_skipped_fix()
+    {
+        var a = PresetCatalog.AcerolaDistantPast;
+        _files.Files[Source(a)] = AcerolaSource;
+        const string partly = "[AcerolaFX_CRT.fx]\n_MaskUI=1\n\n[AcerolaFX_End.fx]\n_MaskUI=0\n";
+        _files.Files[Installed(a)] = partly;
+        Make();
+        Assert.Equal(partly, _files.Files[Installed(a)]);
+        Assert.Contains(_warnings, w => w.Contains("acerolafx-distant-past"));
+    }
 }

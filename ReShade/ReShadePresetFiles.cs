@@ -12,6 +12,10 @@ internal interface IReShadePresetFiles
     /// <summary>Writes a NEW file (temp file + move). Returns false and writes nothing when the file exists: an installed
     /// preset is never overwritten — ReShade saves the player's technique switches into it (edits are never lost).</summary>
     bool WriteNew(string path, string text);
+
+    /// <summary>Replaces the file with <paramref name="text"/> only while it still holds exactly <paramref name="expected"/>
+    /// (an unedited working copy); false, touching nothing, otherwise.</summary>
+    bool ReplaceIfEqual(string path, string expected, string text);
 }
 
 internal sealed class DiskReShadePresetFiles : IReShadePresetFiles
@@ -52,6 +56,24 @@ internal sealed class DiskReShadePresetFiles : IReShadePresetFiles
     /// a race with something else) must never replace the caller's real error — mirrors
     /// PluginDownloadService.SwapDirectory's own best-effort cleanup. Internal (not private) so a white-box test can
     /// exercise the swallow path directly, without needing to fabricate a real fault at the exact randomized temp path.</summary>
+    public bool ReplaceIfEqual(string path, string expected, string text)
+    {
+        if (!File.Exists(path) || !Utf8.GetBytes(expected).AsSpan().SequenceEqual(File.ReadAllBytes(path))) return false;
+        var tmp = path + ".new-" + Guid.NewGuid().ToString("N");
+        try
+        {
+            File.WriteAllBytes(tmp, Utf8.GetBytes(text));
+            // Re-check right before the swap: ReShade autosaves the preset it has loaded, and its save must win.
+            if (!Utf8.GetBytes(expected).AsSpan().SequenceEqual(File.ReadAllBytes(path))) return false;
+            File.Move(tmp, path, overwrite: true);
+            return true;
+        }
+        finally
+        {
+            TryDeleteTemp(tmp);
+        }
+    }
+
     internal static void TryDeleteTemp(string path)
     {
         try

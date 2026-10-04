@@ -74,18 +74,41 @@ public sealed class PackCatalogTests
     }
 
     [Fact]
-    public void FxShaders_and_OtisFx_extract_their_Shaders_and_Textures_folders()
+    public void OtisFx_extracts_its_Shaders_and_Textures_folders()
     {
-        Assert.Equal(new[]
-        {
-            "FXShaders-76365e35c48e30170985ca371e67d8daf8eb9a98/Shaders/",
-            "FXShaders-76365e35c48e30170985ca371e67d8daf8eb9a98/Textures/",
-        }, PackCatalog.Request(PackCatalog.FxShaders).IncludePrefixes);
         Assert.Equal(new[]
         {
             "OtisFX-193aa0bf07ee82fbd5f142b5b813b19c5d169745/Shaders/",
             "OtisFX-193aa0bf07ee82fbd5f142b5b813b19c5d169745/Textures/",
         }, PackCatalog.Request(PackCatalog.OtisFx).IncludePrefixes);
+    }
+
+    // Found in game 2026-10-04: FXShaders' GrainSpread.fx fails under Microsoft's d3dcompiler_47 on every load (X4566:
+    // offset texture instructions must take an offset that resolves to an integer literal in -8..7) and shows as a red
+    // entry in ReShade's menu. No other FXShaders file includes it and no catalog preset uses it, so FXShaders extracts
+    // its Shaders file by file (every one but GrainSpread.fx, measured from the zip at 76365e3), its FXShaders/ header
+    // folder and Textures/.
+    [Fact]
+    public void FxShaders_extracts_everything_but_GrainSpread()
+    {
+        const string root = "FXShaders-76365e35c48e30170985ca371e67d8daf8eb9a98/";
+        var prefixes = PackCatalog.Request(PackCatalog.FxShaders).IncludePrefixes!;
+        var effects = new[]
+        {
+            "AdaptiveTonemapper", "ArcaneBloom", "ArtisticVignette", "AspectRatioSuite", "CRT_Lottes", "CRT_Yee64", "CRT_Yeetron",
+            "Checkerboard", "ColorLab", "Cursor", "DepthAlpha", "Dither", "Flashlight", "FlexibleCA", "FocalDOF", "FramerateLimiter",
+            "HexLensFlare", "LiquidLens", "MBMB", "MagicHDR", "MinimalColorGrading", "MultiFX", "NeoBloom", "NormalMap", "Overlay",
+            "PiecewiseFilmicTonemap", "Pong", "RetroFog", "SCurve", "Sketch", "TrackingRays", "UnrealLens", "Unsharp",
+            "VirtualResolution", "WhitepointFixer",
+        };
+        var headers = new[] { "ACES", "ArcaneBloom", "CRT_Lottes", "ColorLab", "KeyCodes" };
+        Assert.Equal(effects.Select(e => root + "Shaders/" + e + ".fx")
+            .Concat(headers.Select(h => root + "Shaders/" + h + ".fxh"))
+            .Concat(new[] { root + "Shaders/FXShaders/", root + "Textures/" }).ToArray(), prefixes);
+        Assert.DoesNotContain(prefixes, x => x.Contains("GrainSpread") || x == root + "Shaders/");
+        Assert.Contains(root + "Shaders/MagicHDR.fx", prefixes);   // the Stella presets' MagicHDR stays
+        foreach (var e in PresetCatalog.All)
+            if (e.Kind == PresetKind.Own) Assert.DoesNotContain("GrainSpread", OwnPresets.Text(e.Id));
     }
 
     // AcerolaFX ships a cut-down Shaders/ReShade.fxh that none of its own effects include. ReShade 6.8.0 resolves an

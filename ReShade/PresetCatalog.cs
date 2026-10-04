@@ -43,6 +43,8 @@ internal sealed record PresetEntry
     public bool Adjusted { get; init; }
     /// <summary>Definitions left out of the installed copy besides every RESHADE_DEPTH_* one (textures no pack ships).</summary>
     public IReadOnlyList<string> DropDefinitions { get; init; } = Array.Empty<string>();
+    /// <summary>Values the installed copy sets wherever the key appears (any section), e.g. AcerolaFX's _MaskUI=0.</summary>
+    public IReadOnlyList<KeyValuePair<string, string>> SetValues { get; init; } = Array.Empty<KeyValuePair<string, string>>();
     public LinkReason Reason { get; init; }
 
     public bool Installable => Kind != PresetKind.LinkOnly;
@@ -71,6 +73,8 @@ internal static class PresetCatalog
 
     private const string AcerolaCommit = "c33f779b093fa1e25faf0c77ef22c3fe6902e2fe";
     private const string AcerolaRepo = "https://github.com/GarrettGunnell/AcerolaFX";
+    // Declared before the entries that use it: static initializers run in textual order.
+    private static readonly KeyValuePair<string, string>[] MaskUiOff = { new("_MaskUI", "0") };
 
     private const string OkamiCommit = "53e9fe085845093f50189dc5cce9419e88e423ed";
     private const string OkamiRepo = "https://github.com/MeynanAneytha/YomigamiOkami-reshade-shaders";
@@ -110,7 +114,10 @@ internal static class PresetCatalog
     // AcerolaFX's own presets (owner 2026-10-04, option b — they carry the AcerolaFXStart … AcerolaFXEnd order its
     // effects need). Chosen: distinct looks, all techniques present at c33f779, no removed technique and no "+suffix"
     // duplicate (so not Hasaki). Covered counts the clone techniques the preset's own AFX_*_COUNT definitions create
-    // (coverage rule v2, PresetEntry.Covered). No RESHADE_DEPTH_* and no missing texture: the installed copy is the download.
+    // (coverage rule v2, PresetEntry.Covered). No RESHADE_DEPTH_* and no missing texture, but they are Adjusted: the
+    // installed copy turns every "Mask UI" off (_MaskUI=0). AcerolaFX was made for FFXIV, whose backbuffer alpha marks
+    // UI; this game's alpha is 1 everywhere, so with Mask UI on, AcerolaFXEnd (and CRT/Dither) restore the original
+    // frame and the look disappears (found + confirmed in game 2026-10-04).
     public static readonly PresetEntry AcerolaGameplay = Acerola("acerolafx-gameplay", "Gameplay", "GameplayLowest",
         "b6f353924a8bb8755506fafaa043bb4f026fa87984ffb616649b7b0c6499c6c1", 3451, 9);   // the only one without XeGTAO
     public static readonly PresetEntry AcerolaGoldenAge = Acerola("acerolafx-golden-age", "Golden Age", "GoldenAge",
@@ -198,6 +205,7 @@ internal static class PresetCatalog
         PageUrl = AcerolaRepo + "/tree/" + AcerolaCommit + "/Presets", Commit = AcerolaCommit,
         RawUrl = "https://raw.githubusercontent.com/GarrettGunnell/AcerolaFX/" + AcerolaCommit + "/Presets/AcerolaFX_" + file + ".ini",
         Sha256 = sha, Size = size, Packs = new[] { "acerolafx" }, Covered = techniques, Total = techniques,
+        Adjusted = true, SetValues = MaskUiOff,
     };
 
     private static PresetEntry Link(string id, string name, string author, string page, LinkReason reason) => new()

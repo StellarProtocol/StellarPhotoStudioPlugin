@@ -53,6 +53,7 @@ internal sealed class PresetInstaller : IDisposable
         _packs.PacksChanged += _onPacksChanged;
         _packs.PackFailed += _onPackFailed;
         Rescan();
+        RefreshUneditedCopies();
     }
 
     /// <summary>A preset was installed (the plugin rescans the Preset dropdown).</summary>
@@ -223,7 +224,42 @@ internal sealed class PresetInstaller : IDisposable
             Fail(e, s, result.Error ?? "");
             return null;
         }
-        return PresetOverrides.Apply(_files.ReadAllText(result.Folder), e.DropDefinitions);   // Folder = the exact FILE path
+        return PresetOverrides.WorkingCopy(e, _files.ReadAllText(result.Folder));   // Folder = the exact FILE path
+    }
+
+    /// <summary>Once, at start: an installed copy of an entry with <see cref="PresetEntry.SetValues"/> that still equals
+    /// what the earlier transform wrote (so the player never changed it) is rewritten with the values set. Any other copy
+    /// is the player's — ReShade autosaves the loaded preset, so a used copy usually differs — and is never touched
+    /// (edits are never lost); it is logged unless it already carries the values. Never throws.</summary>
+    private void RefreshUneditedCopies()
+    {
+        foreach (var e in _catalog)
+        {
+            if (e.SetValues.Count == 0 || !_disk.TryGetValue(e.Id, out var on) || !on) continue;
+            try
+            {
+                RefreshUneditedCopy(e);
+            }
+            catch (Exception ex)
+            {
+                _warn($"[PhotoStudio] ReShade preset '{e.Id}': could not check the installed copy: {ex.Message}");
+            }
+        }
+    }
+
+    private void RefreshUneditedCopy(PresetEntry e)
+    {
+        var path = PresetPath(e);
+        var copy = _files.ReadAllText(path);
+        if (PresetOverrides.HasValues(copy, e.SetValues)) return;   // already right (fresh install, or set by the player)
+        var source = Path.Combine(_downloads.DataFolder, e.SourcePath);
+        if (_files.Exists(source))
+        {
+            var text = _files.ReadAllText(source);
+            if (_files.ReplaceIfEqual(path, PresetOverrides.PreviousWorkingCopy(e, text), PresetOverrides.WorkingCopy(e, text))) return;
+        }
+        _warn($"[PhotoStudio] ReShade preset '{e.Id}': your copy has changes, so Photo Studio left it as it is. "
+            + "Its Mask UI switches are still on; untick Mask UI in ReShade's menu (AcerolaFXEnd) or the look will not show.");
     }
 
     private void Fail(PresetEntry e, LiveState s, string error)

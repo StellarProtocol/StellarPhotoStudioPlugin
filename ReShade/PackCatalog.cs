@@ -85,6 +85,7 @@ internal static class PackCatalog
         License = "MIT",
         LicenseUrl = "https://github.com/luluco250/FXShaders/blob/76365e35c48e30170985ca371e67d8daf8eb9a98/LICENSE",
         Requires = new[] { "standard" },
+        Extract = FxShadersExtract(),   // every Shaders file but GrainSpread.fx (d3dcompiler_47 X4566 on every load)
     };
 
     /// <summary>Self-contained (its Common.fxh carries its own ReShade namespace), so no Requires. Extracted effect by
@@ -128,6 +129,28 @@ internal static class PackCatalog
         var prefixes = new string[p.Extract.Count];
         for (var i = 0; i < prefixes.Length; i++) prefixes[i] = p.ArchiveRoot + "/" + p.Extract[i];
         return new DownloadRequest(p.ArchiveUrl, p.Sha256, p.Size, p.TargetPath, ExtractZip: true, IncludePrefixes: prefixes);
+    }
+
+    /// <summary>FXShaders at the pinned commit file by file, minus GrainSpread.fx: Microsoft's d3dcompiler_47 rejects it on
+    /// every load (X4566, an offset texture instruction whose offset is not an integer literal in -8..7) and ReShade lists
+    /// it as a red error (found in game 2026-10-04). Nothing includes it and no catalog preset uses it.</summary>
+    private static string[] FxShadersExtract()
+    {
+        var effects = new[]
+        {
+            "AdaptiveTonemapper", "ArcaneBloom", "ArtisticVignette", "AspectRatioSuite", "CRT_Lottes", "CRT_Yee64", "CRT_Yeetron",
+            "Checkerboard", "ColorLab", "Cursor", "DepthAlpha", "Dither", "Flashlight", "FlexibleCA", "FocalDOF", "FramerateLimiter",
+            "HexLensFlare", "LiquidLens", "MBMB", "MagicHDR", "MinimalColorGrading", "MultiFX", "NeoBloom", "NormalMap", "Overlay",
+            "PiecewiseFilmicTonemap", "Pong", "RetroFog", "SCurve", "Sketch", "TrackingRays", "UnrealLens", "Unsharp",
+            "VirtualResolution", "WhitepointFixer",
+        };
+        var headers = new[] { "ACES", "ArcaneBloom", "CRT_Lottes", "ColorLab", "KeyCodes" };
+        var list = new List<string>(effects.Length + headers.Length + 2);
+        foreach (var e in effects) list.Add("Shaders/" + e + ".fx");
+        foreach (var h in headers) list.Add("Shaders/" + h + ".fxh");
+        list.Add("Shaders/FXShaders/");
+        list.Add("Textures/");
+        return list.ToArray();
     }
 
     /// <summary>Every AcerolaFX effect at the pinned commit (34), its Includes folder and its Textures — not Shaders/ReShade.fxh.</summary>

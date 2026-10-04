@@ -18,6 +18,16 @@ internal sealed class FakeReShadePresetFiles : IReShadePresetFiles
 
     public string ReadAllText(string path) => Files[path];
 
+    public readonly List<string> Replaces = new();
+
+    public bool ReplaceIfEqual(string path, string expected, string text)
+    {
+        if (!Files.TryGetValue(path, out var now) || !string.Equals(now, expected, StringComparison.Ordinal)) return false;
+        Files[path] = text;
+        Replaces.Add(path);
+        return true;
+    }
+
     public bool WriteNew(string path, string text)
     {
         if (Files.ContainsKey(path)) return false;

@@ -38,16 +38,16 @@ public sealed class PresetCatalogTests
         "9a0d12003cd004f18a437966f7e278b8d259695bee5783e56b047bfc3fcb5677", 2863L, "MIT", 13, 19, false)]
     [InlineData("acerolafx-gameplay", "AcerolaFX Gameplay.ini",
         "https://raw.githubusercontent.com/GarrettGunnell/AcerolaFX/c33f779b093fa1e25faf0c77ef22c3fe6902e2fe/Presets/AcerolaFX_GameplayLowest.ini",
-        "b6f353924a8bb8755506fafaa043bb4f026fa87984ffb616649b7b0c6499c6c1", 3451L, "MIT", 9, 9, false)]
+        "b6f353924a8bb8755506fafaa043bb4f026fa87984ffb616649b7b0c6499c6c1", 3451L, "MIT", 9, 9, true)]
     [InlineData("acerolafx-golden-age", "AcerolaFX Golden Age.ini",
         "https://raw.githubusercontent.com/GarrettGunnell/AcerolaFX/c33f779b093fa1e25faf0c77ef22c3fe6902e2fe/Presets/AcerolaFX_GoldenAge.ini",
-        "f541340d06e8596374f0f6c8e0d6e2b81bf1d22bd13045030398ff7a6a4b1ff4", 8210L, "MIT", 10, 10, false)]
+        "f541340d06e8596374f0f6c8e0d6e2b81bf1d22bd13045030398ff7a6a4b1ff4", 8210L, "MIT", 10, 10, true)]
     [InlineData("acerolafx-draft", "AcerolaFX Draft.ini",
         "https://raw.githubusercontent.com/GarrettGunnell/AcerolaFX/c33f779b093fa1e25faf0c77ef22c3fe6902e2fe/Presets/AcerolaFX_Draft.ini",
-        "b8911c98c07b6a4b025afdee8ab6a4c99340b01f840624d088c30680f8feb53f", 5746L, "MIT", 7, 7, false)]
+        "b8911c98c07b6a4b025afdee8ab6a4c99340b01f840624d088c30680f8feb53f", 5746L, "MIT", 7, 7, true)]
     [InlineData("acerolafx-distant-past", "AcerolaFX Distant Past.ini",
         "https://raw.githubusercontent.com/GarrettGunnell/AcerolaFX/c33f779b093fa1e25faf0c77ef22c3fe6902e2fe/Presets/AcerolaFX_DistantPast.ini",
-        "2dd34d8df4eeb0fd0b49a4e01cf30a518bed9f452980acbfd6c347f5502679a5", 4195L, "MIT", 18, 18, false)]
+        "2dd34d8df4eeb0fd0b49a4e01cf30a518bed9f452980acbfd6c347f5502679a5", 4195L, "MIT", 18, 18, true)]
     public void Community_presets_pin_the_measured_files(string id, string file, string raw, string sha, long size, string license,
         int covered, int total, bool adjusted)
     {
@@ -88,7 +88,7 @@ public sealed class PresetCatalogTests
             Assert.Equal(new[] { "acerolafx" }, a.Packs);
             Assert.Equal(new[] { "acerolafx" }, PresetCatalog.PacksWithRequires(a).Select(p => p.Id).ToArray());   // needs no standard
             Assert.False(a.Partial);   // full coverage through its own clone definitions — no false "partial" badge
-            Assert.Empty(a.DropDefinitions);   // no RESHADE_DEPTH_* and no missing texture: the installed copy is the download
+            Assert.Empty(a.DropDefinitions);   // no RESHADE_DEPTH_* and no missing texture; Mask UI is the one adjusted value
             Assert.Equal("https://github.com/GarrettGunnell/AcerolaFX/blob/c33f779b093fa1e25faf0c77ef22c3fe6902e2fe/LICENSE.md", a.LicenseUrl);
             Assert.Equal("https://github.com/GarrettGunnell/AcerolaFX/tree/c33f779b093fa1e25faf0c77ef22c3fe6902e2fe/Presets", a.PageUrl);
         }
