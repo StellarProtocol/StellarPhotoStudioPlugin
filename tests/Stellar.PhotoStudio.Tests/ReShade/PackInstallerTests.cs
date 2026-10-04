@@ -128,4 +128,16 @@ public sealed class PackInstallerTests
         Assert.Equal(PackStatus.NotInstalled, i.Status(PackCatalog.Standard));
         Assert.Empty(_warnings);
     }
+
+    [Fact]
+    public void A_failed_pack_raises_PackFailed_once_after_its_status_is_failed()
+    {
+        var i = Make();
+        var seen = new List<(string Id, PackStatus Status)>();
+        i.PackFailed += p => seen.Add((p.Id, i.Status(p)));
+        i.Request(PackCatalog.SweetFx);
+        _dl.Calls[0].Done.SetResult(new DownloadResult(false, null, "checksum mismatch"));
+        Assert.Equal(new[] { ("standard", PackStatus.Failed) }, seen);   // SweetFX fails with it (FailDependents) — no event of its own
+        Assert.Equal(PackStatus.Failed, i.Status(PackCatalog.SweetFx));
+    }
 }

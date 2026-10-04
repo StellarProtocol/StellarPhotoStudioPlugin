@@ -55,6 +55,10 @@ internal sealed class PackInstaller : IDisposable
     /// <summary>A pack finished installing (the search paths changed). Main thread.</summary>
     public event Action? PacksChanged;
 
+    /// <summary>A pack's own download failed (raised after its status is Failed; dependents failed with it raise nothing).
+    /// The preset installer fails the presets waiting for it.</summary>
+    public event Action<ShaderPack>? PackFailed;
+
     public PackStatus Status(ShaderPack p) =>
         _live.TryGetValue(p.Id, out var s) ? s.Status : _disk.TryGetValue(p.Id, out var d) ? d : PackStatus.NotInstalled;
 
@@ -172,6 +176,7 @@ internal sealed class PackInstaller : IDisposable
         state.Error = result.Error ?? "";
         _warn($"[PhotoStudio] shader pack '{p.Id}' download failed: {result.Error}");
         FailDependents(p, state.Error);
+        PackFailed?.Invoke(p);
     }
 
     /// <summary>Queued packs that require <paramref name="failed"/> fail too, never downloaded; they keep the requirement's
