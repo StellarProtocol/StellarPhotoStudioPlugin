@@ -11,7 +11,16 @@ public sealed class PresetFilesTests : IDisposable
 
     public void Dispose()
     {
+        // Undo any permission-bit trick before the recursive delete, or it would itself fail to remove the folder.
+        if (Directory.Exists(_dir)) TryRestoreWritable(_dir);
         if (Directory.Exists(_dir)) Directory.Delete(_dir, recursive: true);
+    }
+
+    private static void TryRestoreWritable(string dir)
+    {
+        if (!OperatingSystem.IsLinux()) return;
+        try { File.SetUnixFileMode(dir, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute); }
+        catch { /* best-effort cleanup only */ }
     }
 
     [Fact]
@@ -35,5 +44,50 @@ public sealed class PresetFilesTests : IDisposable
         Assert.True(f.WriteNew(path, text));
         Assert.Equal(new byte[] { 0xEF, 0xBB, 0xBF }, File.ReadAllBytes(path)[..3]);
         Assert.Equal(text, f.ReadAllText(path));
+    }
+
+    // Review fix round 2, item 2: a unique temp name per call (not a fixed ".tmp") plus an isolated try/catch around
+    // the cleanup delete, so a failure while cleaning up never hides the real error from WriteAllBytes.
+    [Fact]
+    public void WriteNew_propagates_the_original_error_and_leaves_no_temp_file_when_the_write_itself_fails()
+    {
+        if (!OperatingSystem.IsLinux()) return;   // the permission-bit trick is POSIX-specific
+        var dir = Path.Combine(_dir, "presets");
+        Directory.CreateDirectory(dir);
+        File.SetUnixFileMode(dir, UnixFileMode.UserRead | UnixFileMode.UserExecute);   // traversable, not writable
+        try
+        {
+            var f = new DiskReShadePresetFiles();
+            var path = Path.Combine(dir, "Soft anime.ini");
+            Assert.Throws<UnauthorizedAccessException>(() => f.WriteNew(path, "Techniques=A@A.fx\n"));
+        }
+        finally
+        {
+            TryRestoreWritable(dir);
+        }
+        Assert.Empty(Directory.GetFiles(dir));   // nothing half-written left behind, under either temp-name scheme
+    }
+
+    // The cleanup delete itself must be unable to hide the original error: force File.Delete to fail (the directory
+    // holding the leftover temp file loses write access) and confirm TryDeleteTemp swallows it rather than throwing —
+    // mirrors the framework's own PluginDownloadService.SwapDirectory pattern (an internal seam for exactly this).
+    [Fact]
+    public void TryDeleteTemp_swallows_a_delete_failure_instead_of_letting_it_propagate()
+    {
+        if (!OperatingSystem.IsLinux()) return;
+        var dir = Path.Combine(_dir, "locked");
+        Directory.CreateDirectory(dir);
+        var orphan = Path.Combine(dir, "x.ini.new-abc123");
+        File.WriteAllText(orphan, "partial");
+        File.SetUnixFileMode(dir, UnixFileMode.UserRead | UnixFileMode.UserExecute);   // can't unlink inside it now
+        try
+        {
+            var ex = Record.Exception(() => DiskReShadePresetFiles.TryDeleteTemp(orphan));
+            Assert.Null(ex);
+        }
+        finally
+        {
+            TryRestoreWritable(dir);
+        }
     }
 }

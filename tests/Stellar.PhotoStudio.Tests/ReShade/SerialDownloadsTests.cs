@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Stellar.Abstractions.Domain;
 using Stellar.PhotoStudio.ReShade;
 using Xunit;
@@ -13,7 +14,7 @@ public sealed class SerialDownloadsTests
         new(new Uri("https://example.invalid/" + target), new string('0', 64), 1, target, false);
 
     [Fact]
-    public void A_second_download_starts_only_when_the_first_is_done()
+    public async Task A_second_download_starts_only_when_the_first_is_done()
     {
         SynchronizationContext.SetSynchronizationContext(null);
         var inner = new FakeDownloads();
@@ -26,7 +27,7 @@ public sealed class SerialDownloadsTests
         Assert.Equal(2, inner.Calls.Count);
         Assert.Equal("b", inner.Calls[1].Request.TargetPath);
         inner.Calls[1].Done.SetResult(new DownloadResult(false, null, "checksum mismatch"));
-        Assert.False(b.Result.Ok);
+        Assert.False((await b).Ok);
     }
 
     [Fact]
@@ -73,7 +74,7 @@ public sealed class SerialDownloadsTests
     // Review carry-over (e): a call queued behind one that FAILS (a legitimate Ok=false result, not a thrown exception
     // or a cancellation) must still start once that failure resolves.
     [Fact]
-    public void A_call_queued_behind_one_that_fails_still_starts_once_it_finishes()
+    public async Task A_call_queued_behind_one_that_fails_still_starts_once_it_finishes()
     {
         SynchronizationContext.SetSynchronizationContext(null);
         var inner = new FakeDownloads();
@@ -82,7 +83,7 @@ public sealed class SerialDownloadsTests
         var b = serial.DownloadAsync(Req("b"), null, CancellationToken.None);
         Assert.Single(inner.Calls);   // b is still queued behind a
         inner.Calls[0].Done.SetResult(new DownloadResult(false, null, "offline"));
-        Assert.False(a.Result.Ok);
+        Assert.False((await a).Ok);
         Assert.Equal(2, inner.Calls.Count);   // b started right after a's failure resolved
         Assert.Equal("b", inner.Calls[1].Request.TargetPath);
     }

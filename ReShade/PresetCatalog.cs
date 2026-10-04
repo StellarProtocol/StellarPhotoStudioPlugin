@@ -51,7 +51,7 @@ internal sealed record PresetEntry
 internal static class PresetCatalog
 {
     /// <summary>Licence shown for Photo Studio's own presets: the plugin repository's (owner ruling 2026-10-04 — own presets are AGPL-3.0).</summary>
-    public const string OwnLicense = "AGPL-3.0";
+    public const string OwnLicense = "AGPL-3.0-or-later";
     public const string OwnLicenseUrl = "https://github.com/StellarProtocol/StellarPhotoStudioPlugin/blob/main/LICENSE";
     private const string OwnPage = "https://github.com/StellarProtocol/StellarPhotoStudioPlugin/tree/main/Resources/Presets";
 

@@ -62,6 +62,14 @@ public sealed class PresetCatalogTests
         Assert.Empty(PresetCatalog.Find("stella-medium")!.DropDefinitions);   // its only override is the RESHADE_DEPTH_* rule
     }
 
+    // Review fix round 2, item 1: OwnLicense must be the plugin's EXACT licence (the README's own closing line says
+    // "AGPL-3.0-or-later"), not the shorter SPDX-adjacent "AGPL-3.0".
+    [Fact]
+    public void Own_licence_is_the_plugins_exact_licence()
+    {
+        Assert.Equal("AGPL-3.0-or-later", PresetCatalog.OwnLicense);
+    }
+
     [Theory]
     [InlineData("cinematic-warm", "Cinematic warm.ini", "sweetfx,prod80")]
     [InlineData("soft-anime", "Soft anime.ini", "sweetfx,prod80")]

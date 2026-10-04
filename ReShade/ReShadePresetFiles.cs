@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Text;
 
@@ -25,15 +26,15 @@ internal sealed class DiskReShadePresetFiles : IReShadePresetFiles
     {
         if (File.Exists(path)) return false;
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        var tmp = path + ".tmp";
+        var tmp = path + ".new-" + Guid.NewGuid().ToString("N");   // unique per call: never collides with another in flight
         try
         {
             File.WriteAllBytes(tmp, Utf8.GetBytes(text));
         }
         catch
         {
-            if (File.Exists(tmp)) File.Delete(tmp);   // never leave a half-written temp file behind
-            throw;
+            TryDeleteTemp(tmp);   // never leave a half-written temp file behind
+            throw;   // the write's own error, never the cleanup's
         }
         try
         {
@@ -41,9 +42,25 @@ internal sealed class DiskReShadePresetFiles : IReShadePresetFiles
         }
         catch (IOException) when (File.Exists(path))
         {
-            File.Delete(tmp);
+            TryDeleteTemp(tmp);
             return false;
         }
         return true;
+    }
+
+    /// <summary>Best-effort delete of an orphaned temp file. A failure here (the directory itself lost write access,
+    /// a race with something else) must never replace the caller's real error — mirrors
+    /// PluginDownloadService.SwapDirectory's own best-effort cleanup. Internal (not private) so a white-box test can
+    /// exercise the swallow path directly, without needing to fabricate a real fault at the exact randomized temp path.</summary>
+    internal static void TryDeleteTemp(string path)
+    {
+        try
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+        catch
+        {
+            // Best-effort only: the caller already has (or is about to throw/return) the real outcome.
+        }
     }
 }
