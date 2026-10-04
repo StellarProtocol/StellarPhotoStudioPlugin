@@ -34,6 +34,7 @@ itself, so they do not mark the look modified and Reset all does not undo them.
   - StarLuxe Galactic, Legacy, Luminescence — Dimitri-Matheus, [GPL-3.0](https://github.com/Dimitri-Matheus/StarLuxe/blob/6b82aff25e9eb3e69c3927ed724a2f463c92c40e/LICENSE)
   - Genshin Stella Mod default preset (Medium, High) — Sefinek, [CC BY-SA 4.0](https://github.com/Genshin-Stella-Mod/resources/blob/a15ae11517dad6c5681beb212422724c4455a276/public/resources/ReShade/Presets/LICENSE)
   - Okami City Ruins — Yomigami Okami, port by Meynan, [MIT](https://github.com/MeynanAneytha/YomigamiOkami-reshade-shaders/blob/53e9fe085845093f50189dc5cce9419e88e423ed/LICENSE)
+  - AcerolaFX Gameplay, Golden Age, Draft, Distant Past — Garrett Gunnell, [MIT](https://github.com/GarrettGunnell/AcerolaFX/blob/c33f779b093fa1e25faf0c77ef22c3fe6902e2fe/LICENSE.md)
 - **Link-only** presets (no licence for sharing) are listed with their author's page; Photo Studio never downloads them.
 - An installed preset file is never overwritten. Any other `.ini` can be added through "Open folder" + Rescan.
 

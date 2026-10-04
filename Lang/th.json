@@ -338,6 +338,7 @@
   "ps.rs.packsFrom": "ดาวน์โหลดจากแหล่งของแต่ละชุด",
   "ps.help.rs.packs": "ชุดเชเดอร์ดาวน์โหลดจากหน้า GitHub ของแต่ละชุด ในเวอร์ชันที่เราทดสอบแล้ว บางชุดต้องใช้ ReShade standard ซึ่งจะถูกดาวน์โหลดมาด้วย",
   "ps.help.rs.pack": "สัญญาอนุญาต: {0}\nแหล่งที่มา: {1}\nเวอร์ชัน: {2}",
+  "ps.help.rs.pack.acerolafx": "เอฟเฟกต์ของ AcerolaFX ทำงานได้เฉพาะเมื่ออยู่ระหว่าง AcerolaFXStart กับ AcerolaFXEnd เท่านั้น พรีเซ็ตของ AcerolaFX จัดลำดับนี้ไว้ให้แล้ว หากเปิดเอฟเฟกต์ทีละตัวเอง ให้จัดลำดับในเมนูของ ReShade เอง",
   "ps.rs.pack.installed": "ติดตั้งแล้ว",
   "ps.rs.pack.download": "ดาวน์โหลด",
   "ps.rs.pack.update": "อัปเดต",

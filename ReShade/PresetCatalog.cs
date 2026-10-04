@@ -32,8 +32,11 @@ internal sealed record PresetEntry
     public long Size { get; init; }
     /// <summary>Pack ids whose techniques the preset enables (requires are added by <see cref="PresetCatalog.PacksWithRequires"/>).</summary>
     public IReadOnlyList<string> Packs { get; init; } = Array.Empty<string>();
-    /// <summary>Enabled techniques found in the pinned packs (file AND technique name match) / all enabled techniques
-    /// (community only). Re-measured 2026-10-04 against all six packs.</summary>
+    /// <summary>Enabled techniques found in the pinned packs / all enabled techniques (community only). Rule v2
+    /// (2026-10-04): a technique counts when its effect FILE is in a pinned pack AND that file, compiled with the preset's
+    /// own PreprocessorDefinitions (global + that effect's section), declares the TECHNIQUE name — so clones a preset's
+    /// definitions create (AcerolaFX's AFX_*_COUNT) count. Measured offline, not computed here: every pinned preset is
+    /// re-measured against all six packs (v1 and v2 agree on every non-AcerolaFX entry).</summary>
     public int Covered { get; init; }
     public int Total { get; init; }
     /// <summary>The installed copy leaves out settings made for another game (measured: plan D-OVR table).</summary>
@@ -65,6 +68,9 @@ internal static class PresetCatalog
     private const string StellaRepo = "https://github.com/Genshin-Stella-Mod/resources";
     private const string StellaRaw = "https://raw.githubusercontent.com/Genshin-Stella-Mod/resources/" + StellaCommit + "/public/resources/ReShade/Presets/";
     private const string StellaAuthor = "Sefinek (Genshin Stella Mod)";
+
+    private const string AcerolaCommit = "c33f779b093fa1e25faf0c77ef22c3fe6902e2fe";
+    private const string AcerolaRepo = "https://github.com/GarrettGunnell/AcerolaFX";
 
     private const string OkamiCommit = "53e9fe085845093f50189dc5cce9419e88e423ed";
     private const string OkamiRepo = "https://github.com/MeynanAneytha/YomigamiOkami-reshade-shaders";
@@ -101,6 +107,19 @@ internal static class PresetCatalog
         Packs = new[] { "standard", "sweetfx", "prod80" }, Covered = 13, Total = 19,
     };
 
+    // AcerolaFX's own presets (owner 2026-10-04, option b — they carry the AcerolaFXStart … AcerolaFXEnd order its
+    // effects need). Chosen: distinct looks, all techniques present at c33f779, no removed technique and no "+suffix"
+    // duplicate (so not Hasaki). Covered counts the clone techniques the preset's own AFX_*_COUNT definitions create
+    // (coverage rule v2, PresetEntry.Covered). No RESHADE_DEPTH_* and no missing texture: the installed copy is the download.
+    public static readonly PresetEntry AcerolaGameplay = Acerola("acerolafx-gameplay", "Gameplay", "GameplayLowest",
+        "b6f353924a8bb8755506fafaa043bb4f026fa87984ffb616649b7b0c6499c6c1", 3451, 9);   // the only one without XeGTAO
+    public static readonly PresetEntry AcerolaGoldenAge = Acerola("acerolafx-golden-age", "Golden Age", "GoldenAge",
+        "f541340d06e8596374f0f6c8e0d6e2b81bf1d22bd13045030398ff7a6a4b1ff4", 8210, 10);
+    public static readonly PresetEntry AcerolaDraft = Acerola("acerolafx-draft", "Draft", "Draft",
+        "b8911c98c07b6a4b025afdee8ab6a4c99340b01f840624d088c30680f8feb53f", 5746, 7);
+    public static readonly PresetEntry AcerolaDistantPast = Acerola("acerolafx-distant-past", "Distant Past", "DistantPast",
+        "2dd34d8df4eeb0fd0b49a4e01cf30a518bed9f452980acbfd6c347f5502679a5", 4195, 18);
+
     public static readonly PresetEntry IpsuShade = Link("ipsushade", "IpsuShade", "ipsusu", "https://github.com/ipsusu/IpsuShade", LinkReason.AskAuthor);
     public static readonly PresetEntry Steaxs = Link("steaxs-filter-pack", "STEAXS Filter Pack", "steaxss",
         "https://github.com/steaxss/STEAXS-FILTER-PACK", LinkReason.NoLicence);
@@ -115,6 +134,7 @@ internal static class PresetCatalog
     {
         CinematicWarm, SoftAnime, CoolNight, CleanSharpen,
         StarLuxeGalactic, StarLuxeLegacy, StarLuxeLuminescence, StellaMedium, StellaHigh, OkamiCityRuins,
+        AcerolaGameplay, AcerolaGoldenAge, AcerolaDraft, AcerolaDistantPast,
         IpsuShade, Steaxs, NoRange, EndfieldOfficial, VibrantSharpen,
     };
 
@@ -169,6 +189,15 @@ internal static class PresetCatalog
         PageUrl = StellaRepo + "/tree/" + StellaCommit + "/public/resources/ReShade/Presets", Commit = StellaCommit,
         RawUrl = StellaRaw + rawFile, Sha256 = sha, Size = 1624, Packs = new[] { "prod80", "fxshaders" },
         Covered = 3, Total = 3, Adjusted = true,   // MagicHDR@MagicHDR.fx is FXShaders'; RESHADE_DEPTH_INPUT_* tuned for Genshin
+    };
+
+    private static PresetEntry Acerola(string id, string name, string file, string sha, long size, int techniques) => new()
+    {
+        Id = id, Name = "AcerolaFX " + name, Kind = PresetKind.Community, FileName = "AcerolaFX " + name + ".ini",
+        Author = "Garrett Gunnell (AcerolaFX)", License = "MIT", LicenseUrl = AcerolaRepo + "/blob/" + AcerolaCommit + "/LICENSE.md",
+        PageUrl = AcerolaRepo + "/tree/" + AcerolaCommit + "/Presets", Commit = AcerolaCommit,
+        RawUrl = "https://raw.githubusercontent.com/GarrettGunnell/AcerolaFX/" + AcerolaCommit + "/Presets/AcerolaFX_" + file + ".ini",
+        Sha256 = sha, Size = size, Packs = new[] { "acerolafx" }, Covered = techniques, Total = techniques,
     };
 
     private static PresetEntry Link(string id, string name, string author, string page, LinkReason reason) => new()

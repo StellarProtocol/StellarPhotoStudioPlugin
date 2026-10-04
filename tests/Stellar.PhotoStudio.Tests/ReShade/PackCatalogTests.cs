@@ -111,6 +111,15 @@ public sealed class PackCatalogTests
         Assert.Equal("/d/reshade/packs/acerolafx/" + root + "Shaders", PackCatalog.EffectsFolder("/d", PackCatalog.AcerolaFx));
     }
 
+    // Owner 2026-10-04: AcerolaFX's "?" says its effects only work between AcerolaFXStart and AcerolaFXEnd. The other
+    // packs carry no extra line.
+    [Fact]
+    public void Only_AcerolaFx_carries_a_pack_help_note()
+    {
+        Assert.Equal("ps.help.rs.pack.acerolafx", PackCatalog.AcerolaFx.HelpNoteKey);
+        Assert.All(PackCatalog.All.Where(p => p.Id != "acerolafx"), p => Assert.Null(p.HelpNoteKey));
+    }
+
     [Fact]
     public void Folders_keep_the_archive_root_because_the_prefix_stays_in_the_output_path()
     {

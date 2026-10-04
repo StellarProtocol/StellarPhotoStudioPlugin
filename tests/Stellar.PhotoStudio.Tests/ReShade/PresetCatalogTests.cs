@@ -10,6 +10,11 @@ namespace Stellar.PhotoStudio.Tests.ReShade;
 // A changed value here must come from a fresh measurement. Coverage re-measured 2026-10-04 against all six packs
 // (technique counts only when file AND technique name match): Stella Medium/High 2/3 -> 3/3 — MagicHDR@MagicHDR.fx is
 // FXShaders' (technique "MagicHDR", uniforms match the preset's section); every other preset unchanged.
+// AcerolaFX presets (owner 2026-10-04, option b): raw files at c33f779, two downloads each, identical to the pack zip's
+// copies. Coverage rule v2: a technique counts when its effect file is in a pinned pack AND that file, compiled with
+// the preset's OWN PreprocessorDefinitions (global + that effect's section), declares the technique — AcerolaFX clones
+// (AFX_Blend2, AFX_ColorCorrection2/3, …) exist only under the preset's AFX_*_COUNT definitions, so they count. The rule
+// leaves every earlier preset's numbers as they were (re-measured, pinned above).
 public sealed class PresetCatalogTests
 {
     [Theory]
@@ -31,6 +36,18 @@ public sealed class PresetCatalogTests
     [InlineData("okami-cityruins", "Okami City Ruins.ini",
         "https://raw.githubusercontent.com/MeynanAneytha/YomigamiOkami-reshade-shaders/53e9fe085845093f50189dc5cce9419e88e423ed/reshade-presets/Okami/OkamiNierAutomata_CityRuins.ini",
         "9a0d12003cd004f18a437966f7e278b8d259695bee5783e56b047bfc3fcb5677", 2863L, "MIT", 13, 19, false)]
+    [InlineData("acerolafx-gameplay", "AcerolaFX Gameplay.ini",
+        "https://raw.githubusercontent.com/GarrettGunnell/AcerolaFX/c33f779b093fa1e25faf0c77ef22c3fe6902e2fe/Presets/AcerolaFX_GameplayLowest.ini",
+        "b6f353924a8bb8755506fafaa043bb4f026fa87984ffb616649b7b0c6499c6c1", 3451L, "MIT", 9, 9, false)]
+    [InlineData("acerolafx-golden-age", "AcerolaFX Golden Age.ini",
+        "https://raw.githubusercontent.com/GarrettGunnell/AcerolaFX/c33f779b093fa1e25faf0c77ef22c3fe6902e2fe/Presets/AcerolaFX_GoldenAge.ini",
+        "f541340d06e8596374f0f6c8e0d6e2b81bf1d22bd13045030398ff7a6a4b1ff4", 8210L, "MIT", 10, 10, false)]
+    [InlineData("acerolafx-draft", "AcerolaFX Draft.ini",
+        "https://raw.githubusercontent.com/GarrettGunnell/AcerolaFX/c33f779b093fa1e25faf0c77ef22c3fe6902e2fe/Presets/AcerolaFX_Draft.ini",
+        "b8911c98c07b6a4b025afdee8ab6a4c99340b01f840624d088c30680f8feb53f", 5746L, "MIT", 7, 7, false)]
+    [InlineData("acerolafx-distant-past", "AcerolaFX Distant Past.ini",
+        "https://raw.githubusercontent.com/GarrettGunnell/AcerolaFX/c33f779b093fa1e25faf0c77ef22c3fe6902e2fe/Presets/AcerolaFX_DistantPast.ini",
+        "2dd34d8df4eeb0fd0b49a4e01cf30a518bed9f452980acbfd6c347f5502679a5", 4195L, "MIT", 18, 18, false)]
     public void Community_presets_pin_the_measured_files(string id, string file, string raw, string sha, long size, string license,
         int covered, int total, bool adjusted)
     {
@@ -64,6 +81,17 @@ public sealed class PresetCatalogTests
         Assert.True(PresetCatalog.Find("okami-cityruins")!.Partial);   // 13/19 — the new packs carry none of its six
         Assert.Equal(new[] { "standard", "sweetfx", "prod80" }, PresetCatalog.Find("okami-cityruins")!.Packs);
         Assert.Equal(new[] { "fLUT_TextureName" }, PresetCatalog.Find("starluxe-luminescence")!.DropDefinitions);
+        foreach (var id in new[] { "acerolafx-gameplay", "acerolafx-golden-age", "acerolafx-draft", "acerolafx-distant-past" })
+        {
+            var a = PresetCatalog.Find(id)!;
+            Assert.Equal("Garrett Gunnell (AcerolaFX)", a.Author);
+            Assert.Equal(new[] { "acerolafx" }, a.Packs);
+            Assert.Equal(new[] { "acerolafx" }, PresetCatalog.PacksWithRequires(a).Select(p => p.Id).ToArray());   // needs no standard
+            Assert.False(a.Partial);   // full coverage through its own clone definitions — no false "partial" badge
+            Assert.Empty(a.DropDefinitions);   // no RESHADE_DEPTH_* and no missing texture: the installed copy is the download
+            Assert.Equal("https://github.com/GarrettGunnell/AcerolaFX/blob/c33f779b093fa1e25faf0c77ef22c3fe6902e2fe/LICENSE.md", a.LicenseUrl);
+            Assert.Equal("https://github.com/GarrettGunnell/AcerolaFX/tree/c33f779b093fa1e25faf0c77ef22c3fe6902e2fe/Presets", a.PageUrl);
+        }
         Assert.Empty(PresetCatalog.Find("stella-medium")!.DropDefinitions);   // its only override is the RESHADE_DEPTH_* rule
     }
 
@@ -122,7 +150,7 @@ public sealed class PresetCatalogTests
     {
         var kinds = PresetCatalog.All.Select(e => e.Kind).ToArray();
         Assert.Equal(kinds.OrderBy(k => (int)k).ToArray(), kinds);
-        Assert.Equal(15, PresetCatalog.All.Count);
+        Assert.Equal(19, PresetCatalog.All.Count);
         Assert.Equal(PresetCatalog.All.Count, PresetCatalog.All.Select(e => e.Id).Distinct().Count());
         var files = PresetCatalog.All.Where(e => e.Installable).Select(e => e.FileName.ToLowerInvariant()).ToArray();
         Assert.Equal(files.Length, files.Distinct().Count());

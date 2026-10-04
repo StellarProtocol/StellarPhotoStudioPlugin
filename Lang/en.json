@@ -338,6 +338,7 @@
   "ps.rs.packsFrom": "from each pack's own source",
   "ps.help.rs.packs": "Shader packs are downloaded from each pack's own GitHub page, at a version we tested. Some packs need ReShade standard, which is downloaded with them.",
   "ps.help.rs.pack": "License: {0}\nSource: {1}\nVersion: {2}",
+  "ps.help.rs.pack.acerolafx": "AcerolaFX effects work only between AcerolaFXStart and AcerolaFXEnd. Its presets set this order for you; if you switch its effects on one by one, set the order in ReShade's own menu.",
   "ps.rs.pack.installed": "installed",
   "ps.rs.pack.download": "Download",
   "ps.rs.pack.update": "Update",

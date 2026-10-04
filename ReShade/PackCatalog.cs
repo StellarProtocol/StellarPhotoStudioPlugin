@@ -25,6 +25,8 @@ internal sealed record ShaderPack
     /// <summary>What the download extracts, relative to <see cref="ArchiveRoot"/>: a folder (trailing '/') or one exact
     /// file. Effects must stay under <c>Shaders/</c> and textures under <c>Textures/</c> (the search paths).</summary>
     public IReadOnlyList<string> Extract { get; init; } = PackCatalog.ShadersAndTextures;
+    /// <summary>Lang key of a pack-specific line appended to the pack's "?" help; null for none.</summary>
+    public string? HelpNoteKey { get; init; }
 
     /// <summary>GitHub's archive root folder: "&lt;repo name&gt;-&lt;full commit&gt;".</summary>
     public string ArchiveRoot => Repo.Substring(Repo.IndexOf('/') + 1) + "-" + Commit;
@@ -96,6 +98,7 @@ internal static class PackCatalog
         License = "MIT",
         LicenseUrl = "https://github.com/GarrettGunnell/AcerolaFX/blob/c33f779b093fa1e25faf0c77ef22c3fe6902e2fe/LICENSE.md",
         Extract = AcerolaFxExtract(),
+        HelpNoteKey = "ps.help.rs.pack.acerolafx",   // effects work only between AcerolaFXStart and AcerolaFXEnd
     };
 
     /// <summary>MIT for every shader, PandaFX (© Jukka Korhonen) included (its LICENSE names both authors).</summary>

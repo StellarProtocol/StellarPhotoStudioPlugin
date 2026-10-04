@@ -18,6 +18,7 @@ public sealed class ReShadeLangTests
         "ps.rs.packsFrom", "ps.help.rs.packs", "ps.help.rs.pack", "ps.rs.pack.installed", "ps.rs.pack.download",
         "ps.rs.pack.update", "ps.rs.pack.retry", "ps.rs.pack.queued", "ps.rs.pack.mixed",
         "ps.rs.status.on", "ps.rs.status.applying", "ps.rs.note.notReady", "ps.rs.reloading", "ps.rs.pack.failedDep", "ps.rs.savedOnOff", "ps.rs.moreFx",
+        "ps.help.rs.pack.acerolafx",
     };
 
     [Theory]

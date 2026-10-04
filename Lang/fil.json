@@ -338,6 +338,7 @@
   "ps.rs.packsFrom": "mula sa sariling source ng bawat pack",
   "ps.help.rs.packs": "Dina-download ang mga shader pack mula sa GitHub page ng bawat pack, sa bersyong nasubukan namin. May mga pack na kailangan ang ReShade standard, na sabay na dina-download.",
   "ps.help.rs.pack": "Lisensya: {0}\nSource: {1}\nBersyon: {2}",
+  "ps.help.rs.pack.acerolafx": "Gumagana lang ang mga effect ng AcerolaFX kapag nasa pagitan ng AcerolaFXStart at AcerolaFXEnd. Naka-set na ang ayos na ito sa mga preset nito; kung isa-isa mong io-on ang mga effect, ayusin ang pagkakasunod-sunod sa sariling menu ng ReShade.",
   "ps.rs.pack.installed": "naka-install",
   "ps.rs.pack.download": "I-download",
   "ps.rs.pack.update": "I-update",

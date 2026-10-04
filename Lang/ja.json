@@ -338,6 +338,7 @@
   "ps.rs.packsFrom": "各パックの配布元から取得",
   "ps.help.rs.packs": "シェーダーパックは、動作を確認したバージョンを各パックのGitHubページからダウンロードします。ReShade standardが必要なパックは、一緒にダウンロードされます。",
   "ps.help.rs.pack": "ライセンス: {0}\n配布元: {1}\nバージョン: {2}",
+  "ps.help.rs.pack.acerolafx": "AcerolaFXのエフェクトは、AcerolaFXStartとAcerolaFXEndの間でのみ動作します。AcerolaFXのプリセットではこの順番が設定済みです。エフェクトを1つずつオンにする場合は、ReShadeのメニューで順番を並べ替えてください。",
   "ps.rs.pack.installed": "インストール済み",
   "ps.rs.pack.download": "ダウンロード",
   "ps.rs.pack.update": "更新",

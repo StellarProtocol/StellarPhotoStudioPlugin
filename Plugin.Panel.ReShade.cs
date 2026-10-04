@@ -277,6 +277,7 @@ public sealed partial class Plugin
     private string PackHelp(ShaderPack p)
     {
         var help = _loc.TFormat("ps.help.rs.pack", LicenseLabel(p), p.SourceUrl, p.Commit.Substring(0, 7));
+        if (p.HelpNoteKey is { } note) help = T(note) + "\n\n" + help;   // the pack's own usage line first, then the facts
         return _packs.Status(p) == PackStatus.Failed ? WithLastError(help, _packs.Error(p)) : help;
     }
 
