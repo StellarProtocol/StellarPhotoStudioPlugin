@@ -22,10 +22,10 @@ public sealed class PresetCatalogTests
         "5e1b23f882fede42f1cf7d9cd0076574daae354710eca19e143cec00e4571d63", 38217L, "GPL-3.0", 5, 5, true)]
     [InlineData("stella-medium", "Stella Medium.ini",
         "https://raw.githubusercontent.com/Genshin-Stella-Mod/resources/a15ae11517dad6c5681beb212422724c4455a276/public/resources/ReShade/Presets/1.%20Default%20preset%20-%20Medium%20settings.ini",
-        "320356eab91018c4677be724626a6532fa3801e2cea4f48e7df242a6c6bca93a", 1624L, "MIT", 2, 3, true)]
+        "320356eab91018c4677be724626a6532fa3801e2cea4f48e7df242a6c6bca93a", 1624L, "CC-BY-SA-4.0", 2, 3, true)]
     [InlineData("stella-high", "Stella High.ini",
         "https://raw.githubusercontent.com/Genshin-Stella-Mod/resources/a15ae11517dad6c5681beb212422724c4455a276/public/resources/ReShade/Presets/2.%20Default%20preset%20-%20High%20settings.ini",
-        "61c65ecbc73e00ad7f2a319df66dcc6c1a960098d63c865b8054ede52f9da043", 1624L, "MIT", 2, 3, true)]
+        "61c65ecbc73e00ad7f2a319df66dcc6c1a960098d63c865b8054ede52f9da043", 1624L, "CC-BY-SA-4.0", 2, 3, true)]
     [InlineData("okami-cityruins", "Okami City Ruins.ini",
         "https://raw.githubusercontent.com/MeynanAneytha/YomigamiOkami-reshade-shaders/53e9fe085845093f50189dc5cce9419e88e423ed/reshade-presets/Okami/OkamiNierAutomata_CityRuins.ini",
         "9a0d12003cd004f18a437966f7e278b8d259695bee5783e56b047bfc3fcb5677", 2863L, "MIT", 13, 19, false)]

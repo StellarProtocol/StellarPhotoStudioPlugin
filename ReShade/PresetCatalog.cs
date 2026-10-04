@@ -50,7 +50,7 @@ internal sealed record PresetEntry
 /// <summary>The presets Photo Studio offers (plan 2026-10-04 presets § The catalog; licences verified at each commit).</summary>
 internal static class PresetCatalog
 {
-    /// <summary>Licence shown for Photo Studio's own presets: the plugin repository's (plan gap G2 — the owner may grant MIT).</summary>
+    /// <summary>Licence shown for Photo Studio's own presets: the plugin repository's (owner ruling 2026-10-04 — own presets are AGPL-3.0).</summary>
     public const string OwnLicense = "AGPL-3.0";
     public const string OwnLicenseUrl = "https://github.com/StellarProtocol/StellarPhotoStudioPlugin/blob/main/LICENSE";
     private const string OwnPage = "https://github.com/StellarProtocol/StellarPhotoStudioPlugin/tree/main/Resources/Presets";
@@ -163,8 +163,8 @@ internal static class PresetCatalog
 
     private static PresetEntry Stella(string id, string name, string rawFile, string sha) => new()
     {
-        Id = id, Name = name, Kind = PresetKind.Community, FileName = name + ".ini", Author = StellaAuthor, License = "MIT",
-        LicenseUrl = StellaRepo + "/blob/" + StellaCommit + "/LICENSE",
+        Id = id, Name = name, Kind = PresetKind.Community, FileName = name + ".ini", Author = StellaAuthor, License = "CC-BY-SA-4.0",
+        LicenseUrl = StellaRepo + "/blob/" + StellaCommit + "/public/resources/ReShade/Presets/LICENSE",
         PageUrl = StellaRepo + "/tree/" + StellaCommit + "/public/resources/ReShade/Presets", Commit = StellaCommit,
         RawUrl = StellaRaw + rawFile, Sha256 = sha, Size = 1624, Packs = new[] { "prod80" },
         Covered = 2, Total = 3, Adjusted = true,   // MagicHDR.fx is in no pack; RESHADE_DEPTH_INPUT_* tuned for Genshin
