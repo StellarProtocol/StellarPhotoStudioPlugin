@@ -385,5 +385,6 @@
   "ps.rs.note.drewNothing": "Hindi natapos ang ReShade sa oras — kinuha ang litrato nang walang ReShade.",
   "ps.rs.note.nothingToDraw": "Walang aktibong ReShade effect na gumagana sa hugis ng litratong ito — kinuha ito nang wala ang mga iyon.",
   "ps.rs.note.screenSizeOnly": "May mga ReShade effect na gumagana lang sa laki ng screen, kaya kinuha sa 1× ang litratong ito.",
-  "ps.rs.note.screenSizeOnlySkipped": "May mga ReShade effect na gumagana lang sa laki ng screen, kaya hindi sila isinama sa litratong ito."
+  "ps.rs.note.screenSizeOnlySkipped": "May mga ReShade effect na gumagana lang sa laki ng screen, kaya hindi sila isinama sa litratong ito.",
+  "ps.rs.note.depthLeftOut": "Hindi isinama sa litratong ito ang mga ReShade effect na gumagamit ng depth."
 }

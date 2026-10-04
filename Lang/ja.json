@@ -385,5 +385,6 @@
   "ps.rs.note.drewNothing": "ReShadeの処理が間に合わなかったため、ReShadeなしで撮影しました。",
   "ps.rs.note.nothingToDraw": "有効なReShadeエフェクトはこの写真の形では使えないため、それらなしで撮影しました。",
   "ps.rs.note.screenSizeOnly": "画面サイズでのみ動くReShadeエフェクトがあるため、この写真は1×で撮影しました。",
-  "ps.rs.note.screenSizeOnlySkipped": "画面サイズでのみ動くReShadeエフェクトがあるため、それらはこの写真から外しました。"
+  "ps.rs.note.screenSizeOnlySkipped": "画面サイズでのみ動くReShadeエフェクトがあるため、それらはこの写真から外しました。",
+  "ps.rs.note.depthLeftOut": "深度を使うReShadeエフェクトは、この写真には適用されていません。"
 }

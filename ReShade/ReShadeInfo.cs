@@ -17,13 +17,15 @@ internal static class ReShadeInfo
     /// <summary>fw 2.17.0: a screen-shaped 2×/4× photo with a size-locked effect is taken at 1× — not a memory shortfall.</summary>
     public const string ScreenSizeOnlyNote = "Some ReShade effects only work at screen size, so this photo was taken at 1×.";
     public const string ScreenSizeOnlySkippedNote = "Some ReShade effects only work at screen size, so they were left out of this photo.";
+    /// <summary>fw 2.17.0: a screen-shaped 2×/4× photo drawn by the separate capture runtime, which cannot see the game's depth.</summary>
+    public const string DepthLeftOutNote = "ReShade effects that use depth were left out of this photo.";
 
     // The framework's English notes (fw 2.17.0 ReShadeCaptureNotes) → Photo Studio's own keys, so each shows in the player's language.
     private static readonly (string Note, string Key)[] NoteKeys =
     {
         (NotReadyNote, "ps.rs.note.notReady"), (ErrorNote, "ps.rs.note.error"), (DrewNothingNote, "ps.rs.note.drewNothing"),
         (NothingToDrawNote, "ps.rs.note.nothingToDraw"), (ScreenSizeOnlyNote, "ps.rs.note.screenSizeOnly"),
-        (ScreenSizeOnlySkippedNote, "ps.rs.note.screenSizeOnlySkipped"),
+        (ScreenSizeOnlySkippedNote, "ps.rs.note.screenSizeOnlySkipped"), (DepthLeftOutNote, "ps.rs.note.depthLeftOut"),
     };
 
     /// <summary>True when the note means the photo was taken WITHOUT ReShade (the sidecar's <c>applied</c> is false).</summary>

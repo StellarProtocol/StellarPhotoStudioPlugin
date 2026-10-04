@@ -385,5 +385,6 @@
   "ps.rs.note.drewNothing": "ReShade tidak selesai tepat waktu — foto diambil tanpa ReShade.",
   "ps.rs.note.nothingToDraw": "Tidak ada efek ReShade aktif yang bisa dipakai di bentuk foto ini — foto diambil tanpa efek tersebut.",
   "ps.rs.note.screenSizeOnly": "Beberapa efek ReShade hanya bekerja di ukuran layar, jadi foto ini diambil di 1×.",
-  "ps.rs.note.screenSizeOnlySkipped": "Beberapa efek ReShade hanya bekerja di ukuran layar, jadi tidak dipakai di foto ini."
+  "ps.rs.note.screenSizeOnlySkipped": "Beberapa efek ReShade hanya bekerja di ukuran layar, jadi tidak dipakai di foto ini.",
+  "ps.rs.note.depthLeftOut": "Efek ReShade yang memakai depth tidak dipakai di foto ini."
 }

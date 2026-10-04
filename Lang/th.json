@@ -385,5 +385,6 @@
   "ps.rs.note.drewNothing": "ReShade ทำงานไม่ทัน จึงถ่ายรูปโดยไม่ใช้ ReShade",
   "ps.rs.note.nothingToDraw": "เอฟเฟกต์ ReShade ที่เปิดอยู่ใช้กับสัดส่วนรูปนี้ไม่ได้ จึงถ่ายโดยไม่ใช้เอฟเฟกต์เหล่านั้น",
   "ps.rs.note.screenSizeOnly": "เอฟเฟกต์ ReShade บางตัวใช้ได้เฉพาะขนาดหน้าจอ จึงถ่ายรูปนี้ที่ 1×",
-  "ps.rs.note.screenSizeOnlySkipped": "เอฟเฟกต์ ReShade บางตัวใช้ได้เฉพาะขนาดหน้าจอ จึงไม่ถูกใช้ในรูปนี้"
+  "ps.rs.note.screenSizeOnlySkipped": "เอฟเฟกต์ ReShade บางตัวใช้ได้เฉพาะขนาดหน้าจอ จึงไม่ถูกใช้ในรูปนี้",
+  "ps.rs.note.depthLeftOut": "เอฟเฟกต์ ReShade ที่ใช้ความลึกไม่ถูกใช้ในรูปนี้"
 }

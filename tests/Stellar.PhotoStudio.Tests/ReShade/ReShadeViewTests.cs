@@ -120,6 +120,7 @@ public sealed class ReShadeViewTests
     [InlineData(ReShadeInfo.NothingToDrawNote, "ps.rs.note.nothingToDraw", true)]
     [InlineData(ReShadeInfo.ScreenSizeOnlyNote, "ps.rs.note.screenSizeOnly", false)]
     [InlineData(ReShadeInfo.ScreenSizeOnlySkippedNote, "ps.rs.note.screenSizeOnlySkipped", false)]
+    [InlineData(ReShadeInfo.DepthLeftOutNote, "ps.rs.note.depthLeftOut", false)]
     public void Framework_notes_are_localized_and_classified(string note, string key, bool withoutReShade)
     {
         Assert.Equal("[" + key + "]", ReShadeInfo.LocalizeNote(note, k => "[" + k + "]"));
