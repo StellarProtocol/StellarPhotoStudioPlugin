@@ -1,6 +1,7 @@
 using System;
 using Stellar.Abstractions.Domain;
 using Stellar.Abstractions.Services;
+using Stellar.PhotoStudio.ReShade;
 
 namespace Stellar.PhotoStudio;
 
@@ -46,6 +47,7 @@ internal sealed class StudioSettings
         PacksOpen = cfg.Get("ui.reshade.packsOpen", true);
         AllFxOpen = cfg.Get("ui.reshade.allFx", false);
         PresetsOpen = cfg.Get("ui.reshade.presetsOpen", true);
+        for (var k = 0; k < _presetGroups.Length; k++) _presetGroups[k] = cfg.Get(PresetGroupKey((PresetKind)k), k == (int)PresetKind.Own);
     }
 
     public QualityMode Supersample { get; private set; }
@@ -58,6 +60,10 @@ internal sealed class StudioSettings
     public bool PacksOpen { get; private set; }
     public bool AllFxOpen { get; private set; }
     public bool PresetsOpen { get; private set; }
+    private readonly bool[] _presetGroups = new bool[3];
+
+    /// <summary>Presets group folds: Photo Studio's own open, Community and author-page links folded by default.</summary>
+    public bool PresetGroupOpen(PresetKind kind) => _presetGroups[(int)kind];
 
     public void SetSupersample(QualityMode m) { Supersample = m; Store("quality.supersample", (int)m); }
     public void SetShadows(QualityMode m) { Shadows = m; Store("quality.shadows", (int)m); }
@@ -68,6 +74,14 @@ internal sealed class StudioSettings
     public void SetPacksOpen(bool open) { PacksOpen = open; Store("ui.reshade.packsOpen", open); }
     public void SetAllFxOpen(bool open) { AllFxOpen = open; Store("ui.reshade.allFx", open); }
     public void SetPresetsOpen(bool open) { PresetsOpen = open; Store("ui.reshade.presetsOpen", open); }
+    public void SetPresetGroupOpen(PresetKind kind, bool open) { _presetGroups[(int)kind] = open; Store(PresetGroupKey(kind), open); }
+
+    private static string PresetGroupKey(PresetKind kind) => kind switch
+    {
+        PresetKind.Own => "ui.reshade.presets.ownOpen",
+        PresetKind.Community => "ui.reshade.presets.communityOpen",
+        _ => "ui.reshade.presets.linksOpen",
+    };
 
     /// <summary>The hour slider fires every frame while dragged: <paramref name="save"/> false keeps it in memory
     /// only, and the owner saves once the drag settles (a config save is a main-thread file write).</summary>

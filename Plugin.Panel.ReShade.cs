@@ -139,6 +139,7 @@ public sealed partial class Plugin
         _moreFxText = default;
         _rsOptionsCache = null;
         _presetText.Clear();
+        _failText.Clear();
     }
 
     private (string? Path, bool Own) _ownPreset;
@@ -266,16 +267,20 @@ public sealed partial class Plugin
                 new ButtonElement(() => T(PackButtonKey(p) ?? "ps.rs.pack.download"), OnClick: () => _packs.Request(p)),
                 new TextElement(() => PackStatusText(p), Color: Muted, Align: TextAlign.Right, NoWrap: true)), Width: PackStatusWidth),
             HelpDot("rs.pack." + p.Id, () => p.Name,
-                () => _loc.TFormat("ps.help.rs.pack", LicenseLabel(p), p.SourceUrl, p.Commit.Substring(0, 7))),
+                () => PackHelp(p)),
         }, Gap: 6f),
         new TextElement(() => LicenseLabel(p), Color: Muted),
         new ConditionalElement(() => _packs.Status(p) == PackStatus.Failed, new TextElement(() => PackFailedText(p),
             Color: () => _services.Theme.Colors.Warning)),
     }, Gap: 2f);
 
-    private string PackFailedText(ShaderPack p) => _packs.FailedRequirement(p) is { } needs
-        ? _loc.TFormat("ps.rs.pack.failedDep", needs)
-        : _loc.TFormat("ps.rs.pack.failed", ReShadeView.Ellipsize(_packs.Error(p) ?? "", 80));
+    private string PackHelp(ShaderPack p)
+    {
+        var help = _loc.TFormat("ps.help.rs.pack", LicenseLabel(p), p.SourceUrl, p.Commit.Substring(0, 7));
+        return _packs.Status(p) == PackStatus.Failed ? WithLastError(help, _packs.Error(p)) : help;
+    }
+
+    private string PackFailedText(ShaderPack p) => DownloadFailedText(_packs.FailureKind(p), _packs.FailedRequirement(p));
 
     private string PackStatusText(ShaderPack p) => _packs.Status(p) switch
     {

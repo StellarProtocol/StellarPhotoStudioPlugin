@@ -374,5 +374,11 @@
   "ps.rs.preset.desc.cool-night": "Cahaya lebih sejuk, bayangan kebiruan dengan sorotan hangat, kontras lembut, dan vinyet lebih gelap.",
   "ps.rs.preset.desc.clean-sharpen": "Garis dan detail lebih tajam, tanpa mengubah yang lain.",
   "ps.rs.savedOnOff": "Preset milik ReShade sedang dipakai: preset tampilanmu hanya menyimpan apakah ReShade aktif.",
-  "ps.rs.moreFx": "+{0} lagi di preset ini"
+  "ps.rs.moreFx": "+{0} lagi di preset ini",
+  "ps.rs.presets.community": "Komunitas",
+  "ps.rs.presets.links": "Dari halaman pembuatnya",
+  "ps.rs.fail.changed": "Tidak dipasang: file di halaman sumbernya berubah sejak diuji Photo Studio. Pembaruan Photo Studio akan memperbaikinya.",
+  "ps.rs.fail.network": "Gagal mengunduh. Periksa koneksi, lalu tekan Coba lagi.",
+  "ps.rs.fail.other": "Gagal mengunduh. Tekan Coba lagi; detailnya ada di ?.",
+  "ps.help.rs.lastError": "Galat terakhir: {0}"
 }

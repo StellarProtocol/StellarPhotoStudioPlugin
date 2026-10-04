@@ -6,14 +6,15 @@ using Stellar.PhotoStudio.ReShade;
 
 namespace Stellar.PhotoStudio;
 
-// Look → ReShade → Presets (spec 2026-10-03 reshade § 12 V4; mockup v3 "In game — Presets"). Logic lives in
-// ReShade/PresetCatalog.cs + PresetInstaller.cs. Row 1 is the shader-pack recipe that measured clean at 400 px in every
-// locale (name + fixed 104 px status column + "?"); the "Photo Studio" / coverage pill opens line 2 (plan § Placement).
-// The framework has no "open a web page" service, so a link-only row shows its address and a "Copy link" button.
 public sealed partial class Plugin
 {
+    private const float PresetRowGap = 10f;
+    private static readonly TimeSpan CopiedShownFor = TimeSpan.FromSeconds(2.5);
+    private static readonly PresetKind[] PresetGroups = { PresetKind.Own, PresetKind.Community, PresetKind.LinkOnly };
     private readonly Dictionary<string, (string Sub, string Cov, string Help)> _presetText = new(StringComparer.Ordinal);
+    private readonly Dictionary<(DownloadFailure, string?), string> _failText = new();
     private string? _copiedPresetId;
+    private DateTime _copiedAt;
 
     private HudElement PresetsSection()
     {
@@ -31,16 +32,46 @@ public sealed partial class Plugin
             }, Gap: 6f),
             new ConditionalElement(() => _settings.PresetsOpen, Indent(new TextElement(() => T("ps.rs.presets.hint"), Color: Muted))),
         };
-        foreach (var e in PresetCatalog.All)
-            rows.Add(new ConditionalElement(() => _settings.PresetsOpen, Indent(PresetRow(e))));
-        rows.Add(new ConditionalElement(() => _settings.PresetsOpen, Indent(new RowElement(new HudElement[]
+        foreach (var kind in PresetGroups)
+            rows.Add(new ConditionalElement(() => _settings.PresetsOpen, Indent(PresetGroup(kind))));
+        rows.Add(new ConditionalElement(() => _settings.PresetsOpen, Indent(new ColumnElement(new HudElement[]
         {
-            new CellElement(new TextElement(() => T("ps.rs.presets.import"), Color: Muted), Weight: 1f),
-            new CellElement(new ButtonElement(() => T("ps.cap.openFolder"), OnClick: () => OpenFolderSafe(ReShadePresetFolder)),
-                Width: PackStatusWidth),   // fixed: an auto-width button clipped its label (sandbox, en/th)
-        }, Gap: 6f))));
+            new TextElement(() => T("ps.rs.presets.import"), Color: Muted),   // full width: beside the button it wrapped to 5 lines (th)
+            new RowElement(new HudElement[]
+            {
+                new CellElement(new ButtonElement(() => T("ps.cap.openFolder"), OnClick: () => OpenFolderSafe(ReShadePresetFolder)),
+                    Width: PackStatusWidth),   // fixed: an auto-width button clipped its label (sandbox, en/th)
+                new SpacerElement(),
+            }),
+        }, Gap: 4f))));
         return new ColumnElement(rows, Gap: 8f);
     }
+
+    /// <summary>One fold per source: Photo Studio's own (open by default), Community, From the author's page.</summary>
+    private HudElement PresetGroup(PresetKind kind)
+    {
+        var entries = new List<HudElement>();
+        foreach (var e in PresetCatalog.All)
+            if (e.Kind == kind) entries.Add(PresetRow(e));
+        var count = "(" + entries.Count + ")";
+        return new ColumnElement(new HudElement[]
+        {
+            new SelectableElement(new RowElement(new HudElement[]
+            {
+                new TextElement(() => _settings.PresetGroupOpen(kind) ? "▾" : "▸", Width: 14f),
+                new TextElement(() => PresetGroupLabel(kind), NoWrap: true),
+                new TextElement(() => count, Color: Muted, NoWrap: true),
+            }, Gap: 4f), OnClick: () => _settings.SetPresetGroupOpen(kind, !_settings.PresetGroupOpen(kind))),
+            new ConditionalElement(() => _settings.PresetGroupOpen(kind), new ColumnElement(entries, Gap: PresetRowGap)),
+        }, Gap: 6f);
+    }
+
+    private string PresetGroupLabel(PresetKind kind) => kind switch
+    {
+        PresetKind.Own => T("ps.rs.preset.ours"),
+        PresetKind.Community => T("ps.rs.presets.community"),
+        _ => T("ps.rs.presets.links"),
+    };
 
     private HudElement PresetRow(PresetEntry e)
     {
@@ -50,52 +81,48 @@ public sealed partial class Plugin
             {
                 new CellElement(new TextElement(() => e.Name, NoWrap: true), Weight: 1f),
                 new CellElement(PresetAction(e), Width: PackStatusWidth),
-                HelpDot("rs.preset." + e.Id, () => e.Name, () => PresetTexts(e).Help),
+                HelpDot("rs.preset." + e.Id, () => e.Name, () => PresetHelp(e)),
             }, Gap: 6f),
-            PresetSubline(e),
         };
-        if (e.Kind == PresetKind.LinkOnly) lines.Add(new TextElement(() => e.PageUrl, Color: Muted));   // the address, as text
+        if (e.Kind == PresetKind.Community && e.Partial)   // full coverage needs no badge; a partial one is worth a glance
+            lines.Add(new RowElement(new HudElement[]
+            {
+                new PillElement(() => PresetTexts(e).Cov, Color: () => _services.Theme.Colors.Gold),
+                new SpacerElement(),
+            }));
+        lines.Add(new TextElement(() => PresetTexts(e).Sub, Color: Muted));
+        if (e.Kind == PresetKind.LinkOnly)
+        {
+            var shown = DisplayUrl(e.PageUrl);   // the address, as text (Copy link puts the full one on the clipboard)
+            lines.Add(new TextElement(() => shown, Color: Muted, NoWrap: true));
+        }
         else lines.Add(new ConditionalElement(() => _rsPresets.Status(e) == PresetStatus.Failed,
             new TextElement(() => PresetFailedText(e), Color: () => _services.Theme.Colors.Warning)));
         return new ColumnElement(lines, Gap: 2f);
     }
 
-    private HudElement PresetSubline(PresetEntry e)
-    {
-        var sub = new TextElement(() => PresetTexts(e).Sub, Color: Muted);
-        if (e.Kind == PresetKind.LinkOnly) return sub;
-        // Pill on its own line, then the text: beside the text the coverage pill overflowed at 400 px in every locale
-        // (sandbox measure, plan Task 7 Step 5 fallback).
-        return new ColumnElement(new HudElement[]
-        {
-            new RowElement(new HudElement[]
-            {
-                new PillElement(() => e.Kind == PresetKind.Own ? T("ps.rs.preset.ours") : PresetTexts(e).Cov, Color: () => PresetPillColor(e)),
-                new SpacerElement(),
-            }),
-            sub,
-        }, Gap: 2f);
-    }
-
-    private ColorRgba? PresetPillColor(PresetEntry e) => e.Kind == PresetKind.Own ? _services.Theme.Colors.Accent
-        : e.Partial ? _services.Theme.Colors.Warning : _services.Theme.Colors.TextMuted;
+    internal static string DisplayUrl(string url) =>
+        url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ? url.Substring(8) : url;
 
     private HudElement PresetAction(PresetEntry e)
     {
         if (e.Kind == PresetKind.LinkOnly)
-            return new ButtonElement(() => _copiedPresetId == e.Id ? T("ps.rs.preset.copied") : T("ps.rs.preset.copyLink"),
+            return new ButtonElement(() => ShowsCopied(e) ? T("ps.rs.preset.copied") : T("ps.rs.preset.copyLink"),
                 OnClick: () => CopyPresetLink(e));
         return new ConditionalElement(() => PresetButtonKey(e) is not null,
             new ButtonElement(() => T(PresetButtonKey(e) ?? "ps.rs.pack.download"), OnClick: () => _rsPresets.Request(e)),
             new TextElement(() => PresetStatusText(e), Color: Muted, Align: TextAlign.Right, NoWrap: true));
     }
 
-    // IPluginServices has no URL opener (Abstractions 2.17.0). The clipboard call is the IL2CPP-safe one CombatMeter uses.
     private void CopyPresetLink(PresetEntry e)
     {
-        UnityEngine.GUIUtility.systemCopyBuffer = e.PageUrl;
+        try { UnityEngine.GUIUtility.systemCopyBuffer = e.PageUrl; }
+        catch (Exception) { return; }   // no clipboard (rare under Proton): the address stays readable under the row
         _copiedPresetId = e.Id;
+        _copiedAt = DateTime.UtcNow;
     }
+
+    private bool ShowsCopied(PresetEntry e) => _copiedPresetId == e.Id && DateTime.UtcNow - _copiedAt < CopiedShownFor;
 
     private string? PresetButtonKey(PresetEntry e) => _rsPresets.Status(e) switch
     {
@@ -112,11 +139,31 @@ public sealed partial class Plugin
         _ => "",
     };
 
-    private string PresetFailedText(PresetEntry e) => _rsPresets.FailedRequirement(e) is { } needs
-        ? _loc.TFormat("ps.rs.pack.failedDep", needs)
-        : _loc.TFormat("ps.rs.pack.failed", ReShadeView.Ellipsize(_rsPresets.Error(e) ?? "", 80));
+    private string PresetFailedText(PresetEntry e) => DownloadFailedText(_rsPresets.FailureKind(e), _rsPresets.FailedRequirement(e));
 
-    /// <summary>The row's localized lines, built once per locale (the panel polls them every refresh).</summary>
+    /// <summary>Plain-language failure line for a pack or preset, cached per (kind, requirement): the row asks every frame.
+    /// The raw error goes to the row's "?" instead (<see cref="WithLastError"/>).</summary>
+    private string DownloadFailedText(DownloadFailure kind, string? needs)
+    {
+        if (_failText.TryGetValue((kind, needs), out var text)) return text;
+        text = kind switch
+        {
+            DownloadFailure.Requirement => _loc.TFormat("ps.rs.pack.failedDep", needs ?? ""),
+            DownloadFailure.Changed => T("ps.rs.fail.changed"),
+            DownloadFailure.Network => T("ps.rs.fail.network"),
+            _ => T("ps.rs.fail.other"),
+        };
+        _failText[(kind, needs)] = text;
+        return text;
+    }
+
+    private string WithLastError(string help, string? error) =>
+        string.IsNullOrEmpty(error) ? help : help + "\n\n" + _loc.TFormat("ps.help.rs.lastError", error);
+
+    private string PresetHelp(PresetEntry e) => e.Kind != PresetKind.LinkOnly && _rsPresets.Status(e) == PresetStatus.Failed
+        ? WithLastError(PresetTexts(e).Help, _rsPresets.Error(e))
+        : PresetTexts(e).Help;
+
     private (string Sub, string Cov, string Help) PresetTexts(PresetEntry e)
     {
         if (_presetText.TryGetValue(e.Id, out var t)) return t;
@@ -143,10 +190,13 @@ public sealed partial class Plugin
         return help;
     }
 
+    /// <summary>The packs the preset itself uses (ReShade standard, pulled in as a requirement, is not listed: every
+    /// preset would say it, so it said nothing).</summary>
     private static string PresetPackNames(PresetEntry e)
     {
         var names = new List<string>();
-        foreach (var p in PresetCatalog.PacksWithRequires(e)) names.Add(p.Name);
+        foreach (var id in e.Packs)
+            if (PackCatalog.Find(id) is { } p) names.Add(p.Name);
         return string.Join(", ", names);
     }
 }

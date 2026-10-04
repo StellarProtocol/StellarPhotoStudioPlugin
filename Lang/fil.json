@@ -359,7 +359,7 @@
   "ps.rs.preset.coverage": "{0} sa {1} effect",
   "ps.rs.preset.downloading": "dina-download…",
   "ps.rs.preset.linkLine": "gawa ni {0} · makukuha lang sa page ng gumawa",
-  "ps.rs.preset.copyLink": "Kopyahin ang link",
+  "ps.rs.preset.copyLink": "Kopyahin",
   "ps.rs.preset.copied": "Nakopya na",
   "ps.rs.preset.why.noLicence": "Walang inilabas na lisensya ang gumawa nito, kaya hindi ito mada-download ng Photo Studio para sa iyo.",
   "ps.rs.preset.why.ask": "Hinihingi ng lisensya ng gumawa na humingi muna ng pahintulot bago ito ipamahagi ng iba, kaya hindi ito mada-download ng Photo Studio para sa iyo.",
@@ -374,5 +374,11 @@
   "ps.rs.preset.desc.cool-night": "Mas malamig na liwanag, mala-asul na anino na may mainit na highlight, banayad na contrast at mas madilim na vignette.",
   "ps.rs.preset.desc.clean-sharpen": "Mas malinaw na linya at detalye, nang walang ibang binabago.",
   "ps.rs.savedOnOff": "Ginagamit ang sariling preset ng ReShade: on/off lang ng ReShade ang naka-save sa preset ng itsura mo.",
-  "ps.rs.moreFx": "+{0} pa sa preset na ito"
+  "ps.rs.moreFx": "+{0} pa sa preset na ito",
+  "ps.rs.presets.community": "Komunidad",
+  "ps.rs.presets.links": "Mula sa page ng gumawa",
+  "ps.rs.fail.changed": "Hindi na-install: nagbago ang file sa source page nito mula nang subukan ito ng Photo Studio. Maaayos ito ng update ng Photo Studio.",
+  "ps.rs.fail.network": "Hindi ma-download. Tingnan ang koneksyon mo, saka pindutin ang Subukan muli.",
+  "ps.rs.fail.other": "Hindi ma-download. Pindutin ang Subukan muli; nasa ? ang detalye.",
+  "ps.help.rs.lastError": "Huling error: {0}"
 }

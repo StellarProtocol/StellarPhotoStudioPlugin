@@ -18,6 +18,8 @@ public sealed class PresetLangTests
         "ps.help.rs.preset.community", "ps.help.rs.preset.partial", "ps.help.rs.preset.adjusted", "ps.help.rs.preset.link",
         "ps.help.rs.preset.own", "ps.rs.presets.import", "ps.rs.preset.desc.cinematic-warm", "ps.rs.preset.desc.soft-anime",
         "ps.rs.preset.desc.cool-night", "ps.rs.preset.desc.clean-sharpen",
+        "ps.rs.presets.community", "ps.rs.presets.links", "ps.rs.fail.changed", "ps.rs.fail.network", "ps.rs.fail.other",
+        "ps.help.rs.lastError",
     };
 
     [Theory]
@@ -40,6 +42,13 @@ public sealed class PresetLangTests
     {
         foreach (var code in new[] { "en", "ja", "th", "id", "fil" })
             Assert.Equal("Photo Studio", Load(code).GetProperty("ps.rs.preset.ours").GetString());
+    }
+
+    [Fact]
+    public void The_address_is_shown_without_its_scheme()
+    {
+        Assert.Equal("github.com/ipsusu/IpsuShade", Plugin.DisplayUrl("https://github.com/ipsusu/IpsuShade"));
+        Assert.Equal("example.org/x", Plugin.DisplayUrl("example.org/x"));
     }
 
     private static JsonElement Load(string code) =>

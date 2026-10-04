@@ -356,7 +356,7 @@
   "ps.rs.preset.ours": "Photo Studio",
   "ps.rs.preset.uses": "使用: {0}",
   "ps.rs.preset.byLine": "{0} · 作者: {1} · 使用: {2}",
-  "ps.rs.preset.coverage": "{1}中{0}エフェクト",
+  "ps.rs.preset.coverage": "エフェクト {0}/{1}",
   "ps.rs.preset.downloading": "ダウンロード中…",
   "ps.rs.preset.linkLine": "作者: {0} · 作者のページからのみ入手",
   "ps.rs.preset.copyLink": "リンクをコピー",
@@ -374,5 +374,11 @@
   "ps.rs.preset.desc.cool-night": "涼しげな光、青みの影と暖かいハイライト、ゆるやかなコントラスト、やや濃い周辺減光。",
   "ps.rs.preset.desc.clean-sharpen": "線とディテールをくっきりさせ、ほかは変えません。",
   "ps.rs.savedOnOff": "ReShade側のプリセットを使用中です。ルックのプリセットにはReShadeのオン／オフだけが保存されます。",
-  "ps.rs.moreFx": "このプリセットにあと{0}件"
+  "ps.rs.moreFx": "このプリセットにあと{0}件",
+  "ps.rs.presets.community": "コミュニティ",
+  "ps.rs.presets.links": "作者のページから",
+  "ps.rs.fail.changed": "インストールできませんでした：配布元のファイルが、Photo Studioで確認した後に変更されています。Photo Studioの更新で直ります。",
+  "ps.rs.fail.network": "ダウンロードできませんでした。接続を確認して「再試行」を押してください。",
+  "ps.rs.fail.other": "ダウンロードできませんでした。「再試行」を押してください。詳しくは ? を見てください。",
+  "ps.help.rs.lastError": "最後のエラー：{0}"
 }

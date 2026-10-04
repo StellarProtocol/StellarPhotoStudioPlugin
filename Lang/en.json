@@ -374,5 +374,11 @@
   "ps.rs.preset.desc.cool-night": "Cooler light, blue-tinted shadows with warm highlights, a gentle contrast curve and a darker vignette.",
   "ps.rs.preset.desc.clean-sharpen": "Crisper lines and detail, with nothing else changed.",
   "ps.rs.savedOnOff": "ReShade's own preset is in use: your Look preset keeps only whether ReShade is on.",
-  "ps.rs.moreFx": "+{0} more in this preset"
+  "ps.rs.moreFx": "+{0} more in this preset",
+  "ps.rs.presets.community": "Community",
+  "ps.rs.presets.links": "From the author's page",
+  "ps.rs.fail.changed": "Not installed: the file on its source page changed since Photo Studio tested it. A Photo Studio update will fix this.",
+  "ps.rs.fail.network": "Couldn't download it. Check your connection, then press Retry.",
+  "ps.rs.fail.other": "Couldn't download it. Press Retry; the ? has the details.",
+  "ps.help.rs.lastError": "Last error: {0}"
 }
