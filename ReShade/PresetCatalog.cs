@@ -84,6 +84,9 @@ internal static class PresetCatalog
     public static readonly PresetEntry SoftAnime = Own("soft-anime", "Soft anime", "sweetfx", "prod80");
     public static readonly PresetEntry CoolNight = Own("cool-night", "Cool night", "sweetfx", "prod80");
     public static readonly PresetEntry CleanSharpen = Own("clean-sharpen", "Clean sharpen", "sweetfx");
+    public static readonly PresetEntry DreamyGlow = Own("dreamy-glow", "Dreamy glow", "fxshaders");
+    public static readonly PresetEntry LensFlare = Own("lens-flare", "Lens flare", "fxshaders");
+    public static readonly PresetEntry SubjectFocus = Own("subject-focus", "Subject focus", "otisfx");   // Emphasize reads depth
 
     public static readonly PresetEntry StarLuxeGalactic = StarLuxe("starluxe-galactic", "Galactic",
         "19db3f3e5ce8a8a75f2f27cf941758d29590aa236049b43a6e6ba44d61f3e2ac", 6375) with { Covered = 5, Total = 5 };
@@ -139,7 +142,7 @@ internal static class PresetCatalog
 
     public static IReadOnlyList<PresetEntry> All { get; } = new[]
     {
-        CinematicWarm, SoftAnime, CoolNight, CleanSharpen,
+        CinematicWarm, SoftAnime, CoolNight, CleanSharpen, DreamyGlow, LensFlare, SubjectFocus,
         StarLuxeGalactic, StarLuxeLegacy, StarLuxeLuminescence, StellaMedium, StellaHigh, OkamiCityRuins,
         AcerolaGameplay, AcerolaGoldenAge, AcerolaDraft, AcerolaDistantPast,
         IpsuShade, Steaxs, NoRange, EndfieldOfficial, VibrantSharpen,

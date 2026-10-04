@@ -7,12 +7,14 @@ using Xunit;
 
 namespace Stellar.PhotoStudio.Tests.ReShade;
 
-// Photo Studio's own presets use ONLY techniques of the three pinned packs (plan § Re-measure: `technique` lines of every
-// .fx at standard fd00221 / SweetFX 93ddf39 / prod80 1c2ed5b, + the two macro-named prod80 LUT techniques), set only real
-// uniforms within their ui_min..ui_max, and enable no depth-reading effect (measured with the framework's scanner rule).
+// Photo Studio's own presets use ONLY techniques of the pinned packs (plan § Re-measure: `technique` lines of every
+// .fx at standard fd00221 / SweetFX 93ddf39 / prod80 1c2ed5b, + the two macro-named prod80 LUT techniques; and the five
+// FXShaders 76365e3 / OtisFX 193aa0b techniques the 2026-10-05 looks use, compiled with ReShade 6.8.0's own front end),
+// set only real uniforms within their ui_min..ui_max, and enable a depth-reading effect (measured with the framework's
+// scanner rule) only where pinned in DepthPresets.
 public sealed class OwnPresetContentTests
 {
-    // (effect file, technique) -> pack id. 67 rows, measured from clones at the pinned commits.
+    // (effect file, technique) -> pack id. 72 rows, measured from clones at the pinned commits.
     private static readonly Dictionary<(string File, string Technique), string> Inventory = Build(@"
 standard Daltonize.fx Daltonize
 standard Deband.fx Deband
@@ -80,13 +82,29 @@ prod80 PD80_06_Depth_Slicer.fx prod80_06_Depth_Slicer
 prod80 PD80_06_Film_Grain.fx prod80_06_FilmGrain
 prod80 PD80_06_Luma_Fade.fx prod80_06_LumaFade_Start
 prod80 PD80_06_Luma_Fade.fx prod80_06_LumaFade_End
-prod80 PD80_06_Posterize_Pixelate.fx prod80_06_Posterize_Pixelate");
+prod80 PD80_06_Posterize_Pixelate.fx prod80_06_Posterize_Pixelate
+fxshaders NeoBloom.fx NeoBloom
+fxshaders MagicHDR.fx MagicHDR
+fxshaders HexLensFlare.fx HexLensFlare
+fxshaders ArtisticVignette.fx ArtisticVignette
+otisfx Emphasize.fx Emphasize");
 
     // Effect files the framework's EffectDepthScanner finds depth-FREE (includes flattened; standard headers skipped).
     private static readonly HashSet<string> DepthFree = new(StringComparer.OrdinalIgnoreCase)
     {
         "Curves.fx", "Vibrance.fx", "Vignette.fx", "CAS.fx", "LiftGammaGain.fx",
         "PD80_04_Color_Temperature.fx", "PD80_02_Bloom.fx", "PD80_04_Color_Balance.fx",
+        "MagicHDR.fx", "HexLensFlare.fx", "ArtisticVignette.fx",
+    };
+
+    // Own presets that enable a depth-FLAGGED effect (owner-approved looks, 2026-10-05) -> those effect files. Emphasize
+    // reads depth by design. NeoBloom reads depth only under NEO_BLOOM_DEPTH (0 by default; the preset sets no
+    // definitions), but the scanner ORs every #if branch, so it is flagged too: in photos where depth effects are left
+    // out, Dreamy glow keeps only its MagicHDR glow.
+    private static readonly Dictionary<string, string[]> DepthPresets = new(StringComparer.Ordinal)
+    {
+        ["dreamy-glow"] = new[] { "NeoBloom.fx" },
+        ["subject-focus"] = new[] { "Emphasize.fx" },
     };
 
     // Uniforms of the effects our presets set: name -> (ui_min, ui_max, components). From the pinned sources, comments stripped.
@@ -108,6 +126,34 @@ prod80 PD80_06_Posterize_Pixelate.fx prod80_06_Posterize_Pixelate");
             ["BloomMix"] = (0, 1, 1), ["BloomLimit"] = (0, 1, 1), ["GreyValue"] = (0, 1, 1), ["bExposure"] = (-1, 5, 1),
             ["BlurSigmaNarrow"] = (10, 40, 1), ["BlurSigma"] = (10, 300, 1), ["BloomSaturation"] = (0, 2, 1),
         },
+        ["NeoBloom.fx"] = new()
+        {
+            ["Intensity"] = (0, 1, 1), ["Saturation"] = (0, 3, 1), ["ColorFilter"] = (0, 1, 3), ["BloomBlendMode"] = (0, 2, 1),
+            ["Mean"] = (0, 5, 1), ["Variance"] = (1, 5, 1), ["MaxBrightness"] = (1, 1000, 1), ["NormalizeBrightness"] = (0, 1, 1),
+            ["MagicMode"] = (0, 1, 1), ["Sigma"] = (1, 10, 1), ["Padding"] = (0, 10, 1),
+        },
+        ["MagicHDR.fx"] = new()
+        {
+            ["InputExposure"] = (-3, 3, 1), ["Exposure"] = (-3, 3, 1), ["InvTonemap"] = (0, 5, 1), ["Tonemap"] = (0, 5, 1),
+            ["BloomAmount"] = (0, 1, 1), ["BloomBrightness"] = (1, 5, 1), ["BloomSaturation"] = (0, 2, 1),
+            ["BlurSize"] = (0.01, 1, 1), ["BlendingAmount"] = (0.1, 1, 1), ["BlendingBase"] = (0, 1, 1),
+        },
+        ["HexLensFlare.fx"] = new()
+        {
+            ["uIntensity"] = (0, 3, 1), ["uThreshold"] = (0, 1, 1), ["uScale"] = (0, 10, 1),
+            ["uColor0"] = (0, 1, 3), ["uColor1"] = (0, 1, 3), ["uColor2"] = (0, 1, 3), ["uColor3"] = (0, 1, 3),
+        },
+        ["ArtisticVignette.fx"] = new()
+        {
+            ["VignetteColor"] = (0, 1, 4), ["BlendMode"] = (0, 7, 1), ["VignetteStartEnd"] = (0, 3, 2), ["VignetteRatio"] = (0, 1, 1),
+            ["VignetteShape"] = (0, 6, 1),
+        },
+        ["Emphasize.fx"] = new()
+        {
+            ["FocusDepth"] = (0, 1, 1), ["FocusRangeDepth"] = (0, 1, 1), ["FocusEdgeDepth"] = (0, 1, 1), ["Spherical"] = (0, 1, 1),
+            ["Sphere_FieldOfView"] = (1, 180, 1), ["Sphere_FocusHorizontal"] = (0, 1, 1), ["Sphere_FocusVertical"] = (0, 1, 1),
+            ["BlendColor"] = (0, 1, 3), ["BlendFactor"] = (0, 1, 1), ["EffectFactor"] = (0, 1, 1),
+        },
         ["PD80_04_Color_Balance.fx"] = new()
         {
             ["preserve_luma"] = (0, 1, 1), ["separation_mode"] = (0, 1, 1),
@@ -125,6 +171,9 @@ prod80 PD80_06_Posterize_Pixelate.fx prod80_06_Posterize_Pixelate");
     [InlineData("soft-anime", "prod80_02_Bloom@PD80_02_Bloom.fx,LiftGammaGain@LiftGammaGain.fx,Vibrance@Vibrance.fx")]
     [InlineData("cool-night", "prod80_04_ColorTemperature@PD80_04_Color_Temperature.fx,prod80_04_ColorBalance@PD80_04_Color_Balance.fx,Curves@Curves.fx,Vignette@Vignette.fx")]
     [InlineData("clean-sharpen", "ContrastAdaptiveSharpen@CAS.fx")]
+    [InlineData("dreamy-glow", "NeoBloom@NeoBloom.fx,MagicHDR@MagicHDR.fx")]
+    [InlineData("lens-flare", "HexLensFlare@HexLensFlare.fx,ArtisticVignette@ArtisticVignette.fx")]
+    [InlineData("subject-focus", "Emphasize@Emphasize.fx")]
     public void Each_preset_enables_exactly_its_designed_techniques_in_order(string id, string techniques)
     {
         var ini = Parse(OwnPresets.Text(id));
@@ -149,11 +198,16 @@ prod80 PD80_06_Posterize_Pixelate.fx prod80_06_Posterize_Pixelate");
 
     [Theory]
     [MemberData(nameof(Own))]
-    public void No_preset_enables_a_depth_effect_or_sets_preprocessor_definitions(string id)
+    public void Only_pinned_presets_enable_a_depth_effect_and_none_sets_preprocessor_definitions(string id)
     {
         var ini = Parse(OwnPresets.Text(id));
+        var depth = new List<string>();
         foreach (var t in ini.Top["Techniques"].Split(','))
-            Assert.Contains(t[(t.IndexOf('@') + 1)..], DepthFree);
+        {
+            var file = t[(t.IndexOf('@') + 1)..];
+            if (!DepthFree.Contains(file)) depth.Add(file);
+        }
+        Assert.Equal(DepthPresets.TryGetValue(id, out var pinned) ? pinned : Array.Empty<string>(), depth);
         Assert.False(ini.Top.ContainsKey("PreprocessorDefinitions"));
         Assert.All(ini.Sections.Values, s => Assert.False(s.ContainsKey("PreprocessorDefinitions")));
     }
@@ -239,7 +293,7 @@ prod80 PD80_06_Posterize_Pixelate.fx prod80_06_Posterize_Pixelate");
             var f = row.Split(' ');
             d[(f[1], f[2])] = f[0];
         }
-        Assert.Equal(67, d.Count);
+        Assert.Equal(72, d.Count);
         return d;
     }
 }

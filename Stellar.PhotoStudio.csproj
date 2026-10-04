@@ -31,6 +31,9 @@
     <EmbeddedResource Include="Resources/Presets/soft-anime.ini" LogicalName="Stellar.PhotoStudio.Presets.soft-anime.ini" />
     <EmbeddedResource Include="Resources/Presets/cool-night.ini" LogicalName="Stellar.PhotoStudio.Presets.cool-night.ini" />
     <EmbeddedResource Include="Resources/Presets/clean-sharpen.ini" LogicalName="Stellar.PhotoStudio.Presets.clean-sharpen.ini" />
+    <EmbeddedResource Include="Resources/Presets/dreamy-glow.ini" LogicalName="Stellar.PhotoStudio.Presets.dreamy-glow.ini" />
+    <EmbeddedResource Include="Resources/Presets/lens-flare.ini" LogicalName="Stellar.PhotoStudio.Presets.lens-flare.ini" />
+    <EmbeddedResource Include="Resources/Presets/subject-focus.ini" LogicalName="Stellar.PhotoStudio.Presets.subject-focus.ini" />
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="tests/**/*.cs" />
