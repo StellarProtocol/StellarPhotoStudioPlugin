@@ -13,23 +13,35 @@ internal static class ReShadePresets
 {
     public const string DefaultFile = "Photo Studio.ini";
 
+    /// <summary>The "None" choice (owner 2026-10-05): an empty preset Photo Studio owns, rewritten empty each time it is
+    /// picked so a ReShade auto-save into it never sticks. Never listed as a normal preset.</summary>
+    public const string NoneFile = "_none.ini";
+    public const string NoneContent = "Techniques=\r\nTechniqueSorting=\r\n";
+
     public static IReadOnlyList<string> List(IEnumerable<string> files)
     {
         var names = new List<string>();
         foreach (var f in files)
         {
             var name = ReShadePaths.FileName(f);
-            if (name.EndsWith(".ini", StringComparison.OrdinalIgnoreCase) && !names.Contains(name)) names.Add(name);
+            if (name.EndsWith(".ini", StringComparison.OrdinalIgnoreCase) && !names.Contains(name)
+                && !string.Equals(name, NoneFile, StringComparison.OrdinalIgnoreCase)) names.Add(name);
         }
         names.Sort(StringComparer.OrdinalIgnoreCase);
         return names;
     }
 
     /// <param name="otherLabel">Formats the label of a current preset outside our folder (ReShade's own).</param>
-    public static PresetOptions Options(string folder, IReadOnlyList<string> files, string? current, Func<string, string> otherLabel)
+    public static PresetOptions Options(string folder, IReadOnlyList<string> files, string? current, Func<string, string> otherLabel,
+        string? noneLabel = null)
     {
         var labels = new List<string>();
         var paths = new List<string>();
+        if (noneLabel is not null)   // "None" first: no effects, ReShade itself stays on
+        {
+            labels.Add(noneLabel);
+            paths.Add(ReShadePaths.PathFor(folder, NoneFile));
+        }
         IReadOnlyList<string> names = files.Count == 0 ? new[] { DefaultFile } : files;
         foreach (var f in names)
         {

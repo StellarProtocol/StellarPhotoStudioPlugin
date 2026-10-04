@@ -392,5 +392,7 @@
   "ps.rs.note.depthLeftOut": "ReShade effects that use depth were left out of this photo.",
   "ps.rs.fx.other": "Other",
   "ps.rs.fx.groupCount": "{0}",
-  "ps.rs.fx.groupCountOn": "{1} on · {0}"
+  "ps.rs.fx.groupCountOn": "{1} on · {0}",
+  "ps.rs.presetNone": "None",
+  "ps.rs.presetEmpty": "No effects in this preset."
 }

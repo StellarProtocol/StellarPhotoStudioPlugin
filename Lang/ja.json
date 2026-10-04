@@ -392,5 +392,7 @@
   "ps.rs.note.depthLeftOut": "深度を使うReShadeエフェクトは、この写真には適用されていません。",
   "ps.rs.fx.other": "その他",
   "ps.rs.fx.groupCount": "{0}",
-  "ps.rs.fx.groupCountOn": "オン {1} · {0}"
+  "ps.rs.fx.groupCountOn": "オン {1} · {0}",
+  "ps.rs.presetNone": "なし",
+  "ps.rs.presetEmpty": "このプリセットにはエフェクトがありません。"
 }
