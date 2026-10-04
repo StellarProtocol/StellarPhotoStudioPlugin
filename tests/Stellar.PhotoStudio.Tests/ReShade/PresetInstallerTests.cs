@@ -217,7 +217,7 @@ public sealed class PresetInstallerTests
     {
         var i = Make();
         var after = _files.ExistsCalls;
-        Assert.Equal(14, after);   // the 14 installable entries
+        Assert.Equal(17, after);   // the 17 installable entries
         foreach (var e in PresetCatalog.All) i.Status(e);
         Assert.Equal(after, _files.ExistsCalls);
         _files.Files[Installed(PresetCatalog.CoolNight)] = "x";

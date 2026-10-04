@@ -18,6 +18,7 @@ public sealed class PresetLangTests
         "ps.help.rs.preset.community", "ps.help.rs.preset.partial", "ps.help.rs.preset.adjusted", "ps.help.rs.preset.link",
         "ps.help.rs.preset.own", "ps.rs.presets.import", "ps.rs.preset.desc.cinematic-warm", "ps.rs.preset.desc.soft-anime",
         "ps.rs.preset.desc.cool-night", "ps.rs.preset.desc.clean-sharpen",
+        "ps.rs.preset.desc.dreamy-glow", "ps.rs.preset.desc.lens-flare", "ps.rs.preset.desc.subject-focus",
         "ps.rs.presets.community", "ps.rs.presets.links", "ps.rs.fail.changed", "ps.rs.fail.network", "ps.rs.fail.other",
         "ps.help.rs.lastError",
     };

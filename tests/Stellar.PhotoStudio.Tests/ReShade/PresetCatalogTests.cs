@@ -108,6 +108,9 @@ public sealed class PresetCatalogTests
     [InlineData("soft-anime", "Soft anime.ini", "sweetfx,prod80")]
     [InlineData("cool-night", "Cool night.ini", "sweetfx,prod80")]
     [InlineData("clean-sharpen", "Clean sharpen.ini", "sweetfx")]
+    [InlineData("dreamy-glow", "Dreamy glow.ini", "fxshaders")]
+    [InlineData("lens-flare", "Lens flare.ini", "fxshaders")]
+    [InlineData("subject-focus", "Subject focus.ini", "otisfx")]
     public void Own_presets_are_listed_with_their_packs_and_no_download(string id, string file, string packs)
     {
         var e = PresetCatalog.Find(id)!;
@@ -150,7 +153,7 @@ public sealed class PresetCatalogTests
     {
         var kinds = PresetCatalog.All.Select(e => e.Kind).ToArray();
         Assert.Equal(kinds.OrderBy(k => (int)k).ToArray(), kinds);
-        Assert.Equal(19, PresetCatalog.All.Count);
+        Assert.Equal(22, PresetCatalog.All.Count);
         Assert.Equal(PresetCatalog.All.Count, PresetCatalog.All.Select(e => e.Id).Distinct().Count());
         var files = PresetCatalog.All.Where(e => e.Installable).Select(e => e.FileName.ToLowerInvariant()).ToArray();
         Assert.Equal(files.Length, files.Distinct().Count());
@@ -170,6 +173,10 @@ public sealed class PresetCatalogTests
             PresetCatalog.PacksWithRequires(PresetCatalog.Find("stella-medium")!).Select(p => p.Id).ToArray());
         Assert.Equal(new[] { "standard", "sweetfx", "prod80" },
             PresetCatalog.PacksWithRequires(PresetCatalog.Find("cinematic-warm")!).Select(p => p.Id).ToArray());
+        Assert.Equal(new[] { "standard", "fxshaders" },
+            PresetCatalog.PacksWithRequires(PresetCatalog.Find("dreamy-glow")!).Select(p => p.Id).ToArray());
+        Assert.Equal(new[] { "standard", "otisfx" },
+            PresetCatalog.PacksWithRequires(PresetCatalog.Find("subject-focus")!).Select(p => p.Id).ToArray());
         Assert.Empty(PresetCatalog.PacksWithRequires(PresetCatalog.Find("ipsushade")!));
     }
 
