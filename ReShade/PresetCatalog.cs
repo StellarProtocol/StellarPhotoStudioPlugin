@@ -32,7 +32,8 @@ internal sealed record PresetEntry
     public long Size { get; init; }
     /// <summary>Pack ids whose techniques the preset enables (requires are added by <see cref="PresetCatalog.PacksWithRequires"/>).</summary>
     public IReadOnlyList<string> Packs { get; init; } = Array.Empty<string>();
-    /// <summary>Enabled techniques found in the three pinned packs / all enabled techniques (community only).</summary>
+    /// <summary>Enabled techniques found in the pinned packs (file AND technique name match) / all enabled techniques
+    /// (community only). Re-measured 2026-10-04 against all six packs.</summary>
     public int Covered { get; init; }
     public int Total { get; init; }
     /// <summary>The installed copy leaves out settings made for another game (measured: plan D-OVR table).</summary>
@@ -166,8 +167,8 @@ internal static class PresetCatalog
         Id = id, Name = name, Kind = PresetKind.Community, FileName = name + ".ini", Author = StellaAuthor, License = "CC-BY-SA-4.0",
         LicenseUrl = StellaRepo + "/blob/" + StellaCommit + "/public/resources/ReShade/Presets/LICENSE",
         PageUrl = StellaRepo + "/tree/" + StellaCommit + "/public/resources/ReShade/Presets", Commit = StellaCommit,
-        RawUrl = StellaRaw + rawFile, Sha256 = sha, Size = 1624, Packs = new[] { "prod80" },
-        Covered = 2, Total = 3, Adjusted = true,   // MagicHDR.fx is in no pack; RESHADE_DEPTH_INPUT_* tuned for Genshin
+        RawUrl = StellaRaw + rawFile, Sha256 = sha, Size = 1624, Packs = new[] { "prod80", "fxshaders" },
+        Covered = 3, Total = 3, Adjusted = true,   // MagicHDR@MagicHDR.fx is FXShaders'; RESHADE_DEPTH_INPUT_* tuned for Genshin
     };
 
     private static PresetEntry Link(string id, string name, string author, string page, LinkReason reason) => new()

@@ -16,7 +16,9 @@ folder's `dxgi.dll` and the Stellar ReShade bridge add-on (MIT) beside it, for M
 Dependencies). Photo Studio's Look tab turns ReShade on/off, switches presets and effects, and downloads shader packs
 from each pack's own GitHub at a pinned commit (sha256-checked, never re-hosted): ReShade standard
 (`crosire/reshade-shaders`, licence per file), SweetFX (`CeeJayDK/SweetFX`, MIT), prod80 (`prod80/prod80-ReShade-Repository`,
-MIT). qUINT is not offered: its licence reserves all rights. Packs and Photo Studio's ReShade presets live in
+MIT), FXShaders (`luluco250/FXShaders`, MIT), AcerolaFX (`GarrettGunnell/AcerolaFX`, MIT) and OtisFX (`FransBouma/OtisFX`,
+MIT, PandaFX by Jukka Korhonen included). AcerolaFX effects only work between its `AcerolaFXStart` and `AcerolaFXEnd`
+effects, in that order. qUINT is not offered: its licence reserves all rights. Packs and Photo Studio's ReShade presets live in
 `stellar/plugindata/stellar.photostudio.data/reshade/`. A Look preset remembers the ReShade preset and on/off (a preset
 outside that folder — ReShade's own — is remembered as on/off only); effect switches are saved in the ReShade preset
 itself, so they do not mark the look modified and Reset all does not undo them.

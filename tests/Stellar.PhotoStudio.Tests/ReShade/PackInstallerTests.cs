@@ -99,6 +99,32 @@ public sealed class PackInstallerTests
         Assert.Equal(0d, i.Progress(PackCatalog.Standard));
     }
 
+    // Owner decision 2026-10-04: FXShaders and OtisFX need ReShade standard's headers; AcerolaFX needs nothing.
+    [Fact]
+    public void New_packs_queue_standard_only_when_they_need_its_headers()
+    {
+        var i = Make();
+        i.Request(PackCatalog.AcerolaFx);
+        Assert.Single(_dl.Calls);
+        Assert.Equal("reshade/packs/acerolafx", _dl.Calls[0].Request.TargetPath);
+        Assert.Equal(PackStatus.NotInstalled, i.Status(PackCatalog.Standard));
+        Succeed(0, PackCatalog.AcerolaFx);
+        i.Request(PackCatalog.OtisFx);
+        Assert.Equal("reshade/packs/standard", _dl.Calls[1].Request.TargetPath);
+        Succeed(1, PackCatalog.Standard);
+        Assert.Equal("reshade/packs/otisfx", _dl.Calls[2].Request.TargetPath);
+        Succeed(2, PackCatalog.OtisFx);
+        i.Request(PackCatalog.FxShaders);   // standard already installed: FXShaders alone
+        Assert.Equal(4, _dl.Calls.Count);
+        Assert.Equal("reshade/packs/fxshaders", _dl.Calls[3].Request.TargetPath);
+        Succeed(3, PackCatalog.FxShaders);
+        Assert.Equal(new[]
+        {
+            PackCatalog.EffectsFolder("/data", PackCatalog.Standard), PackCatalog.EffectsFolder("/data", PackCatalog.FxShaders),
+            PackCatalog.EffectsFolder("/data", PackCatalog.AcerolaFx), PackCatalog.EffectsFolder("/data", PackCatalog.OtisFx),
+        }, i.SearchPaths().Effects);
+    }
+
     [Fact]
     public void A_second_request_while_queued_does_not_queue_twice()
     {

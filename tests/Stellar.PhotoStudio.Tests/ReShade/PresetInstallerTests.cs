@@ -146,7 +146,7 @@ public sealed class PresetInstallerTests
     [Fact]
     public void A_failed_preset_download_shows_its_error_and_writes_nothing()
     {
-        HavePacks(PackCatalog.Standard, PackCatalog.Prod80);
+        HavePacks(PackCatalog.Standard, PackCatalog.Prod80, PackCatalog.FxShaders);   // Stella: prod80 + FXShaders (MagicHDR)
         var i = Make();
         var s = PresetCatalog.StellaMedium;
         i.Request(s);
@@ -199,7 +199,7 @@ public sealed class PresetInstallerTests
     [Fact]
     public void The_checked_download_is_never_rewritten_and_the_installed_copy_drops_other_game_settings()
     {
-        HavePacks(PackCatalog.Standard, PackCatalog.Prod80);
+        HavePacks(PackCatalog.Standard, PackCatalog.Prod80, PackCatalog.FxShaders);   // Stella: prod80 + FXShaders (MagicHDR)
         var i = Make();
         var s = PresetCatalog.StellaMedium;
         const string text = "PreprocessorDefinitions=RESHADE_DEPTH_INPUT_IS_REVERSED=1,RESHADE_DEPTH_INPUT_IS_UPSIDE_DOWN=1,BLOOM_QUALITY_0_TO_2=2\n"
@@ -294,6 +294,7 @@ public sealed class PresetInstallerTests
         _dirs.Add(PackCatalog.EffectsFolder("/data", PackCatalog.Standard));
         _dirs.Add(PackCatalog.PackFolder("/data", PackCatalog.SweetFx));   // a stale/partial folder -> UpdateAvailable
         _dirs.Add(PackCatalog.EffectsFolder("/data", PackCatalog.Prod80));
+        _dirs.Add(PackCatalog.EffectsFolder("/data", PackCatalog.FxShaders));
         SynchronizationContext.SetSynchronizationContext(null);
         var serial = new SerialDownloads(_dl);
         var packs = new PackInstaller(serial, PackCatalog.All, _dirs.Contains, _warnings.Add);
@@ -309,7 +310,7 @@ public sealed class PresetInstallerTests
         Assert.Equal(PresetStatus.Queued, i.Status(c));   // nothing has told it yet
         // Requesting an unrelated preset whose packs are ALL already installed re-walks the whole catalog in
         // StartReady, which must now notice SweetFX is stuck and fail c instead of leaving it Queued forever.
-        var other = PresetCatalog.StellaMedium;   // needs [standard, prod80] only — never touches sweetfx
+        var other = PresetCatalog.StellaMedium;   // needs [standard, prod80, fxshaders] only — never touches sweetfx
         i.Request(other);
         Assert.Equal(PresetStatus.Failed, i.Status(c));
         Assert.Equal("SweetFX", i.FailedRequirement(c));
@@ -327,7 +328,7 @@ public sealed class PresetInstallerTests
     [InlineData("bad zip", nameof(DownloadFailure.Other))]
     public void FailureKind_classifies_a_failed_presets_own_download_error(string error, string expected)
     {
-        HavePacks(PackCatalog.Standard, PackCatalog.Prod80);
+        HavePacks(PackCatalog.Standard, PackCatalog.Prod80, PackCatalog.FxShaders);   // Stella: prod80 + FXShaders (MagicHDR)
         var i = Make();
         var s = PresetCatalog.StellaMedium;
         i.Request(s);

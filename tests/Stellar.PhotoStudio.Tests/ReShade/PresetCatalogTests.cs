@@ -7,7 +7,9 @@ namespace Stellar.PhotoStudio.Tests.ReShade;
 
 // Spec 2026-10-03 reshade § 12 V4; docs/recon/reshade-preset-sources.md. Community presets are pinned to a commit and
 // checked by sha256 + exact size, re-measured 2026-10-04 (plan § Re-measure — identical to the research download).
-// A changed value here must come from a fresh measurement.
+// A changed value here must come from a fresh measurement. Coverage re-measured 2026-10-04 against all six packs
+// (technique counts only when file AND technique name match): Stella Medium/High 2/3 -> 3/3 — MagicHDR@MagicHDR.fx is
+// FXShaders' (technique "MagicHDR", uniforms match the preset's section); every other preset unchanged.
 public sealed class PresetCatalogTests
 {
     [Theory]
@@ -22,10 +24,10 @@ public sealed class PresetCatalogTests
         "5e1b23f882fede42f1cf7d9cd0076574daae354710eca19e143cec00e4571d63", 38217L, "GPL-3.0", 5, 5, true)]
     [InlineData("stella-medium", "Stella Medium.ini",
         "https://raw.githubusercontent.com/Genshin-Stella-Mod/resources/a15ae11517dad6c5681beb212422724c4455a276/public/resources/ReShade/Presets/1.%20Default%20preset%20-%20Medium%20settings.ini",
-        "320356eab91018c4677be724626a6532fa3801e2cea4f48e7df242a6c6bca93a", 1624L, "CC-BY-SA-4.0", 2, 3, true)]
+        "320356eab91018c4677be724626a6532fa3801e2cea4f48e7df242a6c6bca93a", 1624L, "CC-BY-SA-4.0", 3, 3, true)]
     [InlineData("stella-high", "Stella High.ini",
         "https://raw.githubusercontent.com/Genshin-Stella-Mod/resources/a15ae11517dad6c5681beb212422724c4455a276/public/resources/ReShade/Presets/2.%20Default%20preset%20-%20High%20settings.ini",
-        "61c65ecbc73e00ad7f2a319df66dcc6c1a960098d63c865b8054ede52f9da043", 1624L, "CC-BY-SA-4.0", 2, 3, true)]
+        "61c65ecbc73e00ad7f2a319df66dcc6c1a960098d63c865b8054ede52f9da043", 1624L, "CC-BY-SA-4.0", 3, 3, true)]
     [InlineData("okami-cityruins", "Okami City Ruins.ini",
         "https://raw.githubusercontent.com/MeynanAneytha/YomigamiOkami-reshade-shaders/53e9fe085845093f50189dc5cce9419e88e423ed/reshade-presets/Okami/OkamiNierAutomata_CityRuins.ini",
         "9a0d12003cd004f18a437966f7e278b8d259695bee5783e56b047bfc3fcb5677", 2863L, "MIT", 13, 19, false)]
@@ -56,7 +58,10 @@ public sealed class PresetCatalogTests
         Assert.Equal("Sefinek (Genshin Stella Mod)", PresetCatalog.Find("stella-medium")!.Author);
         Assert.Equal("Yomigami Okami, port by Meynan", PresetCatalog.Find("okami-cityruins")!.Author);
         Assert.Equal(new[] { "sweetfx" }, PresetCatalog.Find("starluxe-legacy")!.Packs);
-        Assert.Equal(new[] { "prod80" }, PresetCatalog.Find("stella-high")!.Packs);
+        Assert.Equal(new[] { "prod80", "fxshaders" }, PresetCatalog.Find("stella-high")!.Packs);
+        Assert.Equal(new[] { "prod80", "fxshaders" }, PresetCatalog.Find("stella-medium")!.Packs);
+        Assert.False(PresetCatalog.Find("stella-medium")!.Partial);   // no "partial" badge any more
+        Assert.True(PresetCatalog.Find("okami-cityruins")!.Partial);   // 13/19 — the new packs carry none of its six
         Assert.Equal(new[] { "standard", "sweetfx", "prod80" }, PresetCatalog.Find("okami-cityruins")!.Packs);
         Assert.Equal(new[] { "fLUT_TextureName" }, PresetCatalog.Find("starluxe-luminescence")!.DropDefinitions);
         Assert.Empty(PresetCatalog.Find("stella-medium")!.DropDefinitions);   // its only override is the RESHADE_DEPTH_* rule
@@ -133,7 +138,7 @@ public sealed class PresetCatalogTests
                 Assert.NotNull(PackCatalog.Find(id));
         Assert.Equal(new[] { "standard", "sweetfx" },
             PresetCatalog.PacksWithRequires(PresetCatalog.Find("starluxe-galactic")!).Select(p => p.Id).ToArray());
-        Assert.Equal(new[] { "standard", "prod80" },
+        Assert.Equal(new[] { "standard", "prod80", "fxshaders" },   // installing Stella also fetches FXShaders (MagicHDR)
             PresetCatalog.PacksWithRequires(PresetCatalog.Find("stella-medium")!).Select(p => p.Id).ToArray());
         Assert.Equal(new[] { "standard", "sweetfx", "prod80" },
             PresetCatalog.PacksWithRequires(PresetCatalog.Find("cinematic-warm")!).Select(p => p.Id).ToArray());
