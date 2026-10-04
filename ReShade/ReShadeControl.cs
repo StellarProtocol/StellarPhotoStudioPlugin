@@ -25,6 +25,8 @@ internal sealed class ReShadeControl
     private bool _liveEnabled;
     private string? _livePreset;
     private ReShadeChoice? _openSnapshot;   // O1: ReShade as it was when Photo Studio opened (full preset path)
+    private bool _open = true;                // tests drive the setters directly; the plugin calls OnStudioClosed at start
+    private ReShadeChoice? _session;          // the studio's ReShade state, re-applied at the next open (edits never lost)
 
     public ReShadeControl(IReShade rs, string presetFolder)
     {
@@ -104,6 +106,7 @@ internal sealed class ReShadeControl
     /// (an in-memory baseline / stash row) is switched to as it is; then on/off.</summary>
     public void Apply(ReShadeChoice c)
     {
+        if (!_open) { _session = c; return; }   // closed (next-preset hotkey): wait for the open, after its snapshot (O1)
         if (c.Preset is { Length: > 0 } p)
             SetPresetPath(ReShadePaths.HasFolder(p) ? p : ReShadePaths.PathFor(_presetFolder, p));
         SetEnabled(c.Enabled);
@@ -113,20 +116,40 @@ internal sealed class ReShadeControl
     /// close that could not restore (ReShade was not Ready then): that one is still what the game had.</summary>
     public void OnStudioOpened()
     {
-        if (_openSnapshot is not null || !Installed) return;
-        _openSnapshot = new ReShadeChoice(PresetPath, Enabled);   // with wishes: a restore sent at a quick re-close counts
+        _open = true;
+        if (_openSnapshot is null && Installed)
+            _openSnapshot = new ReShadeChoice(PresetPath, Enabled);   // with wishes: a restore sent at a quick re-close counts
+        if (_session is not { } s) return;
+        _session = null;
+        if (Installed) ApplyDiff(s);   // the state the studio had at close (or a look applied while closed) comes back
     }
 
     /// <summary>O1: Photo Studio closed (or the plugin unloads). Puts back only what differs from the snapshot; while
     /// ReShade is not Ready it sends nothing and keeps the snapshot for the next close.</summary>
     public void OnStudioClosed()
     {
+        _open = false;
         if (_openSnapshot is not { } snap) return;
         if (!Installed) { _openSnapshot = null; return; }
         if (_rs.State != ReShadeState.Ready) return;
         _openSnapshot = null;
-        if (snap.Preset is { Length: > 0 } p && !ReShadePaths.Same(PresetPath, p)) SetPresetPath(p);
-        if (Enabled != snap.Enabled) SetEnabled(snap.Enabled);
+        var now = new ReShadeChoice(PresetPath, Enabled);
+        _session = Differs(now, snap) ? now : null;   // remembered so a reopen brings the edit back
+        ApplyDiff(snap);
+    }
+
+    private static bool Differs(ReShadeChoice a, ReShadeChoice b) =>
+        a.Enabled != b.Enabled || (a.Preset is { Length: > 0 } p && !ReShadePaths.Same(p, b.Preset ?? ""));
+
+    /// <summary>Sends only the parts of <paramref name="c"/> that differ from ReShade's current state.</summary>
+    private void ApplyDiff(ReShadeChoice c)
+    {
+        if (c.Preset is { Length: > 0 } p)
+        {
+            var path = ReShadePaths.HasFolder(p) ? p : ReShadePaths.PathFor(_presetFolder, p);   // a look's bare file name
+            if (!ReShadePaths.Same(PresetPath, path)) SetPresetPath(path);
+        }
+        if (Enabled != c.Enabled) SetEnabled(c.Enabled);
     }
 
     private bool TechniqueIs(string effect, string name, bool on)

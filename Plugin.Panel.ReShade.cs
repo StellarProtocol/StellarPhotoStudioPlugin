@@ -68,13 +68,17 @@ public sealed partial class Plugin
         LabeledRow(() => T("ps.rs.preset"),
             new CellElement(new DropdownElement(() => RsOptions().Selected, () => RsOptions().Labels, SelectReShadePreset), Weight: 1f),
             new ButtonElement(() => T("ps.look.rescan"), OnClick: RescanReShadePresets, Width: 96f)),
-        new TextElement(() => T("ps.rs.savedWithLook"), Color: Muted),
-        new TextElement(() => T("ps.rs.effectsOn")),
+        // A preset outside our folder (ReShade's own) is not stored by a look — only on/off (qa re-review).
+        new TextElement(() => OwnPresetInUse() ? T("ps.rs.savedOnOff") : T("ps.rs.savedWithLook"), Color: Muted),
+        new ConditionalElement(() => !_settings.AllFxOpen, new TextElement(() => T("ps.rs.effectsOn"))),
         new ConditionalElement(() => RsReloading(), new TextElement(() => T("ps.rs.reloading"), Color: Muted)),
         new ConditionalElement(() => !RsReloading() && _services.ReShade.Techniques.Count == 0,
             new TextElement(() => T("ps.rs.noEffects"), Color: Muted)),
         new ConditionalElement(() => !RsReloading() && !_settings.AllFxOpen, PresetFxRows()),
-        new ConditionalElement(() => RsRows().Count > ReShadeView.EnabledCount(RsRows()),
+        new ConditionalElement(() => !RsReloading() && !_settings.AllFxOpen && ReShadeView.EnabledCount(RsRows()) > FxPresetRows,
+            new TextElement(MoreFxText, Color: Muted)),
+        // Shown whenever some effect is not on the preset rows — incl. a preset with more effects on than FxPresetRows.
+        new ConditionalElement(() => !RsReloading() && RsRows().Count > Math.Min(ReShadeView.EnabledCount(RsRows()), FxPresetRows),
             new SelectableElement(new TextElement(AllFxText, Color: Muted), OnClick: () => _settings.SetAllFxOpen(!_settings.AllFxOpen))),
         new ConditionalElement(() => !RsReloading() && _settings.AllFxOpen && RsRows().Count > 0,
             new VirtualListElement(() => RsRows().Count, FxRowHeight, FxPoolRows(), o => _fxOffset = o, Height: FxRowHeight * 6)
@@ -116,6 +120,33 @@ public sealed partial class Plugin
         if (_allFxText.Text is null || _allFxText.Open != _settings.AllFxOpen || _allFxText.Count != count)
             _allFxText = (_settings.AllFxOpen, count, (_settings.AllFxOpen ? "▾ " : "▸ ") + _loc.TFormat("ps.rs.allEffects", count));
         return _allFxText.Text;
+    }
+
+    private (int Count, string Text) _moreFxText;
+
+    private string MoreFxText()
+    {
+        var more = ReShadeView.EnabledCount(RsRows()) - FxPresetRows;
+        if (_moreFxText.Text is null || _moreFxText.Count != more) _moreFxText = (more, _loc.TFormat("ps.rs.moreFx", more));
+        return _moreFxText.Text;
+    }
+
+    /// <summary>Localized caches dropped on a language change (perf re-review).</summary>
+    private void ResetReShadeTextCaches()
+    {
+        _allFxText = default;
+        _moreFxText = default;
+        _rsOptionsCache = null;
+    }
+
+    private (string? Path, bool Own) _ownPreset;
+
+    /// <summary>Cached on the preset path instance (InPresetsFolder allocates; this runs every refresh).</summary>
+    private bool OwnPresetInUse()
+    {
+        var p = _rs.PresetPath;
+        if (!ReferenceEquals(p, _ownPreset.Path)) _ownPreset = (p, p is { Length: > 0 } && !ReShadePaths.InPresetsFolder(p));
+        return _ownPreset.Own;
     }
 
     private DepthNote RsDepth() => ReShadeView.Depth(_settings.Shape, EffectiveScale(), _services.ReShade.Techniques, _rs.IsOnFunc);
@@ -175,7 +206,7 @@ public sealed partial class Plugin
         _presetSession.OnReShadeEdited();   // the Look preset remembers on/off (R8)
     }
 
-    private const int MaxPresetLabel = 24;
+    private const int MaxPresetLabel = 18;   // measured: 24 overflowed the 139 px dropdown at 400 px
 
     private PresetOptions RsOptions() => _rsOptionsCache ??= ShortLabels(ReShadePresets.Options(ReShadePresetFolder, _rsPresetFiles,
         _rs.PresetPath, name => _loc.TFormat("ps.rs.presetOther", name)));

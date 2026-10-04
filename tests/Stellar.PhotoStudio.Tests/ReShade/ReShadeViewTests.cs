@@ -146,4 +146,16 @@ public sealed class ReShadeViewTests
         Assert.EndsWith("…", label);
         Assert.Equal("Short", ReShadeView.Ellipsize("Short", 10));
     }
+
+    // ux-ui re-review: a shortened label of a repeated name must keep its "(File)" suffix — it is what tells them apart.
+    [Fact]
+    public void A_shortened_repeated_name_keeps_its_effect_suffix()
+    {
+        var a = new ReShadeTechnique("SuperLongSharpeningTechniqueName", "CAS.fx", true, false);
+        var b = new ReShadeTechnique("SuperLongSharpeningTechniqueName", "PD80.fx", true, false);
+        var labels = ReShadeView.Rows(new[] { a, b }).Select(r => r.Label).ToArray();
+        Assert.All(labels, l => Assert.True(l.Length <= ReShadeView.MaxLabel, l));
+        Assert.Contains(labels, l => l.EndsWith(" (CAS)"));
+        Assert.Contains(labels, l => l.EndsWith(" (PD80)"));
+    }
 }

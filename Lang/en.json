@@ -349,5 +349,7 @@
   "ps.rs.status.applying": "Applying ReShade…",
   "ps.rs.note.notReady": "ReShade wasn't ready in time — this photo was taken without its effects.",
   "ps.rs.reloading": "Reloading effects…",
-  "ps.rs.pack.failedDep": "Needs {0}, which failed to download."
+  "ps.rs.pack.failedDep": "Needs {0}, which failed to download.",
+  "ps.rs.savedOnOff": "ReShade's own preset is in use: your Look preset keeps only whether ReShade is on.",
+  "ps.rs.moreFx": "+{0} more in this preset"
 }

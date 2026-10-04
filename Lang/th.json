@@ -349,5 +349,7 @@
   "ps.rs.status.applying": "กำลังปรับใช้ ReShade…",
   "ps.rs.note.notReady": "ReShade ยังไม่พร้อมทันเวลา — รูปนี้ถ่ายโดยไม่มีเอฟเฟกต์",
   "ps.rs.reloading": "กำลังโหลดเอฟเฟกต์ใหม่…",
-  "ps.rs.pack.failedDep": "ต้องใช้ {0} ซึ่งดาวน์โหลดไม่สำเร็จ"
+  "ps.rs.pack.failedDep": "ต้องใช้ {0} ซึ่งดาวน์โหลดไม่สำเร็จ",
+  "ps.rs.savedOnOff": "กำลังใช้พรีเซ็ตของ ReShade เอง: พรีเซ็ตโทนภาพจะจำเฉพาะสถานะเปิด/ปิด ReShade",
+  "ps.rs.moreFx": "อีก {0} รายการในพรีเซ็ตนี้"
 }

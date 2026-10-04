@@ -349,5 +349,7 @@
   "ps.rs.status.applying": "Menerapkan ReShade…",
   "ps.rs.note.notReady": "ReShade belum siap tepat waktu — foto ini diambil tanpa efeknya.",
   "ps.rs.reloading": "Memuat ulang efek…",
-  "ps.rs.pack.failedDep": "Butuh {0}, yang gagal diunduh."
+  "ps.rs.pack.failedDep": "Butuh {0}, yang gagal diunduh.",
+  "ps.rs.savedOnOff": "Preset milik ReShade sedang dipakai: preset tampilanmu hanya menyimpan apakah ReShade aktif.",
+  "ps.rs.moreFx": "+{0} lagi di preset ini"
 }

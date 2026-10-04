@@ -34,6 +34,7 @@ public sealed partial class Plugin
     {
         _gameRoot = gameRoot;
         _rs = new ReShadeControl(_services.ReShade, ReShadePresetFolder);
+        _rs.OnStudioClosed();   // the plugin starts with Photo Studio closed: a hotkey look waits for the open (O1)
         _packs = new PackInstaller(_services.Downloads, PackCatalog.All, Directory.Exists, _services.Log.Warning);
         _packs.PacksChanged += ApplySearchPaths;
         _onReShadeChanged = OnReShadeChanged;

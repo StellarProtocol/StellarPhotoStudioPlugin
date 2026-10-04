@@ -349,5 +349,7 @@
   "ps.rs.status.applying": "ReShadeを適用中…",
   "ps.rs.note.notReady": "ReShadeの準備が間に合わなかったため、この写真はエフェクトなしで撮影されました。",
   "ps.rs.reloading": "エフェクトを再読み込み中…",
-  "ps.rs.pack.failedDep": "{0}が必要ですが、ダウンロードに失敗しました。"
+  "ps.rs.pack.failedDep": "{0}が必要ですが、ダウンロードに失敗しました。",
+  "ps.rs.savedOnOff": "ReShade側のプリセットを使用中です。ルックのプリセットにはReShadeのオン／オフだけが保存されます。",
+  "ps.rs.moreFx": "このプリセットにあと{0}件"
 }

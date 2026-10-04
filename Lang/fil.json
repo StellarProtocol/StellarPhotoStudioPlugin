@@ -349,5 +349,7 @@
   "ps.rs.status.applying": "Ina-apply ang ReShade…",
   "ps.rs.note.notReady": "Hindi pa handa ang ReShade sa oras — kinunan ang litratong ito nang walang effect nito.",
   "ps.rs.reloading": "Nire-reload ang mga effect…",
-  "ps.rs.pack.failedDep": "Kailangan ang {0}, na hindi na-download."
+  "ps.rs.pack.failedDep": "Kailangan ang {0}, na nabigong ma-download.",
+  "ps.rs.savedOnOff": "Ginagamit ang sariling preset ng ReShade: on/off lang ng ReShade ang naka-save sa preset ng itsura mo.",
+  "ps.rs.moreFx": "+{0} pa sa preset na ito"
 }

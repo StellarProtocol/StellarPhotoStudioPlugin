@@ -218,4 +218,46 @@ public sealed class ReShadeReviewFixTests
         public void Write(string n, string j) => _files[n] = j;
         public void Delete(string n) => _files.Remove(n);
     }
+
+    // qa re-review: a Look preset applied while Photo Studio is CLOSED (the next-preset hotkey) must not change ReShade
+    // behind O1's back — it waits for the next open, where it is applied after the snapshot (so closing puts it back).
+    [Fact]
+    public void A_choice_applied_while_closed_waits_for_the_next_open()
+    {
+        var c = Make();
+        c.OnStudioClosed();                                        // the plugin starts closed
+        c.Apply(new ReShadeChoice(Folder + "/Noir.ini", false));
+        Assert.Empty(_fake.PresetCalls);
+        Assert.Empty(_fake.EnabledRequests);
+
+        c.OnStudioOpened();
+        Assert.Equal(new[] { Folder + "/Noir.ini" }, _fake.PresetCalls);
+        Assert.Equal(new[] { false }, _fake.EnabledRequests);
+        Land(c);
+        _fake.PresetCalls.Clear();
+        _fake.EnabledRequests.Clear();
+
+        c.OnStudioClosed();
+        Assert.Equal(new[] { Own }, _fake.PresetCalls);             // the snapshot was taken BEFORE the deferred choice
+        Assert.Equal(new[] { true }, _fake.EnabledRequests);
+    }
+
+    // qa re-review: "edits are never lost" — the ReShade change made in Photo Studio comes back when it reopens (the
+    // close put the game's own state back per O1; the session's state returns with the rest of the look).
+    [Fact]
+    public void Reopening_re_applies_the_reshade_state_the_studio_had_at_close()
+    {
+        var c = Make();
+        c.OnStudioOpened();
+        c.SetPresetPath(Folder + "/Noir.ini");
+        Land(c);
+        c.OnStudioClosed();
+        Land(c);                                                   // back on the player's own preset
+        _fake.PresetCalls.Clear();
+        _fake.EnabledRequests.Clear();
+
+        c.OnStudioOpened();
+        Assert.Equal(new[] { Folder + "/Noir.ini" }, _fake.PresetCalls);
+        Assert.Empty(_fake.EnabledRequests);                       // on/off did not change, so nothing re-sent
+    }
 }

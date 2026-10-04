@@ -53,7 +53,7 @@ internal static class ReShadeView
         foreach (var t in techniques) names[t.Name] = names.TryGetValue(t.Name, out var n) ? n + 1 : 1;
         var rows = new List<FxRow>(techniques.Count);
         foreach (var t in techniques)
-            rows.Add(new FxRow(t, Ellipsize(names[t.Name] > 1 ? $"{t.Name} ({EffectName(t.EffectFile)})" : t.Name, MaxLabel), t.Enabled));
+            rows.Add(new FxRow(t, Label(t, names[t.Name] > 1), t.Enabled));
         rows.Sort((a, b) => a.InPreset != b.InPreset
             ? (a.InPreset ? -1 : 1)
             : string.Compare(a.Label, b.Label, StringComparison.OrdinalIgnoreCase));
@@ -69,6 +69,17 @@ internal static class ReShadeView
     }
 
     public static string Ellipsize(string s, int max) => s.Length <= max ? s : s.Substring(0, max - 1) + "…";
+
+    /// <summary>A repeated name keeps its "(File)" suffix when shortened — the suffix is what tells the two apart; only a
+    /// suffix longer than half the label is shortened along with the name.</summary>
+    private static string Label(ReShadeTechnique t, bool repeated)
+    {
+        if (!repeated) return Ellipsize(t.Name, MaxLabel);
+        var suffix = $" ({EffectName(t.EffectFile)})";
+        return suffix.Length <= MaxLabel / 2
+            ? Ellipsize(t.Name, MaxLabel - suffix.Length) + suffix
+            : Ellipsize(t.Name + suffix, MaxLabel);
+    }
 
     private static IReadOnlyList<FxRow>? Rebind(IReadOnlyList<FxRow> previous, IReadOnlyList<ReShadeTechnique> live)
     {

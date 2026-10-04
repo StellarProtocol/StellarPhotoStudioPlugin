@@ -79,7 +79,7 @@ public sealed partial class Plugin : IStellarPlugin
 
         _onFrameworkUpdate = OnUpdate;
         services.Framework.Update += _onFrameworkUpdate;
-        _onLanguageChanged = () => { _lutOptionsCache = null; _importOptionsCache = null; };
+        _onLanguageChanged = () => { _lutOptionsCache = null; _importOptionsCache = null; ResetReShadeTextCaches(); };
         _loc.LanguageChanged += _onLanguageChanged;
         ArmSelfTests();                          // Plugin.SelfTest.cs — inert unless their env vars are set
     }
