@@ -15,7 +15,7 @@ public sealed class PresetInstallerTests
 {
     private readonly FakeDownloads _dl = new();
     private readonly HashSet<string> _dirs = new();
-    private readonly FakePresetFiles _files = new();
+    private readonly FakeReShadePresetFiles _files = new();
     private readonly List<string> _warnings = new();
 
     private PresetInstaller Make()
@@ -257,5 +257,27 @@ public sealed class PresetInstallerTests
         _dl.Calls[0].Done.SetResult(new DownloadResult(false, null, "checksum mismatch"));
         Assert.Equal(PresetStatus.Failed, i.Status(g));
         Assert.Equal("ReShade standard", i.FailedRequirement(g));
+    }
+
+    // Fix round 1, minor 2: a throwing PresetsChanged subscriber sits inside InstallAsync's own try block, right after
+    // the write — unguarded, its exception used to be caught by InstallAsync's OWN catch(Exception), which then called
+    // Fail(e, s, ...) and logged "install failed" for a preset whose file had already been written successfully. By then
+    // _live.Remove(e.Id) and _disk[e.Id]=true had already run, so Status()/Error() still read Installed/null either way
+    // (they fall through to the already-updated disk cache once the live entry is gone) — the observable bug is the
+    // spurious warning, not the reported status.
+    [Fact]
+    public void A_throwing_PresetsChanged_subscriber_does_not_log_install_failed_for_the_preset_that_installed()
+    {
+        var i = Make();
+        i.PresetsChanged += () => throw new System.InvalidOperationException("boom");
+        var c = PresetCatalog.CleanSharpen;
+        i.Request(c);
+        PackDone(0, PackCatalog.Standard);
+        PackDone(1, PackCatalog.SweetFx);
+        Assert.Equal(PresetStatus.Installed, i.Status(c));
+        Assert.Null(i.Error(c));
+        Assert.Equal(OwnPresets.Text("clean-sharpen"), _files.Files[Installed(c)]);
+        Assert.DoesNotContain(_warnings, w => w.Contains("install failed"));
+        Assert.Contains(_warnings, w => w.Contains("PresetsChanged subscriber threw"));
     }
 }

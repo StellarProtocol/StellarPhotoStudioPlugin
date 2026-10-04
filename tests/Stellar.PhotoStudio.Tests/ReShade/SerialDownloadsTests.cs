@@ -86,4 +86,28 @@ public sealed class SerialDownloadsTests
         Assert.Equal(2, inner.Calls.Count);   // b started right after a's failure resolved
         Assert.Equal("b", inner.Calls[1].Request.TargetPath);
     }
+
+    // Fix round 1 (Important): cancelling a MIDDLE waiter must not release the one behind it while the one AHEAD of it
+    // is still running. Reproduced by the reviewer with a running, b and c waiting: cancelling b used to free c
+    // immediately (c jumped ahead of a — calls=[a,c], maxInFlight=2), because b's finally unconditionally released
+    // its own "done" signal regardless of whether b ever reached its turn.
+    [Fact]
+    public void Cancelling_a_middle_waiter_does_not_let_the_one_behind_it_jump_the_still_running_call()
+    {
+        SynchronizationContext.SetSynchronizationContext(null);
+        var inner = new FakeDownloads();
+        var serial = new SerialDownloads(inner);
+        var a = serial.DownloadAsync(Req("a"), null, CancellationToken.None);
+        using var ctsB = new CancellationTokenSource();
+        var b = serial.DownloadAsync(Req("b"), null, ctsB.Token);
+        var c = serial.DownloadAsync(Req("c"), null, CancellationToken.None);
+        Assert.Single(inner.Calls);   // only a has started
+        ctsB.Cancel();
+        Assert.True(b.IsCanceled);
+        Assert.Single(inner.Calls);   // b's cancellation must not let c start while a is still running
+        inner.Calls[0].Done.SetResult(new DownloadResult(true, "/data/a", null));
+        Assert.True(a.IsCompletedSuccessfully);
+        Assert.Equal(2, inner.Calls.Count);   // only now, once a finishes, does c start
+        Assert.Equal("c", inner.Calls[1].Request.TargetPath);
+    }
 }

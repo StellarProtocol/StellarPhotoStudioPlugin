@@ -17,7 +17,7 @@ public sealed class PresetFilesTests : IDisposable
     [Fact]
     public void WriteNew_creates_the_folder_and_never_overwrites_a_file()
     {
-        var f = new DiskPresetFiles();
+        var f = new DiskReShadePresetFiles();
         var path = Path.Combine(_dir, "presets", "Soft anime.ini");
         Assert.True(f.WriteNew(path, "Techniques=A@A.fx\n"));
         Assert.False(f.WriteNew(path, "something else"));   // edits are never lost
@@ -29,7 +29,7 @@ public sealed class PresetFilesTests : IDisposable
     [Fact]
     public void Text_round_trips_byte_for_byte()
     {
-        var f = new DiskPresetFiles();
+        var f = new DiskReShadePresetFiles();
         var path = Path.Combine(_dir, "x.ini");
         var text = (char)0xFEFF + "Key=1\r\nB=\"é\"\n";   // a BOM char + CRLF + non-ASCII
         Assert.True(f.WriteNew(path, text));

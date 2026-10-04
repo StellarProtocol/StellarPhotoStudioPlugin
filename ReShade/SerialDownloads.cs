@@ -28,14 +28,24 @@ internal sealed class SerialDownloads : IPluginDownloads
         var previous = _tail;
         var done = new TaskCompletionSource<bool>();
         _tail = done.Task;
+        var turn = false;
         try
         {
             await WaitTurn(previous, ct);
+            turn = true;
             return await _inner.DownloadAsync(request, progress, ct);
         }
         finally
         {
-            done.TrySetResult(true);   // release the next waiter regardless of how this call ended
+            // Release the next waiter now ONLY if this call actually reached its turn (previous was already done by
+            // then) — or if previous finished by coincidence while we were unwinding. Otherwise this call was cancelled
+            // while still queued BEHIND previous: releasing "done" immediately would let the call behind US skip past
+            // previous, which is still running (the bug: cancelling a middle waiter let the one behind it jump ahead of
+            // one still in flight — calls=[a,c], maxInFlight=2). Chain the release onto previous instead, so the next
+            // waiter still waits for the call actually ahead of it, not for us.
+            if (turn || previous.IsCompleted) done.TrySetResult(true);
+            else _ = previous.ContinueWith(_ => done.TrySetResult(true), CancellationToken.None,
+                TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
         }
     }
 

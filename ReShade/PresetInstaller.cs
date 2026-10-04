@@ -25,7 +25,7 @@ internal sealed class PresetInstaller : IDisposable
     private readonly SerialDownloads _downloads;
     private readonly PackInstaller _packs;
     private readonly IReadOnlyList<PresetEntry> _catalog;
-    private readonly IPresetFiles _files;
+    private readonly IReShadePresetFiles _files;
     private readonly Action<string> _warn;
     private readonly Dictionary<string, bool> _disk = new(StringComparer.Ordinal);
     private readonly Dictionary<string, LiveState> _live = new(StringComparer.Ordinal);
@@ -40,7 +40,7 @@ internal sealed class PresetInstaller : IDisposable
         public string? FailedRequirement;   // the required pack's Name, when the preset failed because that pack did
     }
 
-    public PresetInstaller(SerialDownloads downloads, PackInstaller packs, IReadOnlyList<PresetEntry> catalog, IPresetFiles files,
+    public PresetInstaller(SerialDownloads downloads, PackInstaller packs, IReadOnlyList<PresetEntry> catalog, IReShadePresetFiles files,
         Action<string> warn)
     {
         _downloads = downloads;
@@ -147,7 +147,7 @@ internal sealed class PresetInstaller : IDisposable
             _files.WriteNew(PresetPath(e), text);   // false: a file of that name exists and is kept (edits are never lost)
             _live.Remove(e.Id);
             _disk[e.Id] = true;
-            PresetsChanged?.Invoke();
+            RaisePresetsChanged();
         }
         catch (OperationCanceledException)
         {
@@ -156,6 +156,27 @@ internal sealed class PresetInstaller : IDisposable
         catch (Exception ex)
         {
             Fail(e, s, ex.Message);
+        }
+    }
+
+    /// <summary>Invokes each <see cref="PresetsChanged"/> subscriber in its own try/catch (mirrors
+    /// <see cref="PackInstaller"/>'s <c>RaisePackFailed</c>): a throwing subscriber must not propagate into the
+    /// surrounding catch in <see cref="InstallAsync"/>, which would otherwise log "install failed" for a preset that
+    /// actually installed successfully.</summary>
+    private void RaisePresetsChanged()
+    {
+        var handler = PresetsChanged;
+        if (handler is null) return;
+        foreach (var d in handler.GetInvocationList())
+        {
+            try
+            {
+                ((Action)d)();
+            }
+            catch (Exception ex)
+            {
+                _warn($"[PhotoStudio] a PresetsChanged subscriber threw: {ex.Message}");
+            }
         }
     }
 

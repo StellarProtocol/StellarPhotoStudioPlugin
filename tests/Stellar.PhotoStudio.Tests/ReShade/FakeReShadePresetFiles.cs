@@ -4,7 +4,7 @@ using Stellar.PhotoStudio.ReShade;
 
 namespace Stellar.PhotoStudio.Tests.ReShade;
 
-internal sealed class FakePresetFiles : IPresetFiles
+internal sealed class FakeReShadePresetFiles : IReShadePresetFiles
 {
     public readonly Dictionary<string, string> Files = new(StringComparer.Ordinal);
     public readonly List<string> Writes = new();
