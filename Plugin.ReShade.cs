@@ -13,6 +13,8 @@ public sealed partial class Plugin
 {
     private ReShadeControl _rs = null!;
     private PackInstaller _packs = null!;
+    private PresetInstaller _rsPresets = null!;
+    private Action _onPresetsChanged = null!;
     private readonly CaptureGate _captureGate = new();
     private Action _onReShadeChanged = null!;
     private string _gameRoot = "";
@@ -35,8 +37,13 @@ public sealed partial class Plugin
         _gameRoot = gameRoot;
         _rs = new ReShadeControl(_services.ReShade, ReShadePresetFolder);
         _rs.OnStudioClosed();   // the plugin starts with Photo Studio closed: a hotkey look waits for the open (O1)
-        _packs = new PackInstaller(_services.Downloads, PackCatalog.All, Directory.Exists, _services.Log.Warning);
-        _packs.PacksChanged += ApplySearchPaths;
+        // Packs and presets share ONE download queue: the framework answers "busy" to an overlapping download.
+        var downloads = new SerialDownloads(_services.Downloads);
+        _packs = new PackInstaller(downloads, PackCatalog.All, Directory.Exists, _services.Log.Warning);
+        _packs.PacksChanged += ApplySearchPaths;   // subscribed before the preset installer: search paths first, then the preset
+        _rsPresets = new PresetInstaller(downloads, _packs, PresetCatalog.All, new DiskReShadePresetFiles(), _services.Log.Warning);
+        _onPresetsChanged = RescanReShadePresets;   // an installed preset appears in the Preset dropdown at once
+        _rsPresets.PresetsChanged += _onPresetsChanged;
         _onReShadeChanged = OnReShadeChanged;
         _services.ReShade.Changed += _onReShadeChanged;
         _dxgiPresent = File.Exists(Path.Combine(_gameRoot, "dxgi.dll"));
@@ -51,6 +58,8 @@ public sealed partial class Plugin
     {
         _rs.OnStudioClosed();   // O1: unloading returns ReShade to what it was when Photo Studio opened
         _services.ReShade.Changed -= _onReShadeChanged;
+        _rsPresets.PresetsChanged -= _onPresetsChanged;
+        _rsPresets.Dispose();
         _packs.PacksChanged -= ApplySearchPaths;
         _packs.Dispose();
     }
@@ -126,6 +135,7 @@ public sealed partial class Plugin
             _rsPresetFiles = Array.Empty<string>();
         }
         _rsOptionsCache = null;
+        _rsPresets.Rescan();   // the Presets list's installed state follows the folder (a file deleted or copied in by hand)
     }
 
     private void SnapshotReShadeForShot() =>

@@ -134,11 +134,14 @@ public sealed class StudioSettingsTests
         Assert.True(s.ReShadeOpen);
         Assert.True(s.PacksOpen);
         Assert.False(s.AllFxOpen);
+        Assert.True(s.PresetsOpen);
         s.SetAllFxOpen(true);
+        s.SetPresetsOpen(false);
         s.SetPacksOpen(false);
         s.SetReShadeOpen(false);
         var again = new StudioSettings(cfg);
         Assert.True(again.AllFxOpen);
+        Assert.False(again.PresetsOpen);
         Assert.False(again.PacksOpen);
         Assert.False(again.ReShadeOpen);
     }

@@ -45,6 +45,7 @@ internal sealed class StudioSettings
         ReShadeOpen = cfg.Get("ui.reshade.open", true);
         PacksOpen = cfg.Get("ui.reshade.packsOpen", true);
         AllFxOpen = cfg.Get("ui.reshade.allFx", false);
+        PresetsOpen = cfg.Get("ui.reshade.presetsOpen", true);
     }
 
     public QualityMode Supersample { get; private set; }
@@ -56,6 +57,7 @@ internal sealed class StudioSettings
     public bool ReShadeOpen { get; private set; }
     public bool PacksOpen { get; private set; }
     public bool AllFxOpen { get; private set; }
+    public bool PresetsOpen { get; private set; }
 
     public void SetSupersample(QualityMode m) { Supersample = m; Store("quality.supersample", (int)m); }
     public void SetShadows(QualityMode m) { Shadows = m; Store("quality.shadows", (int)m); }
@@ -65,6 +67,7 @@ internal sealed class StudioSettings
     public void SetReShadeOpen(bool open) { ReShadeOpen = open; Store("ui.reshade.open", open); }
     public void SetPacksOpen(bool open) { PacksOpen = open; Store("ui.reshade.packsOpen", open); }
     public void SetAllFxOpen(bool open) { AllFxOpen = open; Store("ui.reshade.allFx", open); }
+    public void SetPresetsOpen(bool open) { PresetsOpen = open; Store("ui.reshade.presetsOpen", open); }
 
     /// <summary>The hour slider fires every frame while dragged: <paramref name="save"/> false keeps it in memory
     /// only, and the owner saves once the drag settles (a config save is a main-thread file write).</summary>

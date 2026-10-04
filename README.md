@@ -21,6 +21,20 @@ MIT). qUINT is not offered: its licence reserves all rights. Packs and Photo Stu
 outside that folder — ReShade's own — is remembered as on/off only); effect switches are saved in the ReShade preset
 itself, so they do not mark the look modified and Reset all does not undo them.
 
+### ReShade presets (Look → ReShade → Presets)
+
+- **Photo Studio's own looks** — Cinematic warm, Soft anime, Cool night, Clean sharpen — ship inside the plugin
+  (`Resources/Presets/`) and use only SweetFX and prod80 effects that do not read depth. Installing one downloads the
+  shader packs it needs first.
+- **Community presets** are downloaded from their authors' own repositories at a pinned commit and checked by sha256 —
+  never re-hosted. The downloaded file is kept unchanged in `reshade/preset-sources/`; ReShade loads a copy in
+  `reshade/presets/` that leaves out depth settings made for another game and textures no pack ships.
+  - StarLuxe Galactic, Legacy, Luminescence — Dimitri-Matheus, [GPL-3.0](https://github.com/Dimitri-Matheus/StarLuxe/blob/6b82aff25e9eb3e69c3927ed724a2f463c92c40e/LICENSE)
+  - Genshin Stella Mod default preset (Medium, High) — Sefinek, [CC BY-SA 4.0](https://github.com/Genshin-Stella-Mod/resources/blob/a15ae11517dad6c5681beb212422724c4455a276/public/resources/ReShade/Presets/LICENSE)
+  - Okami City Ruins — Yomigami Okami, port by Meynan, [MIT](https://github.com/MeynanAneytha/YomigamiOkami-reshade-shaders/blob/53e9fe085845093f50189dc5cce9419e88e423ed/LICENSE)
+- **Link-only** presets (no licence for sharing) are listed with their author's page; Photo Studio never downloads them.
+- An installed preset file is never overwritten. Any other `.ini` can be added through "Open folder" + Rescan.
+
 ```bash
 dotnet build -c Release
 ```
