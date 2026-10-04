@@ -55,6 +55,8 @@ internal sealed class ReShadeControl
     public bool OnChanged()
     {
         _liveEnabled = Installed && _rs.Enabled;
+        // O1: a close that hit a reload could not restore — finish it the moment ReShade is Ready again (qa re-review 2).
+        if (!_open && _openSnapshot is not null && _rs.State == ReShadeState.Ready) OnStudioClosed();
         var preset = _rs.CurrentPreset;
         if (string.Equals(preset, _livePreset, StringComparison.Ordinal)) return false;
         _livePreset = preset;
@@ -106,7 +108,11 @@ internal sealed class ReShadeControl
     /// (an in-memory baseline / stash row) is switched to as it is; then on/off.</summary>
     public void Apply(ReShadeChoice c)
     {
-        if (!_open) { _session = c; return; }   // closed (next-preset hotkey): wait for the open, after its snapshot (O1)
+        if (!_open)   // closed (next-preset hotkey): wait for the open, after its snapshot (O1)
+        {
+            _session = c.Preset is null && _session is { } s ? s with { Enabled = c.Enabled } : c;   // on/off-only keeps the preset
+            return;
+        }
         if (c.Preset is { Length: > 0 } p)
             SetPresetPath(ReShadePaths.HasFolder(p) ? p : ReShadePaths.PathFor(_presetFolder, p));
         SetEnabled(c.Enabled);

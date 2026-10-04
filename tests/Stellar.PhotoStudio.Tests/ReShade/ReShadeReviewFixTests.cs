@@ -260,4 +260,44 @@ public sealed class ReShadeReviewFixTests
         Assert.Equal(new[] { Folder + "/Noir.ini" }, _fake.PresetCalls);
         Assert.Empty(_fake.EnabledRequests);                       // on/off did not change, so nothing re-sent
     }
+
+    // qa re-review 2: closing DURING a ReShade reload must still restore — as soon as ReShade is Ready again.
+    [Fact]
+    public void A_close_during_a_reload_restores_once_reshade_is_ready()
+    {
+        var c = Make();
+        c.OnStudioOpened();
+        c.SetPresetPath(Folder + "/Noir.ini");
+        Land(c);
+        _fake.State = ReShadeState.Loading;
+        _fake.PresetCalls.Clear();
+        c.OnStudioClosed();
+        Assert.Empty(_fake.PresetCalls);                          // nothing can be sent mid-reload
+
+        _fake.State = ReShadeState.Ready;
+        c.OnChanged();
+        Assert.Equal(new[] { Own }, _fake.PresetCalls);           // restored as soon as it is Ready
+        Land(c);
+        _fake.PresetCalls.Clear();
+        c.OnStudioOpened();
+        Assert.Equal(new[] { Folder + "/Noir.ini" }, _fake.PresetCalls);   // and the edit comes back on reopen
+    }
+
+    // qa re-review 2: an on/off-only look applied while closed keeps the remembered edit's preset.
+    [Fact]
+    public void An_on_off_only_look_applied_while_closed_keeps_the_remembered_preset()
+    {
+        var c = Make();
+        c.OnStudioOpened();
+        c.SetPresetPath(Folder + "/Noir.ini");
+        Land(c);
+        c.OnStudioClosed();
+        Land(c);
+        c.Apply(new ReShadeChoice(null, false));                   // a look saved on ReShade's own preset: on/off only
+        _fake.PresetCalls.Clear();
+        _fake.EnabledRequests.Clear();
+        c.OnStudioOpened();
+        Assert.Equal(new[] { Folder + "/Noir.ini" }, _fake.PresetCalls);
+        Assert.Equal(new[] { false }, _fake.EnabledRequests);
+    }
 }
