@@ -36,6 +36,7 @@ public sealed partial class Plugin
     {
         _gameRoot = gameRoot;
         _rs = new ReShadeControl(_services.ReShade, ReShadePresetFolder);
+        WriteNonePreset();   // "None" (an empty preset) exists for Look presets that saved it
         _rs.OnStudioClosed();   // the plugin starts with Photo Studio closed: a hotkey look waits for the open (O1)
         // Packs and presets share ONE download queue: the framework answers "busy" to an overlapping download.
         var downloads = new SerialDownloads(_services.Downloads);

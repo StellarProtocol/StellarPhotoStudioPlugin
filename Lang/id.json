@@ -392,5 +392,7 @@
   "ps.rs.note.depthLeftOut": "Efek ReShade yang memakai depth tidak dipakai di foto ini.",
   "ps.rs.fx.other": "Lainnya",
   "ps.rs.fx.groupCount": "{0}",
-  "ps.rs.fx.groupCountOn": "{1} aktif · {0}"
+  "ps.rs.fx.groupCountOn": "{1} aktif · {0}",
+  "ps.rs.presetNone": "Tidak ada",
+  "ps.rs.presetEmpty": "Tidak ada efek di preset ini."
 }

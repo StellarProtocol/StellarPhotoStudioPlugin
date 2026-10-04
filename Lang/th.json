@@ -392,5 +392,7 @@
   "ps.rs.note.depthLeftOut": "เอฟเฟกต์ ReShade ที่ใช้ความลึกไม่ถูกใช้ในรูปนี้",
   "ps.rs.fx.other": "อื่น ๆ",
   "ps.rs.fx.groupCount": "{0}",
-  "ps.rs.fx.groupCountOn": "เปิด {1} · {0}"
+  "ps.rs.fx.groupCountOn": "เปิด {1} · {0}",
+  "ps.rs.presetNone": "ไม่ใช้",
+  "ps.rs.presetEmpty": "พรีเซ็ตนี้ไม่มีเอฟเฟกต์"
 }

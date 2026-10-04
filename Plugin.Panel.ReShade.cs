@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using Stellar.Abstractions.Domain;
 using Stellar.Abstractions.Services;
 using Stellar.PhotoStudio.ReShade;
@@ -74,6 +75,8 @@ public sealed partial class Plugin
         new ConditionalElement(() => RsReloading(), new TextElement(() => T("ps.rs.reloading"), Color: Muted)),
         new ConditionalElement(() => !RsReloading() && _services.ReShade.Techniques.Count == 0,
             new TextElement(() => T("ps.rs.noEffects"), Color: Muted)),
+        new ConditionalElement(() => !RsReloading() && !_settings.AllFxOpen && _services.ReShade.Techniques.Count > 0
+            && ReShadeView.EnabledCount(RsRows()) == 0, new TextElement(() => T("ps.rs.presetEmpty"), Color: Muted)),   // e.g. None
         new ConditionalElement(() => !RsReloading() && !_settings.AllFxOpen, PresetFxRows()),
         new ConditionalElement(() => !RsReloading() && !_settings.AllFxOpen && ReShadeView.EnabledCount(RsRows()) > FxPresetRows,
             new TextElement(MoreFxText, Color: Muted)),
@@ -207,7 +210,7 @@ public sealed partial class Plugin
     private const int MaxPresetLabel = 18;   // measured: 24 overflowed the 139 px dropdown at 400 px
 
     private PresetOptions RsOptions() => _rsOptionsCache ??= ShortLabels(ReShadePresets.Options(ReShadePresetFolder, _rsPresetFiles,
-        _rs.PresetPath, name => _loc.TFormat("ps.rs.presetOther", name)));
+        _rs.PresetPath, name => _loc.TFormat("ps.rs.presetOther", name), T("ps.rs.presetNone")));
 
     private static PresetOptions ShortLabels(PresetOptions o)
     {
@@ -220,9 +223,25 @@ public sealed partial class Plugin
     {
         var o = RsOptions();
         if (index < 0 || index >= o.Paths.Count || index == o.Selected) return;
+        if (ReShadePaths.Same(o.Paths[index], ReShadePaths.PathFor(ReShadePresetFolder, ReShadePresets.NoneFile))) WriteNonePreset();
         _rs.SetPresetPath(o.Paths[index]);
         _rsOptionsCache = null;
         _presetSession.OnReShadeEdited();   // the Look preset remembers the ReShade preset (R8)
+    }
+
+    /// <summary>"None" is an empty preset: (re)written empty before it is used, so effects ReShade auto-saved into it while it
+    /// was active never come back. A write failure leaves ReShade to create the file itself (it does for a missing preset).</summary>
+    private void WriteNonePreset()
+    {
+        try
+        {
+            Directory.CreateDirectory(ReShadePresetFolder);
+            File.WriteAllText(Path.Combine(ReShadePresetFolder, ReShadePresets.NoneFile), ReShadePresets.NoneContent);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _services.Log.Warning($"[PhotoStudio] could not write the None preset: {ex.Message}");
+        }
     }
 
     // ── shader packs ────────────────────────────────────────────────────────────────────────────────────
