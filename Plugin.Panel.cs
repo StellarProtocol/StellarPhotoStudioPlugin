@@ -59,6 +59,9 @@ public sealed partial class Plugin
             Enabled: () => !Capturing,
             Style: MenuButtonStyle.Filled), Weight: 1f),
         new TextElement(StatusLine, Color: Muted, Align: TextAlign.Center, NoWrap: true),
+        // Mockup "· ReShade on" — its own short line: appended to the status it overflowed the window in fil (ux-ui review).
+        new ConditionalElement(() => _services.ReShade.State == ReShadeState.Ready && _rs.Enabled,
+            new TextElement(() => T("ps.rs.status.on"), Color: () => _services.Theme.Colors.Accent, Align: TextAlign.Center, NoWrap: true)),
         new TextElement(HotkeyHint, Color: Muted, Align: TextAlign.Center, NoWrap: true),
     }, Gap: 4f);
 
@@ -68,15 +71,11 @@ public sealed partial class Plugin
         if (Capturing)
             return _settings.Scale == 4 ? T("ps.status.capturing4x") : T("ps.capturing");
         var scale = EffectiveScale();
-        string line;
         if (_settings.Shape != PhotoShape.Screen)   // a shape keeps its scale and shrinks both sides; the size is real
-            line = ShapeFrame.StatusText(_settings.Scale, FormatName(), PlannedSize(), _settings.Shape);
-        else
-            line = scale < _settings.Scale
-                ? _loc.TFormat("ps.status.capped", _settings.Scale, scale, FormatName(), ResolutionText())
-                : $"{scale}× · {FormatName()} · {ResolutionText()}";
-        // Mockup footer "4× · PNG · 7680 × 4320 · ReShade on".
-        return _services.ReShade.State == ReShadeState.Ready && _rs.Enabled ? line + " · " + T("ps.rs.status.on") : line;
+            return ShapeFrame.StatusText(_settings.Scale, FormatName(), PlannedSize(), _settings.Shape);
+        return scale < _settings.Scale
+            ? _loc.TFormat("ps.status.capped", _settings.Scale, scale, FormatName(), ResolutionText())
+            : $"{scale}× · {FormatName()} · {ResolutionText()}";
     }
 
     private string FormatName() => _settings.Format == CaptureFormat.Jpg ? "JPG" : "PNG";

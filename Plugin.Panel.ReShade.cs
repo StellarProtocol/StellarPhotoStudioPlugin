@@ -7,37 +7,52 @@ using Stellar.PhotoStudio.ReShade;
 namespace Stellar.PhotoStudio;
 
 // Look tab → ReShade group (spec 2026-10-03 reshade § 6 + § 11; mockup assets/2026-10-03-reshade-mockup.html, state
-// "In game — Photo Studio Look tab"). R3: one line for NotInstalled / Unreachable / Loading, the full body when Ready.
-// R4: the depth note follows the photo SHAPE. Effects use the Presets-tab virtual-list recipe (a pack set can list
-// dozens of techniques; a full column would rebuild them all). All rules live in ReShade/ReShadeView.cs.
+// "In game — Photo Studio Look tab"). R3: one line for NotInstalled / Unreachable / first Loading, the full body when
+// Ready — and it STAYS up through a later reload (a preset pick or a pack install reloads ReShade; hiding the body then
+// hid the dropdown and the pack progress mid-use — ux-ui review). R4: the depth note follows the photo SHAPE. The preset's
+// own effects are plain rows (no inner scroll); "All effects" is a virtual list. All rules live in ReShade/ReShadeView.cs.
 public sealed partial class Plugin
 {
-    private const int FxPool = 8;              // 6 visible rows + margin for a part-scrolled row
+    private const int FxPool = 8;              // virtual list: 6 visible rows + margin for a part-scrolled row
+    private const int FxPresetRows = 8;        // plain rows for the preset's effects (more → "All effects")
     private const float FxRowHeight = 26f;
     private int _fxOffset;
+    private bool _rsWasReady;                  // body stays up through a reload once ReShade has been Ready
     private IReadOnlyList<ReShadeTechnique>? _rsRowsSource;
+    private string? _rsRowsPreset;
+    private bool _rsRowsReset;
     private IReadOnlyList<FxRow> _rsRows = Array.Empty<FxRow>();
+    private (bool Open, int Count, string Text) _allFxText;
 
-    private ReShadePanel RsPanel() => ReShadeView.Panel(_services.ReShade.State, _dxgiPresent);
+    private ReShadePanel RsPanel()
+    {
+        var p = ReShadeView.Panel(_services.ReShade.State, _dxgiPresent);
+        if (p == ReShadePanel.Ready) _rsWasReady = true;
+        else if (p != ReShadePanel.Loading) _rsWasReady = false;
+        return p;
+    }
+
+    private bool RsBody() => RsPanel() == ReShadePanel.Ready || (_rsWasReady && RsPanel() == ReShadePanel.Loading);
+    private bool RsReloading() => _rsWasReady && RsPanel() == ReShadePanel.Loading;
 
     private HudElement ReShadeGroup() => new ColumnElement(new HudElement[]
     {
         new RowElement(new HudElement[]
         {
+            // Only a state with a body folds; the one-line states have no chevron and no click (ux-ui review).
             new SelectableElement(new RowElement(new HudElement[]
             {
-                new TextElement(() => _settings.ReShadeOpen ? "▾" : "▸", Width: 14f),
+                new TextElement(() => !RsBody() ? "" : _settings.ReShadeOpen ? "▾" : "▸", Width: 14f),
                 new TextElement(() => T("ps.look.reshade"), Emphasis: true),
-            }, Gap: 4f), OnClick: () => _settings.SetReShadeOpen(!_settings.ReShadeOpen)),
+            }, Gap: 4f), OnClick: () => { if (RsBody()) _settings.SetReShadeOpen(!_settings.ReShadeOpen); }),
             new SpacerElement(),
             HelpDot("look.reshade", () => T("ps.look.reshade"), () => T("ps.help.look.reshade")),
         }, Gap: 6f),
-        // The one-line states stay visible even when the group is folded (mockup "ReShade not installed").
         new ConditionalElement(() => RsPanel() == ReShadePanel.NotInstalled, Indent(new TextElement(() => T("ps.rs.notInstalled"), Color: Muted))),
         new ConditionalElement(() => RsPanel() == ReShadePanel.Unreachable,
             Indent(new TextElement(() => T("ps.rs.unreachable"), Color: () => _services.Theme.Colors.Warning))),
-        new ConditionalElement(() => RsPanel() == ReShadePanel.Loading, Indent(new TextElement(() => T("ps.rs.loading"), Color: Muted))),
-        new ConditionalElement(() => RsPanel() == ReShadePanel.Ready && _settings.ReShadeOpen, Indent(ReShadeReadyBody())),
+        new ConditionalElement(() => RsPanel() == ReShadePanel.Loading && !_rsWasReady, Indent(new TextElement(() => T("ps.rs.loading"), Color: Muted))),
+        new ConditionalElement(() => RsBody() && _settings.ReShadeOpen, Indent(ReShadeReadyBody())),
     }, Gap: 4f);
 
     private static HudElement Indent(HudElement e) => new RowElement(new HudElement[]
@@ -48,18 +63,22 @@ public sealed partial class Plugin
 
     private HudElement ReShadeReadyBody() => new ColumnElement(new HudElement[]
     {
-        HelpToggle("rs.use", () => _rs.Enabled, OnUseReShade, new HelpText(() => T("ps.rs.use"), () => T("ps.help.rs.use"))),
+        HelpToggle("rs.use", () => _rs.Enabled, OnUseReShade, new HelpText(() => T("ps.rs.use"), () => T("ps.help.rs.use")),
+            enabled: () => !RsReloading()),
         LabeledRow(() => T("ps.rs.preset"),
             new CellElement(new DropdownElement(() => RsOptions().Selected, () => RsOptions().Labels, SelectReShadePreset), Weight: 1f),
-            new ButtonElement(() => "↻", OnClick: RescanReShadePresets, Width: 28f)),
+            new ButtonElement(() => T("ps.look.rescan"), OnClick: RescanReShadePresets, Width: 96f)),
         new TextElement(() => T("ps.rs.savedWithLook"), Color: Muted),
-        new TextElement(() => T("ps.rs.effectsOn"), Color: Muted),
-        new ConditionalElement(() => _services.ReShade.Techniques.Count == 0, new TextElement(() => T("ps.rs.noEffects"), Color: Muted)),
-        new ConditionalElement(() => FxCount() > 0, new VirtualListElement(FxCount, FxRowHeight, FxPoolRows(), o => _fxOffset = o,
-            Height: FxRowHeight * 6)),
-        new ConditionalElement(() => RsRows().Count > ReShadeView.EnabledCount(RsRows()), new SelectableElement(new TextElement(
-            () => (_settings.AllFxOpen ? "▾ " : "▸ ") + _loc.TFormat("ps.rs.allEffects", RsRows().Count), Color: Muted),
-            OnClick: () => _settings.SetAllFxOpen(!_settings.AllFxOpen))),
+        new TextElement(() => T("ps.rs.effectsOn")),
+        new ConditionalElement(() => RsReloading(), new TextElement(() => T("ps.rs.reloading"), Color: Muted)),
+        new ConditionalElement(() => !RsReloading() && _services.ReShade.Techniques.Count == 0,
+            new TextElement(() => T("ps.rs.noEffects"), Color: Muted)),
+        new ConditionalElement(() => !RsReloading() && !_settings.AllFxOpen, PresetFxRows()),
+        new ConditionalElement(() => RsRows().Count > ReShadeView.EnabledCount(RsRows()),
+            new SelectableElement(new TextElement(AllFxText, Color: Muted), OnClick: () => _settings.SetAllFxOpen(!_settings.AllFxOpen))),
+        new ConditionalElement(() => !RsReloading() && _settings.AllFxOpen && RsRows().Count > 0,
+            new VirtualListElement(() => RsRows().Count, FxRowHeight, FxPoolRows(), o => _fxOffset = o, Height: FxRowHeight * 6)
+            { ResetScroll = TakeRowsReset }),
         new ConditionalElement(() => RsDepth() == DepthNote.SkippedInShape, new TextElement(
             () => _loc.TFormat("ps.rs.depthSkipped", PhotoShapes.RatioLabel(_settings.Shape)), Color: () => _services.Theme.Colors.Warning)),
         new ConditionalElement(() => RsDepth() == DepthNote.ScreenDetail, new TextElement(() => T("ps.rs.depthDetail"), Color: Muted)),
@@ -70,18 +89,53 @@ public sealed partial class Plugin
 
     // ── effects ─────────────────────────────────────────────────────────────────────────────────────────
 
-    /// <summary>Rows rebuilt only when the framework hands out a new technique list (it builds one only on change).</summary>
+    /// <summary>Rows re-arranged only when the framework hands out a new list; the order and the preset's set stay frozen
+    /// while only on/off changes (ReShadeView.Rows) and re-sort when the ReShade preset changes.</summary>
     private IReadOnlyList<FxRow> RsRows()
     {
         var live = _services.ReShade.Techniques;
         if (ReferenceEquals(live, _rsRowsSource)) return _rsRows;
+        var preset = _services.ReShade.CurrentPreset;
+        var samePreset = string.Equals(preset, _rsRowsPreset, StringComparison.OrdinalIgnoreCase);
         _rsRowsSource = live;
-        return _rsRows = ReShadeView.Rows(live);
+        _rsRowsPreset = preset;
+        if (!samePreset) _rsRowsReset = true;
+        return _rsRows = ReShadeView.Rows(live, samePreset ? _rsRows : null);
     }
 
-    private int FxCount() => _settings.AllFxOpen ? RsRows().Count : ReShadeView.EnabledCount(RsRows());
+    private bool TakeRowsReset()
+    {
+        if (!_rsRowsReset) return false;
+        _rsRowsReset = false;
+        return true;
+    }
 
-    private DepthNote RsDepth() => ReShadeView.Depth(_settings.Shape, EffectiveScale(), _services.ReShade.Techniques, _rs.IsOn);
+    private string AllFxText()
+    {
+        var count = RsRows().Count;
+        if (_allFxText.Text is null || _allFxText.Open != _settings.AllFxOpen || _allFxText.Count != count)
+            _allFxText = (_settings.AllFxOpen, count, (_settings.AllFxOpen ? "▾ " : "▸ ") + _loc.TFormat("ps.rs.allEffects", count));
+        return _allFxText.Text;
+    }
+
+    private DepthNote RsDepth() => ReShadeView.Depth(_settings.Shape, EffectiveScale(), _services.ReShade.Techniques, _rs.IsOnFunc);
+
+    private HudElement PresetFxRows()
+    {
+        var rows = new HudElement[FxPresetRows];
+        for (var i = 0; i < FxPresetRows; i++)
+        {
+            var slot = i;
+            rows[i] = new ConditionalElement(() => slot < ReShadeView.EnabledCount(RsRows()), FxRowElement(() => PresetFxAt(slot)));
+        }
+        return new ColumnElement(rows, Gap: 0f);
+    }
+
+    private FxRow? PresetFxAt(int slot)
+    {
+        var rows = RsRows();
+        return slot < ReShadeView.EnabledCount(rows) ? rows[slot] : null;
+    }
 
     private HudElement[] FxPoolRows()
     {
@@ -89,7 +143,7 @@ public sealed partial class Plugin
         for (var i = 0; i < FxPool; i++)
         {
             var slot = i;
-            pool[i] = FxRowElement(slot);
+            pool[i] = FxRowElement(() => FxAt(slot));
         }
         return pool;
     }
@@ -101,16 +155,16 @@ public sealed partial class Plugin
         return i < rows.Count ? rows[i] : null;
     }
 
-    private HudElement FxRowElement(int slot) => new RowElement(new HudElement[]
+    private HudElement FxRowElement(Func<FxRow?> row) => new RowElement(new HudElement[]
     {
-        new CellElement(new TextElement(() => FxAt(slot)?.Label ?? "", NoWrap: true,
-            Color: () => FxAt(slot) is { } r && _rs.IsOn(r.Technique) ? Normal() : MenuMuted()), Weight: 1f),
-        new ConditionalElement(() => FxAt(slot)?.Technique.UsesDepth == true,
+        new CellElement(new TextElement(() => row()?.Label ?? "", NoWrap: true,
+            Color: () => _rs.Enabled && row() is { } r && _rs.IsOn(r.Technique) ? Normal() : MenuMuted()), Weight: 1f),
+        new ConditionalElement(() => row()?.Technique.UsesDepth == true,
             new PillElement(() => T("ps.rs.depthTag"), Color: () => _services.Theme.Colors.Warning)),
-        new ToggleElement(() => "", () => FxAt(slot) is { } r && _rs.IsOn(r.Technique), on =>
+        new ToggleElement(() => "", () => row() is { } r && _rs.IsOn(r.Technique), on =>
         {
-            if (FxAt(slot) is { } r) _rs.SetTechnique(r.Technique, on);   // saved in the ReShade preset; arms the R1 gate
-        }),
+            if (row() is { } r) _rs.SetTechnique(r.Technique, on);   // saved in the ReShade preset (owner O2); arms the R1 gate
+        }, Enabled: () => _rs.Enabled && !RsReloading()),
     }, Gap: 6f);
 
     // ── on/off + preset ─────────────────────────────────────────────────────────────────────────────────
@@ -121,8 +175,17 @@ public sealed partial class Plugin
         _presetSession.OnReShadeEdited();   // the Look preset remembers on/off (R8)
     }
 
-    private PresetOptions RsOptions() => _rsOptionsCache ??= ReShadePresets.Options(ReShadePresetFolder, _rsPresetFiles,
-        _rs.PresetPath, name => _loc.TFormat("ps.rs.presetOther", name));
+    private const int MaxPresetLabel = 24;
+
+    private PresetOptions RsOptions() => _rsOptionsCache ??= ShortLabels(ReShadePresets.Options(ReShadePresetFolder, _rsPresetFiles,
+        _rs.PresetPath, name => _loc.TFormat("ps.rs.presetOther", name)));
+
+    private static PresetOptions ShortLabels(PresetOptions o)
+    {
+        var labels = new string[o.Labels.Count];
+        for (var i = 0; i < labels.Length; i++) labels[i] = ReShadeView.Ellipsize(o.Labels[i], MaxPresetLabel);
+        return o with { Labels = labels };
+    }
 
     private void SelectReShadePreset(int index)
     {
@@ -150,11 +213,11 @@ public sealed partial class Plugin
                 HelpDot("rs.packs", () => T("ps.rs.packs"), () => T("ps.help.rs.packs")),
             }, Gap: 6f),
             // Its own wrapping line: on the header row it ran under the "?" at 400 px (sandbox, fil).
-            Indent(new TextElement(() => T("ps.rs.packsFrom"), Color: Muted)),
+            new ConditionalElement(() => _settings.PacksOpen, Indent(new TextElement(() => T("ps.rs.packsFrom"), Color: Muted))),
         };
         foreach (var p in PackCatalog.All)
             rows.Add(new ConditionalElement(() => _settings.PacksOpen, Indent(PackRow(p))));
-        return new ColumnElement(rows, Gap: 4f);
+        return new ColumnElement(rows, Gap: 8f);
     }
 
     // Status/button sit in ONE fixed-width column so every pack row lines up, and the licence goes on its own muted
@@ -173,9 +236,13 @@ public sealed partial class Plugin
                 () => _loc.TFormat("ps.help.rs.pack", LicenseLabel(p), p.SourceUrl, p.Commit.Substring(0, 7))),
         }, Gap: 6f),
         new TextElement(() => LicenseLabel(p), Color: Muted),
-        new ConditionalElement(() => _packs.Status(p) == PackStatus.Failed, new TextElement(
-            () => _loc.TFormat("ps.rs.pack.failed", _packs.Error(p) ?? ""), Color: () => _services.Theme.Colors.Warning)),
+        new ConditionalElement(() => _packs.Status(p) == PackStatus.Failed, new TextElement(() => PackFailedText(p),
+            Color: () => _services.Theme.Colors.Warning)),
     }, Gap: 2f);
+
+    private string PackFailedText(ShaderPack p) => _packs.FailedRequirement(p) is { } needs
+        ? _loc.TFormat("ps.rs.pack.failedDep", needs)
+        : _loc.TFormat("ps.rs.pack.failed", ReShadeView.Ellipsize(_packs.Error(p) ?? "", 80));
 
     private string PackStatusText(ShaderPack p) => _packs.Status(p) switch
     {

@@ -59,7 +59,7 @@ public sealed class ReShadeViewTests
         var b = new ReShadeTechnique("Sharpen", "PD80_05_Sharpening.fx", true, false);
         var c = new ReShadeTechnique("Bloom", "PD80_02_Bloom.fx", false, false);
         var rows = ReShadeView.Rows(new[] { a, c, b, Lift });
-        Assert.Equal(new[] { "Lift", "Sharpen (PD80_05_Sharpening)", "Bloom", "Sharpen (CAS)" }, rows.Select(r => r.Label).ToArray());
+        Assert.Equal(new[] { "Lift", "Sharpen (PD80_05_Sharpe…", "Bloom", "Sharpen (CAS)" }, rows.Select(r => r.Label).ToArray());
         Assert.Equal(2, ReShadeView.EnabledCount(rows));
     }
 
@@ -109,5 +109,41 @@ public sealed class ReShadeViewTests
         Assert.Equal("Saved at 2× · LOCALIZED", ReShadeInfo.JoinWarnings("Saved at 2×", new[] { ReShadeInfo.NotReadyNote }, T));
         Assert.Equal("LOCALIZED", ReShadeInfo.JoinWarnings("", new[] { ReShadeInfo.NotReadyNote }, T));
         Assert.Equal("w", ReShadeInfo.JoinWarnings("w", Array.Empty<string>(), T));
+    }
+
+    // ux-ui review: toggling an effect must not re-sort the list (the row would jump out of view and the toggle under the
+    // cursor would belong to a different effect). The order + "in this preset" set freeze until the technique SET changes.
+    [Fact]
+    public void Rows_keep_their_order_and_preset_set_when_only_on_off_changes()
+    {
+        var a = new ReShadeTechnique("Bloom", "Bloom.fx", true, false);
+        var b = new ReShadeTechnique("Vibrance", "Vibrance.fx", true, false);
+        var c = new ReShadeTechnique("Tonemap", "Tonemap.fx", false, false);
+        var first = ReShadeView.Rows(new[] { a, b, c });
+        var next = ReShadeView.Rows(new[] { a with { Enabled = false }, b, c with { Enabled = true } }, first);
+        Assert.Equal(first.Select(r => r.Label), next.Select(r => r.Label));
+        Assert.Equal(2, ReShadeView.EnabledCount(next));                    // still the preset's two effects
+        Assert.False(next[0].Technique.Enabled);                            // but each row carries the LIVE technique
+        Assert.True(next[2].Technique.Enabled);
+    }
+
+    [Fact]
+    public void Rows_re_sort_when_the_technique_set_changes()
+    {
+        var a = new ReShadeTechnique("Bloom", "Bloom.fx", true, false);
+        var first = ReShadeView.Rows(new[] { a });
+        var d = new ReShadeTechnique("Deband", "Deband.fx", true, false);
+        var next = ReShadeView.Rows(new[] { a with { Enabled = false }, d }, first);
+        Assert.Equal(new[] { "Deband", "Bloom" }, next.Select(r => r.Label).ToArray());
+    }
+
+    [Fact]
+    public void Long_labels_end_in_an_ellipsis()
+    {
+        var t = new ReShadeTechnique("AVeryLongTechniqueNameThatNeverFitsInARow", "x.fx", true, false);
+        var label = ReShadeView.Rows(new[] { t })[0].Label;
+        Assert.Equal(ReShadeView.MaxLabel, label.Length);
+        Assert.EndsWith("…", label);
+        Assert.Equal("Short", ReShadeView.Ellipsize("Short", 10));
     }
 }

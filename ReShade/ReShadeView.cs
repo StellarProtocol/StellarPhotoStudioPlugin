@@ -11,7 +11,8 @@ internal enum ReShadePanel { NotInstalled, Unreachable, Loading, Ready }
 internal enum DepthNote { None, SkippedInShape, ScreenDetail }
 
 /// <summary>One effect row: the technique and its label ("Sharpen (CAS)" when the name repeats across effect files).</summary>
-internal sealed record FxRow(ReShadeTechnique Technique, string Label);
+/// <summary><paramref name="InPreset"/> = enabled when the rows were arranged (frozen until the technique set changes).</summary>
+internal sealed record FxRow(ReShadeTechnique Technique, string Label, bool InPreset);
 
 /// <summary>Pure view rules for the ReShade group (unit-tested; the Plugin partial only draws them).</summary>
 internal static class ReShadeView
@@ -39,25 +40,48 @@ internal static class ReShadeView
         return scale > 1 ? DepthNote.ScreenDetail : DepthNote.None;
     }
 
-    /// <summary>Enabled techniques first (the preset's effects), each block by label; labels disambiguate repeated names.</summary>
-    public static IReadOnlyList<FxRow> Rows(IReadOnlyList<ReShadeTechnique> techniques)
+    /// <summary>Longest effect label shown; longer names end in "…" (a NoWrap label in a weighted cell is not clipped).</summary>
+    public const int MaxLabel = 24;
+
+    /// <summary>Enabled techniques first (the preset's effects), each block by label; labels disambiguate repeated names.
+    /// Pass the <paramref name="previous"/> rows: when the technique SET is unchanged (only on/off moved), the order and
+    /// the "in this preset" set are kept and each row just takes its live technique — toggling never re-sorts.</summary>
+    public static IReadOnlyList<FxRow> Rows(IReadOnlyList<ReShadeTechnique> techniques, IReadOnlyList<FxRow>? previous = null)
     {
+        if (previous is not null && Rebind(previous, techniques) is { } kept) return kept;
         var names = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         foreach (var t in techniques) names[t.Name] = names.TryGetValue(t.Name, out var n) ? n + 1 : 1;
         var rows = new List<FxRow>(techniques.Count);
         foreach (var t in techniques)
-            rows.Add(new FxRow(t, names[t.Name] > 1 ? $"{t.Name} ({EffectName(t.EffectFile)})" : t.Name));
-        rows.Sort((a, b) => a.Technique.Enabled != b.Technique.Enabled
-            ? (a.Technique.Enabled ? -1 : 1)
+            rows.Add(new FxRow(t, Ellipsize(names[t.Name] > 1 ? $"{t.Name} ({EffectName(t.EffectFile)})" : t.Name, MaxLabel), t.Enabled));
+        rows.Sort((a, b) => a.InPreset != b.InPreset
+            ? (a.InPreset ? -1 : 1)
             : string.Compare(a.Label, b.Label, StringComparison.OrdinalIgnoreCase));
         return rows;
     }
 
+    /// <summary>Rows in the preset (shown when "All effects" is folded) — they lead the list.</summary>
     public static int EnabledCount(IReadOnlyList<FxRow> rows)
     {
         var n = 0;
-        while (n < rows.Count && rows[n].Technique.Enabled) n++;
+        while (n < rows.Count && rows[n].InPreset) n++;
         return n;
+    }
+
+    public static string Ellipsize(string s, int max) => s.Length <= max ? s : s.Substring(0, max - 1) + "…";
+
+    private static IReadOnlyList<FxRow>? Rebind(IReadOnlyList<FxRow> previous, IReadOnlyList<ReShadeTechnique> live)
+    {
+        if (previous.Count != live.Count) return null;
+        var byKey = new Dictionary<(string, string), ReShadeTechnique>(live.Count);
+        foreach (var t in live) byKey[(t.EffectFile, t.Name)] = t;
+        var rows = new List<FxRow>(previous.Count);
+        foreach (var r in previous)
+        {
+            if (!byKey.TryGetValue((r.Technique.EffectFile, r.Technique.Name), out var t)) return null;
+            rows.Add(r with { Technique = t });
+        }
+        return rows;
     }
 
     private static string EffectName(string file) =>
