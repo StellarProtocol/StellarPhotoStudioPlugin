@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using Stellar.Abstractions.Domain;
@@ -139,5 +140,24 @@ public sealed class PackInstallerTests
         _dl.Calls[0].Done.SetResult(new DownloadResult(false, null, "checksum mismatch"));
         Assert.Equal(new[] { ("standard", PackStatus.Failed) }, seen);   // SweetFX fails with it (FailDependents) — no event of its own
         Assert.Equal(PackStatus.Failed, i.Status(PackCatalog.SweetFx));
+    }
+
+    // Review carry-over (d): one throwing PackFailed subscriber must not stop PumpAsync from reaching the next,
+    // independently-queued pack. Standard is already installed so SweetFX and Prod80 (leaves, unrelated to each other)
+    // queue without pulling Standard in again; SweetFX's own failure cannot cascade to Prod80 via FailDependents (Prod80
+    // does not require SweetFX), so Prod80 is still sitting in the queue when the throwing subscriber fires.
+    [Fact]
+    public void A_throwing_PackFailed_subscriber_does_not_stop_the_pump_from_reaching_the_next_pack()
+    {
+        _dirs.Add(PackCatalog.EffectsFolder("/data", PackCatalog.Standard));
+        var i = Make();
+        i.PackFailed += _ => throw new InvalidOperationException("boom");
+        i.Request(PackCatalog.SweetFx);
+        i.Request(PackCatalog.Prod80);
+        Assert.Single(_dl.Calls);   // only SweetFX has started; Prod80 is queued behind it
+        _dl.Calls[0].Done.SetResult(new DownloadResult(false, null, "checksum mismatch"));
+        Assert.Equal(PackStatus.Failed, i.Status(PackCatalog.SweetFx));
+        Assert.Equal(2, _dl.Calls.Count);   // the pump reached Prod80 despite the throwing subscriber
+        Assert.Equal("reshade/packs/prod80", _dl.Calls[1].Request.TargetPath);
     }
 }

@@ -176,7 +176,26 @@ internal sealed class PackInstaller : IDisposable
         state.Error = result.Error ?? "";
         _warn($"[PhotoStudio] shader pack '{p.Id}' download failed: {result.Error}");
         FailDependents(p, state.Error);
-        PackFailed?.Invoke(p);
+        RaisePackFailed(p);
+    }
+
+    /// <summary>Invokes each <see cref="PackFailed"/> subscriber in its own try/catch, so one throwing subscriber can
+    /// neither stop the others from seeing the event nor escape into <see cref="PumpAsync"/> and halt the pump.</summary>
+    private void RaisePackFailed(ShaderPack p)
+    {
+        var handler = PackFailed;
+        if (handler is null) return;
+        foreach (var d in handler.GetInvocationList())
+        {
+            try
+            {
+                ((Action<ShaderPack>)d)(p);
+            }
+            catch (Exception ex)
+            {
+                _warn($"[PhotoStudio] a PackFailed subscriber threw: {ex.Message}");
+            }
+        }
     }
 
     /// <summary>Queued packs that require <paramref name="failed"/> fail too, never downloaded; they keep the requirement's

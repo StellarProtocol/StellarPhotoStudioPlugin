@@ -10,7 +10,9 @@ namespace Stellar.PhotoStudio.Tests;
 
 public sealed class PresetReShadeTests
 {
-    private sealed class MemFiles : IPresetFiles
+    // Fully qualified: Stellar.PhotoStudio.ReShade also declares an IPresetFiles (Task 5) — the two are unrelated
+    // interfaces that happen to share a name, so the bare name is ambiguous now that both namespaces are imported here.
+    private sealed class MemFiles : Stellar.PhotoStudio.Presets.IPresetFiles
     {
         public readonly Dictionary<string, string> Files = new();
         public IEnumerable<string> List() => Files.Keys.ToList();

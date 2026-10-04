@@ -30,6 +30,9 @@ internal static class PresetOverrides
         {
             var nl = text.IndexOf('\n', start);
             var end = nl < 0 ? text.Length : nl + 1;   // the line including its '\n'
+            // Relies on the exact column-0 spelling "PreprocessorDefinitions=" the pinned files use (ReShade's own ini
+            // writer always starts a key at column 0, never indented): a line is matched only by this literal ordinal
+            // prefix, never by a looser "contains" or case-insensitive check, so a key written any other way is left alone.
             if (string.CompareOrdinal(text, start, Key, 0, Key.Length) == 0)
             {
                 var line = text.Substring(start, end - start);

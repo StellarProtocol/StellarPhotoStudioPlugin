@@ -49,4 +49,41 @@ public sealed class SerialDownloadsTests
     {
         Assert.Equal("/data", new SerialDownloads(new FakeDownloads()).DataFolder);
     }
+
+    // Review carry-over (e): a call still waiting for its turn must honour its own ct — completing as Canceled the
+    // moment the token fires, without ever starting the inner download for it.
+    [Fact]
+    public void A_waiting_call_is_cancelled_without_starting_its_inner_download()
+    {
+        SynchronizationContext.SetSynchronizationContext(null);
+        var inner = new FakeDownloads();
+        var serial = new SerialDownloads(inner);
+        var a = serial.DownloadAsync(Req("a"), null, CancellationToken.None);
+        using var cts = new CancellationTokenSource();
+        var b = serial.DownloadAsync(Req("b"), null, cts.Token);
+        Assert.Single(inner.Calls);   // b is still queued behind a
+        cts.Cancel();
+        Assert.True(b.IsCanceled);   // cancelled while queued, before a ever finished
+        Assert.Single(inner.Calls);   // b's inner download never started
+        inner.Calls[0].Done.SetResult(new DownloadResult(true, "/data/a", null));
+        Assert.True(a.IsCompletedSuccessfully);
+        Assert.Single(inner.Calls);   // still just a — a cancelled waiter never runs, even once it would be its turn
+    }
+
+    // Review carry-over (e): a call queued behind one that FAILS (a legitimate Ok=false result, not a thrown exception
+    // or a cancellation) must still start once that failure resolves.
+    [Fact]
+    public void A_call_queued_behind_one_that_fails_still_starts_once_it_finishes()
+    {
+        SynchronizationContext.SetSynchronizationContext(null);
+        var inner = new FakeDownloads();
+        var serial = new SerialDownloads(inner);
+        var a = serial.DownloadAsync(Req("a"), null, CancellationToken.None);
+        var b = serial.DownloadAsync(Req("b"), null, CancellationToken.None);
+        Assert.Single(inner.Calls);   // b is still queued behind a
+        inner.Calls[0].Done.SetResult(new DownloadResult(false, null, "offline"));
+        Assert.False(a.Result.Ok);
+        Assert.Equal(2, inner.Calls.Count);   // b started right after a's failure resolved
+        Assert.Equal("b", inner.Calls[1].Request.TargetPath);
+    }
 }

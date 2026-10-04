@@ -210,7 +210,9 @@ public sealed class ReShadeReviewFixTests
         Assert.False(g.Disarm());
     }
 
-    private sealed class MemFiles : IPresetFiles
+    // Fully qualified: Stellar.PhotoStudio.ReShade also declares an IPresetFiles (Task 5) — the two are unrelated
+    // interfaces that happen to share a name, so the bare name is ambiguous now that both namespaces are imported here.
+    private sealed class MemFiles : Stellar.PhotoStudio.Presets.IPresetFiles
     {
         private readonly Dictionary<string, string> _files = new();
         public IEnumerable<string> List() => _files.Keys.ToList();
