@@ -81,7 +81,7 @@ public sealed partial class Plugin
         new ConditionalElement(() => !RsReloading() && RsRows().Count > Math.Min(ReShadeView.EnabledCount(RsRows()), FxPresetRows),
             new SelectableElement(new TextElement(AllFxText, Color: Muted), OnClick: () => _settings.SetAllFxOpen(!_settings.AllFxOpen))),
         new ConditionalElement(() => !RsReloading() && _settings.AllFxOpen && RsRows().Count > 0,
-            new VirtualListElement(() => RsRows().Count, FxRowHeight, FxPoolRows(), o => _fxOffset = o, Height: FxRowHeight * 6)
+            new VirtualListElement(() => FxItems().Count, FxRowHeight, FxPoolRows(), o => _fxOffset = o, Height: FxRowHeight * 6)
             { ResetScroll = TakeRowsReset }),
         new ConditionalElement(() => RsDepth() == DepthNote.SkippedInShape, new TextElement(
             () => _loc.TFormat("ps.rs.depthSkipped", PhotoShapes.RatioLabel(_settings.Shape)), Color: () => _services.Theme.Colors.Warning)),
@@ -140,6 +140,7 @@ public sealed partial class Plugin
         _rsOptionsCache = null;
         _presetText.Clear();
         _failText.Clear();
+        _fxHeaderText.Clear();
     }
 
     private (string? Path, bool Own) _ownPreset;
@@ -177,17 +178,11 @@ public sealed partial class Plugin
         for (var i = 0; i < FxPool; i++)
         {
             var slot = i;
-            pool[i] = FxRowElement(() => FxAt(slot));
+            pool[i] = FxPoolItem(slot);   // pack heading or effect row (Plugin.Panel.ReShadeGroups.cs)
         }
         return pool;
     }
 
-    private FxRow? FxAt(int slot)
-    {
-        var rows = RsRows();
-        var i = _fxOffset + slot;
-        return i < rows.Count ? rows[i] : null;
-    }
 
     private HudElement FxRowElement(Func<FxRow?> row) => new RowElement(new HudElement[]
     {

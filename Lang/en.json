@@ -386,5 +386,8 @@
   "ps.rs.note.nothingToDraw": "None of the active ReShade effects work in this photo shape — the photo was taken without them.",
   "ps.rs.note.screenSizeOnly": "Some ReShade effects only work at screen size, so this photo was taken at 1×.",
   "ps.rs.note.screenSizeOnlySkipped": "Some ReShade effects only work at screen size, so they were left out of this photo.",
-  "ps.rs.note.depthLeftOut": "ReShade effects that use depth were left out of this photo."
+  "ps.rs.note.depthLeftOut": "ReShade effects that use depth were left out of this photo.",
+  "ps.rs.fx.other": "Other",
+  "ps.rs.fx.groupCount": "{0}",
+  "ps.rs.fx.groupCountOn": "{1} on · {0}"
 }

@@ -97,6 +97,15 @@ internal sealed class PackInstaller : IDisposable
         _ = PumpAsync();
     }
 
+    /// <summary>Installed packs' names with their Shaders folders, in catalog order (the "All effects" list groups by these).</summary>
+    public IReadOnlyList<(string Name, string EffectsFolder)> InstalledEffectFolders()
+    {
+        var list = new List<(string, string)>();
+        foreach (var p in _catalog)
+            if (Status(p) == PackStatus.Installed) list.Add((p.Name, PackCatalog.EffectsFolder(_downloads.DataFolder, p)));
+        return list;
+    }
+
     /// <summary>Installed packs' Shaders folders (and Textures folders that exist), in catalog order.</summary>
     public (IReadOnlyList<string> Effects, IReadOnlyList<string> Textures) SearchPaths()
     {

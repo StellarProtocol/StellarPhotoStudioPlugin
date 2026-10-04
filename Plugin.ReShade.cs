@@ -46,6 +46,11 @@ public sealed partial class Plugin
         _rsPresets.PresetsChanged += _onPresetsChanged;
         _onReShadeChanged = OnReShadeChanged;
         _services.ReShade.Changed += _onReShadeChanged;
+        // AcerolaFX's "Mask UI" keeps the game's original pixels wherever the backbuffer alpha is set — this game's alpha is
+        // 1 everywhere, so with it on every AcerolaFX effect is discarded. ReShade resets it to its default (on) on every
+        // effect reload and saves that into the preset at the next switch, so the preset value alone cannot hold it: the
+        // bridge re-applies this override after every reload, on screen and in 2×/4× photos. Only AcerolaFX declares it.
+        _services.ReShadeUniforms.SetUniformOverride(null, "_MaskUI", "false");
         _dxgiPresent = File.Exists(Path.Combine(_gameRoot, "dxgi.dll"));
         ReadReShadeVersionOnce();   // a plugin (re)load after ReShade is already Ready gets no Ready transition
         // R5: once at start, whatever the state — the framework holds it until the add-on binds and drops an identical
@@ -66,6 +71,7 @@ public sealed partial class Plugin
 
     private void ApplySearchPaths()
     {
+        _fxIndex = null;   // the "All effects" pack groups follow the installed packs
         var (effects, textures) = _packs.SearchPaths();
         _services.ReShade.SetSearchPaths(effects, textures);
     }
