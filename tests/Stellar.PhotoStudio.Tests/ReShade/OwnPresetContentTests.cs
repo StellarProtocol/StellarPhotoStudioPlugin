@@ -196,6 +196,17 @@ prod80 PD80_06_Posterize_Pixelate.fx prod80_06_Posterize_Pixelate");
         Assert.Throws<InvalidOperationException>(() => OwnPresets.Text("nope"));
     }
 
+    // Review fix round 2, item 7: every own preset carries its own licence line as a plain ini comment (the ini
+    // parser already skips ';' lines, so this adds no new section/key). No em dash (U+2014): that is not ASCII, and
+    // Files_are_ascii_with_lf_line_ends must still pass, so " - " is used instead.
+    [Theory]
+    [MemberData(nameof(Own))]
+    public void Carries_the_AGPL_licence_line(string id)
+    {
+        Assert.Contains("; License: AGPL-3.0-or-later - https://github.com/StellarProtocol/StellarPhotoStudioPlugin",
+            OwnPresets.Text(id).Split('\n'));
+    }
+
     private sealed record Ini(Dictionary<string, string> Top, Dictionary<string, Dictionary<string, string>> Sections);
 
     private static Ini Parse(string text)
