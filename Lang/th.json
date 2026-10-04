@@ -380,5 +380,10 @@
   "ps.rs.fail.changed": "ไม่ได้ติดตั้ง: ไฟล์ในหน้าต้นทางเปลี่ยนไปหลังจาก Photo Studio ทดสอบไว้ การอัปเดต Photo Studio จะแก้ปัญหานี้",
   "ps.rs.fail.network": "ดาวน์โหลดไม่ได้ ตรวจสอบการเชื่อมต่อ แล้วกดลองใหม่",
   "ps.rs.fail.other": "ดาวน์โหลดไม่ได้ กดลองใหม่ ดูรายละเอียดได้ที่ ?",
-  "ps.help.rs.lastError": "ข้อผิดพลาดล่าสุด: {0}"
+  "ps.help.rs.lastError": "ข้อผิดพลาดล่าสุด: {0}",
+  "ps.rs.note.error": "ReShade วาดลงในรูปไม่ได้ จึงถ่ายโดยไม่ใช้ ReShade",
+  "ps.rs.note.drewNothing": "ReShade ทำงานไม่ทัน จึงถ่ายรูปโดยไม่ใช้ ReShade",
+  "ps.rs.note.nothingToDraw": "เอฟเฟกต์ ReShade ที่เปิดอยู่ใช้กับสัดส่วนรูปนี้ไม่ได้ จึงถ่ายโดยไม่ใช้เอฟเฟกต์เหล่านั้น",
+  "ps.rs.note.screenSizeOnly": "เอฟเฟกต์ ReShade บางตัวใช้ได้เฉพาะขนาดหน้าจอ จึงถ่ายรูปนี้ที่ 1×",
+  "ps.rs.note.screenSizeOnlySkipped": "เอฟเฟกต์ ReShade บางตัวใช้ได้เฉพาะขนาดหน้าจอ จึงไม่ถูกใช้ในรูปนี้"
 }

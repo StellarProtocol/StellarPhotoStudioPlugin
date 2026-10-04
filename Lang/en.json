@@ -380,5 +380,10 @@
   "ps.rs.fail.changed": "Not installed: the file on its source page changed since Photo Studio tested it. A Photo Studio update will fix this.",
   "ps.rs.fail.network": "Couldn't download it. Check your connection, then press Retry.",
   "ps.rs.fail.other": "Couldn't download it. Press Retry; the ? has the details.",
-  "ps.help.rs.lastError": "Last error: {0}"
+  "ps.help.rs.lastError": "Last error: {0}",
+  "ps.rs.note.error": "ReShade couldn't draw into the photo — it was taken without ReShade.",
+  "ps.rs.note.drewNothing": "ReShade didn't finish in time — the photo was taken without ReShade.",
+  "ps.rs.note.nothingToDraw": "None of the active ReShade effects work in this photo shape — the photo was taken without them.",
+  "ps.rs.note.screenSizeOnly": "Some ReShade effects only work at screen size, so this photo was taken at 1×.",
+  "ps.rs.note.screenSizeOnlySkipped": "Some ReShade effects only work at screen size, so they were left out of this photo."
 }

@@ -111,6 +111,21 @@ public sealed class ReShadeViewTests
         Assert.Equal("w", ReShadeInfo.JoinWarnings("w", Array.Empty<string>(), T));
     }
 
+    // fw 2.17.0 capture notes: each framework note shows in the player's language, and the sidecar's "applied" is false
+    // exactly for the notes that mean the photo was taken WITHOUT ReShade (not for the 1×/left-out ones, where it WAS applied).
+    [Theory]
+    [InlineData(ReShadeInfo.NotReadyNote, "ps.rs.note.notReady", true)]
+    [InlineData(ReShadeInfo.ErrorNote, "ps.rs.note.error", true)]
+    [InlineData(ReShadeInfo.DrewNothingNote, "ps.rs.note.drewNothing", true)]
+    [InlineData(ReShadeInfo.NothingToDrawNote, "ps.rs.note.nothingToDraw", true)]
+    [InlineData(ReShadeInfo.ScreenSizeOnlyNote, "ps.rs.note.screenSizeOnly", false)]
+    [InlineData(ReShadeInfo.ScreenSizeOnlySkippedNote, "ps.rs.note.screenSizeOnlySkipped", false)]
+    public void Framework_notes_are_localized_and_classified(string note, string key, bool withoutReShade)
+    {
+        Assert.Equal("[" + key + "]", ReShadeInfo.LocalizeNote(note, k => "[" + k + "]"));
+        Assert.Equal(withoutReShade, ReShadeInfo.MeansWithoutReShade(note));
+    }
+
     // ux-ui review: toggling an effect must not re-sort the list (the row would jump out of view and the toggle under the
     // cursor would belong to a different effect). The order + "in this preset" set freeze until the technique SET changes.
     [Fact]

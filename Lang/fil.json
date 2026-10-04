@@ -380,5 +380,10 @@
   "ps.rs.fail.changed": "Hindi na-install: nagbago ang file sa source page nito mula nang subukan ito ng Photo Studio. Maaayos ito ng update ng Photo Studio.",
   "ps.rs.fail.network": "Hindi ma-download. Tingnan ang koneksyon mo, saka pindutin ang Subukan muli.",
   "ps.rs.fail.other": "Hindi ma-download. Pindutin ang Subukan muli; nasa ? ang detalye.",
-  "ps.help.rs.lastError": "Huling error: {0}"
+  "ps.help.rs.lastError": "Huling error: {0}",
+  "ps.rs.note.error": "Hindi nakaguhit ang ReShade sa litrato — kinuha ito nang walang ReShade.",
+  "ps.rs.note.drewNothing": "Hindi natapos ang ReShade sa oras — kinuha ang litrato nang walang ReShade.",
+  "ps.rs.note.nothingToDraw": "Walang aktibong ReShade effect na gumagana sa hugis ng litratong ito — kinuha ito nang wala ang mga iyon.",
+  "ps.rs.note.screenSizeOnly": "May mga ReShade effect na gumagana lang sa laki ng screen, kaya kinuha sa 1× ang litratong ito.",
+  "ps.rs.note.screenSizeOnlySkipped": "May mga ReShade effect na gumagana lang sa laki ng screen, kaya hindi sila isinama sa litratong ito."
 }

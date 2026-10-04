@@ -380,5 +380,10 @@
   "ps.rs.fail.changed": "インストールできませんでした：配布元のファイルが、Photo Studioで確認した後に変更されています。Photo Studioのアップデートで解消されます。",
   "ps.rs.fail.network": "ダウンロードできませんでした。接続を確認して「再試行」を押してください。",
   "ps.rs.fail.other": "ダウンロードできませんでした。「再試行」を押してください。詳しくは ? を見てください。",
-  "ps.help.rs.lastError": "直近のエラー：{0}"
+  "ps.help.rs.lastError": "直近のエラー：{0}",
+  "ps.rs.note.error": "ReShadeが写真に描画できなかったため、ReShadeなしで撮影しました。",
+  "ps.rs.note.drewNothing": "ReShadeの処理が間に合わなかったため、ReShadeなしで撮影しました。",
+  "ps.rs.note.nothingToDraw": "有効なReShadeエフェクトはこの写真の形では使えないため、それらなしで撮影しました。",
+  "ps.rs.note.screenSizeOnly": "画面サイズでのみ動くReShadeエフェクトがあるため、この写真は1×で撮影しました。",
+  "ps.rs.note.screenSizeOnlySkipped": "画面サイズでのみ動くReShadeエフェクトがあるため、それらはこの写真から外しました。"
 }

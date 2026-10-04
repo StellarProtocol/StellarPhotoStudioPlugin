@@ -380,5 +380,10 @@
   "ps.rs.fail.changed": "Tidak dipasang: file di halaman sumbernya berubah sejak diuji Photo Studio. Pembaruan Photo Studio akan memperbaikinya.",
   "ps.rs.fail.network": "Gagal mengunduh. Periksa koneksi, lalu tekan Coba lagi.",
   "ps.rs.fail.other": "Gagal mengunduh. Tekan Coba lagi; detailnya ada di ?.",
-  "ps.help.rs.lastError": "Error terakhir: {0}"
+  "ps.help.rs.lastError": "Error terakhir: {0}",
+  "ps.rs.note.error": "ReShade tidak bisa menggambar ke foto — foto diambil tanpa ReShade.",
+  "ps.rs.note.drewNothing": "ReShade tidak selesai tepat waktu — foto diambil tanpa ReShade.",
+  "ps.rs.note.nothingToDraw": "Tidak ada efek ReShade aktif yang bisa dipakai di bentuk foto ini — foto diambil tanpa efek tersebut.",
+  "ps.rs.note.screenSizeOnly": "Beberapa efek ReShade hanya bekerja di ukuran layar, jadi foto ini diambil di 1×.",
+  "ps.rs.note.screenSizeOnlySkipped": "Beberapa efek ReShade hanya bekerja di ukuran layar, jadi tidak dipakai di foto ini."
 }

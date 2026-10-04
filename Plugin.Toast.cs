@@ -54,7 +54,10 @@ public sealed partial class Plugin
         var size = r.Path is not null && File.Exists(r.Path) ? $" · {FormatBytes(new FileInfo(r.Path).Length)}" : "";
         var warning = _folderFellBack ? T("ps.toast.folderFallback") : "";
         var screenLong = Math.Max(_services.Framework.ScreenWidth, _services.Framework.ScreenHeight);
-        switch (ShapeFrame.Shortfall(_lastPlan.Shape, new CaptureSize(r.Width, r.Height), _lastPlan.Planned, screenLong, _lastPlan.RequestedScale))
+        // A 1× photo forced by screen-size-only ReShade effects is not a memory shortfall: its own note says why.
+        var shortfall = AnyNote(r.Notes, n => n == ReShadeInfo.ScreenSizeOnlyNote) ? CaptureShortfall.None
+            : ShapeFrame.Shortfall(_lastPlan.Shape, new CaptureSize(r.Width, r.Height), _lastPlan.Planned, screenLong, _lastPlan.RequestedScale);
+        switch (shortfall)
         {
             case CaptureShortfall.ScaleCapped: warning = T("ps.toast.cappedSize"); break;
             case CaptureShortfall.Retried2x: warning = T("ps.toast.retried2x"); break;

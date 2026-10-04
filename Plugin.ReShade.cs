@@ -144,14 +144,14 @@ public sealed partial class Plugin
     private ReShadeShot? ShotFor(CaptureResult r)
     {
         if (!_shot.Installed) return null;
-        var applied = _shot.On && !Contains(r.Notes, ReShadeInfo.NotReadyNote);
+        var applied = _shot.On && !AnyNote(r.Notes, ReShadeInfo.MeansWithoutReShade);
         return new ReShadeShot(_shot.Preset, _reShadeVersion, applied, r.Notes);
     }
 
-    private static bool Contains(IReadOnlyList<string> notes, string note)
+    private static bool AnyNote(IReadOnlyList<string> notes, Func<string, bool> match)
     {
         foreach (var n in notes)
-            if (n == note) return true;
+            if (match(n)) return true;
         return false;
     }
 }
