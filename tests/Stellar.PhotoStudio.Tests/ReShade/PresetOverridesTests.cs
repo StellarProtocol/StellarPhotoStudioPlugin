@@ -23,6 +23,24 @@ public sealed class PresetOverridesTests
             PresetOverrides.Apply(text, Array.Empty<string>()));
     }
 
+    // Review fix round 2, item 5: line 2 of the real, pinned StarLuxe Luminescence download (sha256
+    // 5e1b23f882fede42f1cf7d9cd0076574daae354710eca19e143cec00e4571d63, re-fetched from the author's repo at the pinned
+    // commit and confirmed verbatim), not a hand-written stand-in. It carries BOTH kinds of drop at once: two
+    // RESHADE_DEPTH_* definitions AND the entry's own DropDefinitions name (fLUT_TextureName="DarkNRich.png" — no
+    // pinned pack ships that texture). The expected output was independently re-derived with the plan's own Python
+    // reference script (PresetOverridesTests.cs step 5 of the brief), not just eyeballed against the input.
+    private const string LuminescenceLine =
+        "PreprocessorDefinitions=RESHADE_DEPTH_INPUT_IS_UPSIDE_DOWN=1,RESHADE_DEPTH_INPUT_IS_REVERSED=1,INFINITE_BOUNCES=1,MATERIAL_TYPE=1,SKYCOLOR_MODE=2,WINDOW_SIZE=15,SECOND_PASS=0,MXAO_MIPLEVEL_IL=0,MXAO_TWO_LAYER=1,MXAO_SMOOTHNORMALS=1,IMAGEBASEDLIGHTING=1,fLUT_TextureName=\"DarkNRich.png\",ENABLE_MISC_CONTROLS=1,RT_ENABLE_HIGH_PERF_MODE=1";
+
+    [Fact]
+    public void Drops_the_real_Luminescence_depth_and_missing_texture_definitions_together()
+    {
+        var text = LuminescenceLine + "\nTechniques=LumaSharpen@LumaSharpen.fx\n";
+        Assert.Equal(
+            "PreprocessorDefinitions=INFINITE_BOUNCES=1,MATERIAL_TYPE=1,SKYCOLOR_MODE=2,WINDOW_SIZE=15,SECOND_PASS=0,MXAO_MIPLEVEL_IL=0,MXAO_TWO_LAYER=1,MXAO_SMOOTHNORMALS=1,IMAGEBASEDLIGHTING=1,ENABLE_MISC_CONTROLS=1,RT_ENABLE_HIGH_PERF_MODE=1\nTechniques=LumaSharpen@LumaSharpen.fx\n",
+            PresetOverrides.Apply(text, new[] { "fLUT_TextureName" }));
+    }
+
     [Fact]
     public void Drops_a_listed_texture_definition_by_exact_name()
     {
