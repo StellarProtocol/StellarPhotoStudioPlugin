@@ -32,6 +32,7 @@ internal sealed class PackInstaller : IDisposable
         public PackStatus Status = PackStatus.Queued;
         public double Progress;
         public string? Error;
+        public string? FailedRequirement;   // the required pack's Name, when this one failed because that one did
     }
 
     /// <summary>Not <see cref="Progress{T}"/>: with no synchronization context it would call back on a pool thread.</summary>
@@ -60,6 +61,11 @@ internal sealed class PackInstaller : IDisposable
     public double Progress(ShaderPack p) => _live.TryGetValue(p.Id, out var s) ? s.Progress : 0d;
 
     public string? Error(ShaderPack p) => _live.TryGetValue(p.Id, out var s) ? s.Error : null;
+
+    /// <summary>When <paramref name="p"/> failed WITHOUT being downloaded because a pack it requires failed: that pack's
+    /// name (the panel shows "Needs {0}, which failed to download."); otherwise null (<see cref="Error"/> applies).</summary>
+    public string? FailedRequirement(ShaderPack p) =>
+        _live.TryGetValue(p.Id, out var s) && s.Status == PackStatus.Failed ? s.FailedRequirement : null;
 
     public void Rescan()
     {
@@ -168,6 +174,8 @@ internal sealed class PackInstaller : IDisposable
         FailDependents(p, state.Error);
     }
 
+    /// <summary>Queued packs that require <paramref name="failed"/> fail too, never downloaded; they keep the requirement's
+    /// error and record which pack it was (<see cref="FailedRequirement"/>).</summary>
     private void FailDependents(ShaderPack failed, string error)
     {
         var keep = new Queue<ShaderPack>();
@@ -176,7 +184,7 @@ internal sealed class PackInstaller : IDisposable
             var q = _queue.Dequeue();
             var needsFailed = false;
             foreach (var r in q.Requires) needsFailed |= r == failed.Id;
-            if (needsFailed) _live[q.Id] = new LiveState { Status = PackStatus.Failed, Error = error };
+            if (needsFailed) _live[q.Id] = new LiveState { Status = PackStatus.Failed, Error = error, FailedRequirement = failed.Name };
             else keep.Enqueue(q);
         }
         foreach (var q in keep) _queue.Enqueue(q);

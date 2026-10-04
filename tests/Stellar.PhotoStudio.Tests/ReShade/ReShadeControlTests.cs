@@ -94,6 +94,7 @@ public sealed class ReShadeControlTests
         c.SetEnabled(false);                                     // B
         _fake.List[0] = Mxao with { Enabled = true };            // both applied by ReShade
         _fake.EnabledNow = false;
+        c.OnChanged();                                           // ReShade reports both (the settle reads Changed's value)
         Assert.True(c.Pending);                                  // still waits for a tick after B
         c.Tick(Frame);
         Assert.False(c.Pending);
@@ -144,11 +145,11 @@ public sealed class ReShadeControlTests
         var c = Make();
         _fake.CurrentPreset = "/data/reshade/presets/Noir.ini";
         c.OnChanged();
-        Assert.Equal(new ReShadeChoice("Noir.ini", true), c.Current());
+        Assert.Equal(new ReShadeChoice("/data/reshade/presets/Noir.ini", true), c.Current());   // full path in memory
         c.Apply(new ReShadeChoice("Golden hour.ini", false));
         Assert.Equal("/data/reshade/presets/Golden hour.ini", _fake.PresetCalls[0]);
         Assert.Equal(new[] { false }, _fake.EnabledRequests);
-        Assert.Equal(new ReShadeChoice("Golden hour.ini", false), c.Current());
+        Assert.Equal(new ReShadeChoice("/data/reshade/presets/Golden hour.ini", false), c.Current());
     }
 
     [Fact]

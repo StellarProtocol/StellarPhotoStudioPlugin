@@ -36,7 +36,7 @@ public sealed class PresetReShadeTests
     [Fact]
     public void Dto_round_trips_the_choice_as_a_file_name_only()
     {
-        var dto = PresetDto.From("Mine", new LookSettings(), reshade: new ReShadeChoice(@"C:\x\..\Golden hour.ini", false));
+        var dto = PresetDto.From("Mine", new LookSettings(), reshade: new ReShadeChoice(@"C:\g\x.data\reshade\presets\Golden hour.ini", false));
         var back = JsonSerializer.Deserialize<PresetDto>(JsonSerializer.Serialize(dto))!;
         Assert.Equal(new ReShadeChoice("Golden hour.ini", false), back.ToReShade());
     }
@@ -190,6 +190,98 @@ public sealed class PresetReShadeTests
         s.ResetToSaved();
         // Must revert to the ORIGINAL baseline A, not the first discarded edit B.
         Assert.Equal(new ReShadeChoice("A.ini", true), _applied.Single());
+    }
+
+    // Review fix (qa blocker): restoring an "Unsaved look" row that carries a ReShade edit must keep it an EDIT — Save
+    // stores it, and applying another preset sets it aside again — not silently drop it.
+    [Fact]
+    public void Restore_then_save_keeps_the_reshade_edit()
+    {
+        var (s, store) = Make();
+        store.Save("Plain", new LookSettings());
+        s.Apply(store.All.Single(p => p.Name == "Plain"));
+        _live = new ReShadeChoice("Golden.ini", true);
+        s.OnReShadeEdited();
+        s.Apply(store.All.Single(p => p.Name == "Natural"));     // stash
+        s.RestoreUnsaved();                                        // back on Plain with the edit
+        s.Save();
+        Assert.Equal(new ReShadeChoice("Golden.ini", true), store.All.Single(p => p.Name == "Plain").ReShade);
+    }
+
+    [Fact]
+    public void Restore_then_apply_other_restashes_the_reshade_edit()
+    {
+        var (s, store) = Make();
+        store.Save("Plain", new LookSettings());
+        s.Apply(store.All.Single(p => p.Name == "Plain"));
+        _live = new ReShadeChoice("Golden.ini", true);
+        s.OnReShadeEdited();
+        s.Apply(store.All.Single(p => p.Name == "Natural"));
+        s.RestoreUnsaved();
+        s.Apply(store.All.Single(p => p.Name == "Natural"));     // set aside again
+        Assert.Equal(new ReShadeChoice("Golden.ini", true), s.Stash[0].ReShade);
+    }
+
+    // The restored row's baseline comes back too: Reset all after a restore reverts to the ReShade choice the row's
+    // preset started from, not to whatever the preset that was applied in between left behind.
+    [Fact]
+    public void Restore_then_reset_all_reverts_to_the_rows_own_baseline()
+    {
+        var (s, store) = Make();
+        store.Save("Plain", new LookSettings());
+        _live = new ReShadeChoice("Base.ini", true);
+        s.Apply(store.All.Single(p => p.Name == "Plain"));       // baseline: Base
+        _live = new ReShadeChoice("Golden.ini", true);
+        s.OnReShadeEdited();
+        store.Save("Other", new LookSettings(), reshade: new ReShadeChoice("Other.ini", false));
+        s.Apply(store.All.Single(p => p.Name == "Other"));       // stash Plain+Golden; baseline now Other
+        s.RestoreUnsaved();
+        _applied.Clear();
+        s.ResetToSaved();
+        Assert.Equal(new ReShadeChoice("Base.ini", true), _applied.Last());
+    }
+
+    // Review fix (qa minor): what a preset FILE may name — a plain ".ini" file name that is valid on Windows and Linux.
+    [Theory]
+    [InlineData("Noir.txt")]
+    [InlineData(".")]
+    [InlineData("..")]
+    [InlineData("a:b.ini")]
+    [InlineData("what?.ini")]
+    [InlineData("CON.ini")]
+    [InlineData(" .ini")]
+    [InlineData("")]
+    public void A_preset_file_name_that_is_not_a_safe_ini_drops_the_choice_of_preset(string name)
+    {
+        var back = JsonSerializer.Deserialize<PresetDto>("{\"Version\":1,\"Name\":\"X\",\"ReShade\":{\"Preset\":" +
+            JsonSerializer.Serialize(name) + ",\"Enabled\":false}}")!;
+        Assert.Equal(new ReShadeChoice(null, false), back.ToReShade());
+    }
+
+    [Theory]
+    [InlineData("Noir.ini")]
+    [InlineData("Golden hour (v2).INI")]
+    [InlineData("夕焼け.ini")]
+    public void A_safe_ini_file_name_is_kept(string name)
+    {
+        var dto = PresetDto.From("X", new LookSettings(), reshade: new ReShadeChoice(name, true));
+        Assert.Equal(new ReShadeChoice(name, true), dto.ToReShade());
+    }
+
+    // Review fix (qa major): ReShade's OWN preset (outside Photo Studio's presets folder) is not a file the look can find
+    // again on another PC — the file keeps only on/off (the look then leaves ReShade's preset alone), never a bare name
+    // that would re-open as an empty preset in our folder. Our folder's full path is stored as its file name.
+    [Fact]
+    public void Saving_keeps_our_folders_preset_as_a_file_name_and_drops_reshades_own()
+    {
+        var store = new PresetStore(_files, _ => { });
+        store.Save("Ours", new LookSettings(), reshade: new ReShadeChoice(@"C:\g\stellar\plugindata\stellar.photostudio.data\reshade\presets\Noir.ini", true));
+        store.Save("Theirs", new LookSettings(), reshade: new ReShadeChoice(@"C:\g\ReShadePreset.ini", false));
+        var reloaded = new PresetStore(_files, _ => { });
+        Assert.Equal(new ReShadeChoice("Noir.ini", true), reloaded.All.Single(p => p.Name == "Ours").ReShade);
+        Assert.Equal(new ReShadeChoice(null, false), reloaded.All.Single(p => p.Name == "Theirs").ReShade);
+        // and in memory, the same as on disk (no session-only difference after a relaunch)
+        Assert.Equal(new ReShadeChoice(null, false), store.All.Single(p => p.Name == "Theirs").ReShade);
     }
 
     [Fact]

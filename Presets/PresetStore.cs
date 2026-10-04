@@ -39,7 +39,9 @@ internal sealed class PresetStore
         if (existing is not null && existing.Name != name) _files.Delete(existing.Name);
         _files.Write(name, JsonSerializer.Serialize(PresetDto.From(name, look, shape, lights, reshade)));
         _user.RemoveAll(p => NameEquals(p.Name, name));
-        _user.Add(new Preset(name, false, look, shape, lights) { ReShade = reshade });
+        // In memory exactly what the file holds (ReShadeDto: our folder's preset as a file name, ReShade's own dropped),
+        // so a preset behaves the same before and after a relaunch.
+        _user.Add(new Preset(name, false, look, shape, lights) { ReShade = reshade is null ? null : ReShadeDto.From(reshade).ToChoice() });
         Invalidate();
     }
 

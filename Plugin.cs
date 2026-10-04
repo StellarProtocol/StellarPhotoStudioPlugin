@@ -43,7 +43,6 @@ public sealed partial class Plugin : IStellarPlugin
 
         var assemblyDir = Path.GetDirectoryName(typeof(Plugin).Assembly.Location) ?? "";
         var root = GameRootLocator.Resolve(AppContext.BaseDirectory, assemblyDir, Directory.Exists);
-        _gameRoot = root.Path;
         _screenshotFolder = Path.Combine(root.Path, "stellar", "screenshots");
         _studioFolder = Path.Combine(root.Path, "stellar", "photostudio");
         // Not diagnostic spam — a plain, always-on boot line so the resolved path is visible in a normal log.
@@ -56,7 +55,7 @@ public sealed partial class Plugin : IStellarPlugin
         _look = new LookController(services.RenderLook);
         _look.SetPinned(_settings.Pinned);
         _presets = new PresetStore(new DataStorePresetFiles(services.Data), m => services.Log.Warning(m));
-        StartReShade();                          // Plugin.ReShade.cs — before the preset session links to it
+        StartReShade(root.Path);                 // Plugin.ReShade.cs — before the preset session links to it
         StartPresetSession();                    // Plugin.Studio.cs
         StartLights();                           // Plugin.Lights.cs — needs the scene selection + the preset session
         StartRenderQuality();                    // Plugin.Panel.Quality.cs
@@ -82,9 +81,7 @@ public sealed partial class Plugin : IStellarPlugin
         services.Framework.Update += _onFrameworkUpdate;
         _onLanguageChanged = () => { _lutOptionsCache = null; _importOptionsCache = null; };
         _loc.LanguageChanged += _onLanguageChanged;
-        ArmSelfTest();                           // Plugin.SelfTest.cs — inert unless the env var is set
-        ArmPosingSelfTest();                     // Plugin.SelfTest.Posing.cs — inert unless the env var is set
-        ArmShapeSelfTest();                      // Plugin.SelfTest.Shapes.cs — inert unless the env var is set
+        ArmSelfTests();                          // Plugin.SelfTest.cs — inert unless their env vars are set
     }
 
     public string Name => "Photo Studio";

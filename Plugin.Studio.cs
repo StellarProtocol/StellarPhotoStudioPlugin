@@ -74,6 +74,7 @@ public sealed partial class Plugin
         ApplyLiveHides();
         // Closing the full panel while the game's photo mode is still open brings the strip back.
         if (!show) SetDockedForGamePhotoMode(_services.PhotoMode.IsActive);
+        SyncStudioOpen();   // Plugin.ReShade.cs — after the strip decision, so panel → strip is not a close
     }
 
     private void ShowDocked(bool show)
@@ -85,6 +86,7 @@ public sealed partial class Plugin
         _quality.SetComposing(_panelShown || _dockedShown);   // preview the look in the game's photo mode only with our controls on screen
         if (show && _toastWin.IsShown) _toastWin.SetVisible(false);   // the strip shows the saved line itself
         ApplyLiveHides();
+        SyncStudioOpen();
     }
 
     /// <summary>Called by <see cref="PhotoModeAttach"/> when the game's own photo mode starts / ends.</summary>
@@ -220,16 +222,21 @@ public sealed partial class Plugin
     private void CaptureNow()
     {
         if (Capturing || _captureGate.Armed) return;
-        _flash = 0.6f;
-        _flashWin.SetRect(new WindowRect(0f, 0f, _services.Framework.ScreenWidth, _services.Framework.ScreenHeight));
-        _flashWin.SetVisible(true);
         _quality.SetCapturing(true);
         if (_quality.BoostingForCapture || _rs.Pending)
         {
-            _captureGate.Arm(_quality.BoostingForCapture ? BoostSettleTicks : 0);
+            _captureGate.Arm(_quality.BoostingForCapture ? BoostSettleTicks : 0);   // the flash shows when it fires
             return;
         }
+        StartFlash();
         _ = _session.CaptureAsync();
+    }
+
+    private void StartFlash()
+    {
+        _flash = 0.6f;
+        _flashWin.SetRect(new WindowRect(0f, 0f, _services.Framework.ScreenWidth, _services.Framework.ScreenHeight));
+        _flashWin.SetVisible(true);
     }
 
     private bool Capturing => _session.State == StudioState.Capturing;

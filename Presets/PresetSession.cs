@@ -28,8 +28,13 @@ internal sealed record PresetReShadeLink(Func<ReShadeChoice?> Current, Action<Re
 internal sealed record UnsavedLook(string Origin, LookSettings Look, PhotoShape? Shape, PhotoShape? BaseShape,
     LightsPreset? Lights = null, bool LookEdited = true)
 {
-    /// <summary>The ReShade choice at the moment the row was set aside (null = none / not installed).</summary>
+    /// <summary>The ReShade choice at the moment the row was set aside, when the player had changed it (null = no
+    /// ReShade edit / not installed).</summary>
     public ReShadeChoice? ReShade { get; init; }
+
+    /// <summary>The ReShade choice the row's preset state started from (like <see cref="BaseShape"/>), so Reset all after
+    /// a restore reverts to it.</summary>
+    public ReShadeChoice? BaseReShade { get; init; }
 }
 
 /// <summary>
@@ -77,7 +82,9 @@ internal sealed class PresetSession
     /// <summary>Set once at start: presets save and apply ReShade's preset + on/off through it (null = they do not).</summary>
     public PresetReShadeLink? ReShadeLink { get; set; }
 
-    /// <summary>The player changed ReShade's preset or on/off in Photo Studio: marks the look modified, like a shape change.</summary>
+    /// <summary>The player changed ReShade's preset or on/off in Photo Studio: marks the look modified, like a shape change.
+    /// Effect switches do NOT call this (owner ruling O2, 2026-10-04): they belong to the ReShade preset file, which ReShade
+    /// saves itself, so they neither mark the look modified nor are undone by Reset all.</summary>
     public void OnReShadeEdited()
     {
         if (ReShadeLink is null) return;
@@ -138,6 +145,10 @@ internal sealed class PresetSession
         if (u.ReShade is { } rs && ReShadeLink is not null) ReShadeLink.Apply(rs);
         var result = u.Lights is { } lights && Lights is not null ? Lights.Apply(lights) : LightsResult.Ok;
         _baseShape = u.BaseShape;
+        // The row's ReShade edit is still an edit (Save stores it, another Apply stashes it again); its baseline comes
+        // back with it. A row without one leaves the current baseline alone (ReShade was not touched).
+        _reShadeEdited = u.ReShade is not null;
+        if (u.ReShade is not null) _baseReShade = u.BaseReShade;
         Modified = u.LookEdited;
         StateChanged?.Invoke();
         return result;
@@ -218,6 +229,7 @@ internal sealed class PresetSession
         _stash.Insert(0, new UnsavedLook(ActiveName, _editor.Build(), _shape?.Current(), _baseShape, lights, Modified)
         {
             ReShade = _reShadeEdited ? ReShadeLink?.Current() : null,
+            BaseReShade = _baseReShade,
         });
         if (_stash.Count > MaxStash) _stash.RemoveAt(_stash.Count - 1);
     }

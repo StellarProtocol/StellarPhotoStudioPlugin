@@ -17,7 +17,9 @@ Dependencies). Photo Studio's Look tab turns ReShade on/off, switches presets an
 from each pack's own GitHub at a pinned commit (sha256-checked, never re-hosted): ReShade standard
 (`crosire/reshade-shaders`, licence per file), SweetFX (`CeeJayDK/SweetFX`, MIT), prod80 (`prod80/prod80-ReShade-Repository`,
 MIT). qUINT is not offered: its licence reserves all rights. Packs and Photo Studio's ReShade presets live in
-`stellar/plugindata/stellar.photostudio.data/reshade/`.
+`stellar/plugindata/stellar.photostudio.data/reshade/`. A Look preset remembers the ReShade preset and on/off (a preset
+outside that folder — ReShade's own — is remembered as on/off only); effect switches are saved in the ReShade preset
+itself, so they do not mark the look modified and Reset all does not undo them.
 
 ```bash
 dotnet build -c Release
@@ -35,7 +37,9 @@ repo + commit; CI builds it in an isolated container). AGPL-3.0-or-later.
   one swaps the current edits in. Renaming keeps the editor's look.
 - **Closing Photo Studio returns the game to exactly its normal look.** Hides, looks, render quality and time of day
   are all reference-counted framework tokens, released on close and on unload. A look pinned "while playing" keeps
-  colour/white balance/LUT/bloom only; depth of field and film grain are photo-only.
+  colour/white balance/LUT/bloom only; depth of field and film grain are photo-only. ReShade's on/off and preset are
+  snapshotted when Photo Studio opens (panel or docked strip) and put back when it closes or unloads (owner ruling
+  2026-10-04; if ReShade is still loading at close, the snapshot is kept and restored at the next close).
 - **Never use `ZServerTime` for time of day** (it breaks the game's ping display; framework `ITimeOfDay` uses the
   game's own time-of-day calls).
 - Design + decisions: devkit `docs/superpowers/specs/2026-09-30-photo-studio-core-design.md` (§ 11 as-built) and

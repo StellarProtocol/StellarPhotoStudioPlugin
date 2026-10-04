@@ -24,12 +24,16 @@ internal static class ReShadeView
     };
 
     /// <summary>A non-Screen shape with an enabled depth effect → the framework skips it for that photo (D8);
-    /// Screen at 2×/4× → depth is upscaled screen detail (§ 11.5). <paramref name="isOn"/> includes pending wishes.</summary>
+    /// Screen at 2×/4× → depth is upscaled screen detail (§ 11.5). <paramref name="isOn"/> includes pending wishes; pass a
+    /// cached delegate (<see cref="ReShadeControl.IsOnFunc"/>) — this runs every panel refresh.</summary>
     public static DepthNote Depth(PhotoShape shape, int scale, IReadOnlyList<ReShadeTechnique> techniques, Func<ReShadeTechnique, bool> isOn)
     {
         var anyDepthOn = false;
-        foreach (var t in techniques)
+        for (var i = 0; i < techniques.Count; i++)   // by index: foreach over the interface boxes an enumerator
+        {
+            var t = techniques[i];
             if (t.UsesDepth && isOn(t)) { anyDepthOn = true; break; }
+        }
         if (!anyDepthOn) return DepthNote.None;
         if (shape != PhotoShape.Screen) return DepthNote.SkippedInShape;
         return scale > 1 ? DepthNote.ScreenDetail : DepthNote.None;

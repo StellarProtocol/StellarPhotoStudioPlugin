@@ -13,6 +13,14 @@ internal sealed class CaptureGate
 
     public void Arm(int settleTicks) => _ticks = Math.Max(0, settleTicks);
 
+    /// <summary>Drops a waiting shot (Photo Studio closed before it fired). True when one was waiting.</summary>
+    public bool Disarm()
+    {
+        var was = Armed;
+        _ticks = -1;
+        return was;
+    }
+
     /// <summary>True exactly once: the tick on which the capture should start.</summary>
     public bool Tick(bool reShadePending)
     {

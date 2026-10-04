@@ -14,7 +14,10 @@ internal sealed record Preset(string Name, bool BuiltIn, LookSettings Look, Phot
 }
 
 /// <summary>On-disk form of <see cref="ReShadeChoice"/>: the preset FILE NAME only, so a preset travels between PCs and a
-/// crafted "../x.ini" never reaches outside Photo Studio's ReShade presets folder.</summary>
+/// crafted "../x.ini" never reaches outside Photo Studio's ReShade presets folder. In memory a choice may hold a full
+/// path (ReShade's own preset, outside our folder — review fix 2026-10-04): such a path is NOT stored (the look then keeps
+/// on/off only and leaves ReShade's preset alone), because its bare name would re-open as an empty preset in our folder.
+/// A name that is not a safe ".ini" file name on Windows and Linux drops the preset too.</summary>
 internal sealed class ReShadeDto
 {
     public string? Preset { get; set; }
@@ -24,7 +27,14 @@ internal sealed class ReShadeDto
 
     public ReShadeChoice ToChoice() => new(FileOnly(Preset), Enabled);
 
-    private static string? FileOnly(string? p) => p is { Length: > 0 } && ReShadePaths.FileName(p) is { Length: > 0 } f ? f : null;
+    private static string? FileOnly(string? p)
+    {
+        if (p is not { Length: > 0 }) return null;
+        if (ReShadePaths.HasFolder(p) && !ReShadePaths.InPresetsFolder(p)) return null;
+        var name = ReShadePaths.FileName(p);
+        if (!name.EndsWith(".ini", System.StringComparison.OrdinalIgnoreCase)) return null;
+        return PresetNames.IsSafeFileStem(name.Substring(0, name.Length - 4)) ? name : null;
+    }
 }
 
 internal sealed class PresetDto

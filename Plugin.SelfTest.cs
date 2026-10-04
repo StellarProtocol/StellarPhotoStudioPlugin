@@ -18,6 +18,14 @@ public sealed partial class Plugin
     private float _selfTestClock;
     private float _selfTestDueAt;
 
+    /// <summary>The capture, posing and shapes self-tests (each inert unless its env var is set).</summary>
+    private void ArmSelfTests()
+    {
+        ArmSelfTest();
+        ArmPosingSelfTest();      // Plugin.SelfTest.Posing.cs
+        ArmShapeSelfTest();       // Plugin.SelfTest.Shapes.cs
+    }
+
     private void ArmSelfTest()
     {
         _selfTestOn = Environment.GetEnvironmentVariable(SelfTestEnvVar) == "1";
