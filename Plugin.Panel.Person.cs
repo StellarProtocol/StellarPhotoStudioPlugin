@@ -146,17 +146,50 @@ public sealed partial class Plugin
         () => T(key), () => _posingCtl.SetLook(part, mode), Enabled: PoseEnabled,
         Active: () => _posingCtl.State.Mode(part) == mode), Width: LookSegW);
 
+    // Drag the dot on the grid (player request 2026-10-05: "rect area … drag and drop point"), or nudge with the arrows by
+    // the chosen step; both write the same aim (PosingController.SetAim), so the dot follows the arrows and the readout.
     private HudElement AimPad(LookPart part) => new ColumnElement(new HudElement[]
     {
-        PadRow(AimButton(part, "▲", 0, 1)),
-        PadRow(AimButton(part, "◀", -1, 0), AimButton(part, "●", 0, 0), AimButton(part, "▶", 1, 0)),
-        PadRow(AimButton(part, "▼", 0, -1)),
-    }, Gap: 2f);
+        new RowElement(new HudElement[]
+        {
+            new XYPadElement(() => (_posingCtl.State.AimX(part), _posingCtl.State.AimY(part)),
+                (x, y) => _posingCtl.SetAim(part, x, y), Enabled: PoseEnabled) { Size = AimGridSize },
+            new ColumnElement(new HudElement[]
+            {
+                PadRow(AimButton(part, "▲", 0, 1)),
+                PadRow(AimButton(part, "◀", -1, 0), AimButton(part, "●", 0, 0), AimButton(part, "▶", 1, 0)),
+                PadRow(AimButton(part, "▼", 0, -1)),
+                new RowElement(new HudElement[] { new TextElement(() => AimReadout(part), Color: Muted, NoWrap: true) },
+                    Justify: RowJustify.Center),   // under the arrows: the step row overflowed at 440 px (sandbox, fil)
+            }, Gap: 2f),
+        }, Gap: 12f, Justify: RowJustify.Center),
+        AimStepRow(part),
+    }, Gap: 6f);
+
+    private const float AimGridSize = 112f;
+
+    /// <summary>Step: Fine · Normal · Coarse (shared by Head and Eyes, remembered).</summary>
+    private HudElement AimStepRow(LookPart part) => new RowElement(new HudElement[]
+    {
+        new TextElement(() => T("pz.aim.step"), Color: Muted),
+        AimStepButton(0, "pz.aim.fine"), AimStepButton(1, "pz.aim.normal"), AimStepButton(2, "pz.aim.coarse"),
+    }, Gap: 4f);
+
+    private HudElement AimStepButton(int index, string key) => new ButtonElement(() => T(key),
+        () => _settings.SetAimStepIndex(index), Enabled: PoseEnabled, Active: () => _settings.AimStepIndex == index);
+
+    private string AimReadout(LookPart part)
+    {
+        var s = _posingCtl.State;
+        return _loc.TFormat("pz.aim.readout", AimSigned(s.AimX(part)), AimSigned(s.AimY(part)));
+    }
+
+    private static string AimSigned(float v) => (v >= 0.005f ? "+" : v <= -0.005f ? "−" : "") + F(System.Math.Abs(v), "0.00");
 
     private static HudElement PadRow(params HudElement[] buttons) => new RowElement(buttons, Gap: 2f, Justify: RowJustify.Center);
 
     private HudElement AimButton(LookPart part, string glyph, int dx, int dy) =>
-        new CellElement(new ButtonElement(() => glyph, () => _posingCtl.Aim(part, dx, dy), Enabled: PoseEnabled), Width: PadW);
+        new CellElement(new ButtonElement(() => glyph, () => _posingCtl.Aim(part, dx, dy, PosingController.AimSteps[_settings.AimStepIndex]), Enabled: PoseEnabled), Width: PadW);
 
     private HudElement RotateRow() => new RowElement(new HudElement[]
     {

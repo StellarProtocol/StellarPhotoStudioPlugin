@@ -47,6 +47,7 @@ internal sealed class StudioSettings
         PacksOpen = cfg.Get("ui.reshade.packsOpen", true);
         AllFxOpen = cfg.Get("ui.reshade.allFx", false);
         PresetsOpen = cfg.Get("ui.reshade.presetsOpen", true);
+        AimStepIndex = Math.Clamp(cfg.Get("pose.aimStep", 1), 0, 2);
         for (var k = 0; k < _presetGroups.Length; k++) _presetGroups[k] = cfg.Get(PresetGroupKey((PresetKind)k), k == (int)PresetKind.Own);
     }
 
@@ -60,6 +61,8 @@ internal sealed class StudioSettings
     public bool PacksOpen { get; private set; }
     public bool AllFxOpen { get; private set; }
     public bool PresetsOpen { get; private set; }
+    /// <summary>Head/Eyes arrow-pad step: 0 Fine, 1 Normal (default), 2 Coarse (PosingController.AimSteps).</summary>
+    public int AimStepIndex { get; private set; }
     private readonly bool[] _presetGroups = new bool[3];
 
     /// <summary>Presets group folds: Photo Studio's own open, Community and author-page links folded by default.</summary>
@@ -74,6 +77,7 @@ internal sealed class StudioSettings
     public void SetPacksOpen(bool open) { PacksOpen = open; Store("ui.reshade.packsOpen", open); }
     public void SetAllFxOpen(bool open) { AllFxOpen = open; Store("ui.reshade.allFx", open); }
     public void SetPresetsOpen(bool open) { PresetsOpen = open; Store("ui.reshade.presetsOpen", open); }
+    public void SetAimStepIndex(int i) { AimStepIndex = Math.Clamp(i, 0, 2); Store("pose.aimStep", AimStepIndex); }
     public void SetPresetGroupOpen(PresetKind kind, bool open) { _presetGroups[(int)kind] = open; Store(PresetGroupKey(kind), open); }
 
     private static string PresetGroupKey(PresetKind kind) => kind switch

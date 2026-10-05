@@ -394,5 +394,10 @@
   "ps.rs.fx.groupCount": "{0}",
   "ps.rs.fx.groupCountOn": "{1} aktif · {0}",
   "ps.rs.presetNone": "Tidak ada",
-  "ps.rs.presetEmpty": "Tidak ada efek di preset ini."
+  "ps.rs.presetEmpty": "Tidak ada efek di preset ini.",
+  "pz.aim.step": "Langkah",
+  "pz.aim.fine": "Halus",
+  "pz.aim.normal": "Normal",
+  "pz.aim.coarse": "Kasar",
+  "pz.aim.readout": "x {0} · y {1}"
 }

@@ -5,11 +5,11 @@ StellarResonance plugin for screenshots: hide the HUD, nameplates and other play
 LUT, bloom, vignette, film grain); raise render quality (supersampling, high shadows) and pin the time of day; keep
 presets. A compact strip appears beside the game's own photo/selfie mode.
 
-Requires **Stellar framework ≥ 2.17.0** (capture, scene-visibility, look, photo-mode, render-quality and time-of-day
+Requires **Stellar framework ≥ 2.18.0** (capture, scene-visibility, look, photo-mode, render-quality and time-of-day
 services; 2.14.0 adds the free-camera services — camera override, input shield, scene freeze, emotes, entity picker —
 and `IHotkeys.MigrateSavedBinding` for the hide-all key move; 2.15.0 adds `IPosing`, posing a person inside the free
 camera — you live, other players as a local copy, NPCs as a stand-in model; 2.17.0 adds `IReShade` and checked
-plugin downloads).
+plugin downloads; 2.18.0 adds `XYPadElement` for the Head/Eyes aim grid).
 
 **ReShade (1.5.0).** Optional. The Stellar launcher installs ReShade 6.8.0 (add-on build, BSD-3-Clause) as the game
 folder's `dxgi.dll` and the Stellar ReShade bridge add-on (MIT) beside it, for Modded launches only (Photo Studio's page →
