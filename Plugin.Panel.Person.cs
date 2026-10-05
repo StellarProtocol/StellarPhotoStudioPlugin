@@ -151,12 +151,33 @@ public sealed partial class Plugin
         PadRow(AimButton(part, "▲", 0, 1)),
         PadRow(AimButton(part, "◀", -1, 0), AimButton(part, "●", 0, 0), AimButton(part, "▶", 1, 0)),
         PadRow(AimButton(part, "▼", 0, -1)),
+        AimStepRow(part),
     }, Gap: 2f);
+
+    /// <summary>Step: Fine · Normal · Coarse (shared by Head and Eyes, remembered), then where the aim is now.</summary>
+    private HudElement AimStepRow(LookPart part) => new RowElement(new HudElement[]
+    {
+        new TextElement(() => T("pz.aim.step"), Color: Muted),
+        AimStepButton(0, "pz.aim.fine"), AimStepButton(1, "pz.aim.normal"), AimStepButton(2, "pz.aim.coarse"),
+        new SpacerElement(),
+        new TextElement(() => AimReadout(part), Color: Muted, NoWrap: true),
+    }, Gap: 4f);
+
+    private HudElement AimStepButton(int index, string key) => new ButtonElement(() => T(key),
+        () => _settings.SetAimStepIndex(index), Enabled: PoseEnabled, Active: () => _settings.AimStepIndex == index);
+
+    private string AimReadout(LookPart part)
+    {
+        var s = _posingCtl.State;
+        return _loc.TFormat("pz.aim.readout", AimSigned(s.AimX(part)), AimSigned(s.AimY(part)));
+    }
+
+    private static string AimSigned(float v) => (v >= 0.005f ? "+" : v <= -0.005f ? "−" : "") + F(System.Math.Abs(v), "0.00");
 
     private static HudElement PadRow(params HudElement[] buttons) => new RowElement(buttons, Gap: 2f, Justify: RowJustify.Center);
 
     private HudElement AimButton(LookPart part, string glyph, int dx, int dy) =>
-        new CellElement(new ButtonElement(() => glyph, () => _posingCtl.Aim(part, dx, dy), Enabled: PoseEnabled), Width: PadW);
+        new CellElement(new ButtonElement(() => glyph, () => _posingCtl.Aim(part, dx, dy, PosingController.AimSteps[_settings.AimStepIndex]), Enabled: PoseEnabled), Width: PadW);
 
     private HudElement RotateRow() => new RowElement(new HudElement[]
     {

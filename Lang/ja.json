@@ -394,5 +394,10 @@
   "ps.rs.fx.groupCount": "{0}",
   "ps.rs.fx.groupCountOn": "オン {1} · {0}",
   "ps.rs.presetNone": "なし",
-  "ps.rs.presetEmpty": "このプリセットにはエフェクトがありません。"
+  "ps.rs.presetEmpty": "このプリセットにはエフェクトがありません。",
+  "pz.aim.step": "ステップ",
+  "pz.aim.fine": "細かく",
+  "pz.aim.normal": "標準",
+  "pz.aim.coarse": "粗く",
+  "pz.aim.readout": "x {0} · y {1}"
 }

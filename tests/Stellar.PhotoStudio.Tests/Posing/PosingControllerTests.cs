@@ -135,11 +135,22 @@ public sealed class PosingControllerTests
     public void The_arrow_pad_steps_clamps_and_centres()
     {
         var r = new PosingRig();
-        for (var i = 0; i < 5; i++) r.Ctl.Aim(LookPart.Head, 1, 0);
-        r.Ctl.Aim(LookPart.Head, 0, 1);
-        r.Ctl.Aim(LookPart.Head, 0, 0);
+        for (var i = 0; i < 5; i++) r.Ctl.Aim(LookPart.Head, 1, 0, PosingController.AimSteps[2]);   // Coarse = the old 0.25
+        r.Ctl.Aim(LookPart.Head, 0, 1, PosingController.AimSteps[2]);
+        r.Ctl.Aim(LookPart.Head, 0, 0, PosingController.AimSteps[2]);
         Assert.Equal(new[] { "aim Head 0.25,0.00", "aim Head 0.50,0.00", "aim Head 0.75,0.00", "aim Head 1.00,0.00", "aim Head 1.00,0.00",
             "aim Head 1.00,0.25", "aim Head 0.00,0.00" }, r.Target(1).Calls);
+    }
+
+    // Player request 2026-10-05: finer aim. Fine = 0.05 per press; the drag pad sets any point, clamped to ±1.
+    [Fact]
+    public void Fine_steps_move_a_twentieth_and_set_aim_clamps()
+    {
+        var r = new PosingRig();
+        r.Ctl.Aim(LookPart.Eyes, -1, 0, PosingController.AimSteps[0]);
+        r.Ctl.SetAim(LookPart.Eyes, 0.3f, 1.7f);
+        Assert.Equal(new[] { "aim Eyes -0.05,0.00", "aim Eyes 0.30,1.00" }, r.Target(1).Calls);
+        Assert.Equal(0.3f, r.Ctl.State.AimX(LookPart.Eyes), 3);
     }
 
     [Fact]

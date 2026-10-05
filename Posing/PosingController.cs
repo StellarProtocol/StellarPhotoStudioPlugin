@@ -38,7 +38,9 @@ internal sealed class PosingController
     /// <summary>Fallback search radius when the orbit subject (picked by the camera, which can reach ~60 m) is not
     /// among the people <see cref="PeopleRadius"/> already found — queried once per subject, never every frame.</summary>
     public const float SubjectSearchRadius = 100f;
-    public const float AimStep = 0.25f;
+    /// <summary>Arrow-pad steps of the aim range (−1…+1): Fine, Normal, Coarse (player request 2026-10-05 — 0.25 alone was
+    /// too coarse). Normal is the default.</summary>
+    public static readonly float[] AimSteps = { 0.05f, 0.1f, 0.25f };
     public const float MaxYaw = 180f;
 
     private readonly IPosing _posing;
@@ -287,15 +289,21 @@ internal sealed class PosingController
         t.SetLook(part, s.Mode(part), s.Locked(part));
     }
 
-    /// <summary>The arrow pad: one step of <see cref="AimStep"/> per press (clamped to ±1); the centre button re-centres.</summary>
-    public void Aim(LookPart part, int dx, int dy)
+    /// <summary>The arrow pad: one <paramref name="step"/> per press (clamped to ±1); the centre button re-centres.</summary>
+    public void Aim(LookPart part, int dx, int dy, float step)
     {
-        if (Target() is not { } t) return;
         var s = State;
         var centre = dx == 0 && dy == 0;
-        var x = centre ? 0f : Math.Clamp(s.AimX(part) + dx * AimStep, -1f, 1f);
-        var y = centre ? 0f : Math.Clamp(s.AimY(part) + dy * AimStep, -1f, 1f);
-        s.SetAim(part, x, y);
+        SetAim(part, centre ? 0f : s.AimX(part) + dx * step, centre ? 0f : s.AimY(part) + dy * step);
+    }
+
+    /// <summary>Points the head or eyes at (x, y) in the aim range, clamped to ±1 (the drag pad and the arrow pad).</summary>
+    public void SetAim(LookPart part, float x, float y)
+    {
+        if (Target() is not { } t) return;
+        x = Math.Clamp(x, -1f, 1f);
+        y = Math.Clamp(y, -1f, 1f);
+        State.SetAim(part, x, y);
         t.Aim(part, x, y);
     }
 

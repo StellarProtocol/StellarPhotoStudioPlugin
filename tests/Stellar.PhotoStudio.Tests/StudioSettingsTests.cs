@@ -162,4 +162,16 @@ public sealed class StudioSettingsTests
         Assert.False(again.PresetGroupOpen(PresetKind.Community));
         Assert.True(again.PresetGroupOpen(PresetKind.LinkOnly));
     }
+
+    [Fact]
+    public void Aim_step_defaults_to_normal_clamps_and_persists()
+    {
+        var cfg = new MemSection();
+        var s = new StudioSettings(cfg);
+        Assert.Equal(1, s.AimStepIndex);
+        s.SetAimStepIndex(7);
+        Assert.Equal(2, s.AimStepIndex);
+        s.SetAimStepIndex(0);
+        Assert.Equal(0, new StudioSettings(cfg).AimStepIndex);
+    }
 }

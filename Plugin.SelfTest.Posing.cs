@@ -111,7 +111,7 @@ public sealed partial class Plugin
             case 5:
                 c.SetLook(LookPart.Head, LookMode.Lens);
                 c.SetLook(LookPart.Eyes, LookMode.Free);
-                c.Aim(LookPart.Eyes, 1, 0);
+                c.Aim(LookPart.Eyes, 1, 0, PosingController.AimSteps[2]);
                 PzStepDone("-look", c.TargetState == PoseTargetState.Ready);
                 return false;
             case 6: c.SetYaw(30f); PzStepDone("-yaw", c.TargetState == PoseTargetState.Ready); return false;
