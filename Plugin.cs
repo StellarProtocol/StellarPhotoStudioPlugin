@@ -118,6 +118,7 @@ public sealed partial class Plugin : IStellarPlugin
         TickReShade(dt);                         // Plugin.ReShade.cs — R1 settle + the capture gate, before TickStudio
         TickStudio(dt);                          // Plugin.Studio.cs — toast timer, flash fade, tip reposition
         TickFreeCamUi(dt);
+        TickFovKeys(dt);                         // Plugin.Fov.cs — FOV in/out repeat while held (free camera only)
         TickFrameGuide();
         TickLampMarkers();                       // Plugin.LampMarkers.cs — one projection per lamp while shown                        // Plugin.FrameGuide.cs — (re)builds only when shape/toggle/canvas change
         TickPosing(dt);                          // Plugin.Posing.cs — follows a person's own running emote (~10 Hz)
@@ -125,6 +126,7 @@ public sealed partial class Plugin : IStellarPlugin
         TickSelfTest(dt);
         TickPosingSelfTest(dt);
         TickShapeSelfTest();
+        TickHideSelfTest();
         TickHideAllNotice();
     }
 
@@ -133,8 +135,7 @@ public sealed partial class Plugin : IStellarPlugin
         var folder = EffectiveFolder(out _folderFellBack);
         // Camera-render capture never contains UI or nameplates, so only world layers need hiding for it — hiding
         // the HUD too would just flicker it for two frames on every capture.
-        var worldLayers = _settings.Hides & (VisibilityLayers.OtherPlayers | VisibilityLayers.KeepParty | VisibilityLayers.Self |
-            VisibilityLayerSets.Effects);
+        var worldLayers = HideLayers.ForCapture(_settings.Hides);
         // A shaped capture sizes from the REQUESTED scale (the framework shrinks both sides equally to fit); Screen keeps
         // passing the already-lowered scale, as before.
         var aspect = PhotoShapes.Aspect(_settings.Shape);

@@ -89,7 +89,11 @@ public sealed partial class Plugin
     private string BindingText(string id)
     {
         foreach (var h in _hotkeys)
-            if (h.Id == id) return h.CurrentBinding?.ToString() ?? "—";
+            if (h.Id == id) return h.CurrentBinding is { } b ? KeyLabel(b) : "—";
         return "—";
     }
+
+    /// <summary>"Shift+F10", and the bracket keys as the characters on the key ("[", "]", "\") rather than their names.</summary>
+    internal static string KeyLabel(KeyBinding b) =>
+        b.ToString().Replace("LeftBracket", "[").Replace("RightBracket", "]").Replace("Backslash", "\\");
 }

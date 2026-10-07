@@ -33,8 +33,10 @@ public sealed partial class Plugin
         new ButtonElement(() => "▶", OnClick: NextPreset, Width: 28f),
         new ConditionalElement(() => _modified, new PillElement(() => T("ps.pill.modified"), Color: () => _services.Theme.Colors.Accent)),
         new SpacerElement(),
-        new ConditionalElement(() => LayerAvailable(VisibilityLayers.OtherPlayers), LabeledToggle(() => T("ps.hide.others"),
-            () => IsHidden(VisibilityLayers.OtherPlayers), on => SetHidden(VisibilityLayers.OtherPlayers, on))),
+        // "Other players" here = all four player groups on the Capture tab (1.7.0; HideLayers.ToRequest makes that the
+        // game's no-other-player switch), so the strip and the full panel always agree.
+        new ConditionalElement(() => LayerAvailable(VisibilityLayerSets.PlayerGroups), LabeledToggle(() => T("ps.hide.others"),
+            () => IsHidden(VisibilityLayerSets.PlayerGroups), on => SetHidden(VisibilityLayerSets.PlayerGroups, on))),
         new SpacerElement(Width: 12f),   // separate the two [switch][label] pairs so each label reads as its own
         LabeledToggle(() => T("ps.docked.keepLook"), () => _settings.Pinned, SetPinned),
         new SpacerElement(Width: 12f),

@@ -39,6 +39,7 @@ public sealed partial class Plugin
         new SeparatorElement(),
         QualityGroup(),             // Plugin.Panel.Quality.cs
         new SeparatorElement(),
+        FovRow(),                   // Plugin.Fov.cs — free camera only
         DofGroup(),
         ColorGroup(),
         WhiteBalanceGroup(),

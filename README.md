@@ -1,15 +1,27 @@
 # Stellar.PhotoStudio
 
-StellarResonance plugin for screenshots: hide the HUD, nameplates and other players; take supersampled captures
+StellarResonance plugin for screenshots: hide the HUD, nameplates and everything the game's own photo screen can hide
+(you, your Spirit Echo, other adventurers, friends, party, guild, non-players, enemies, weapons, collectibles, other
+Spirit Echoes); take supersampled captures
 (1×/2×/4×); grade the shot with looks built from the game's own render effects (depth of field, colour, white balance,
 LUT, bloom, vignette, film grain); raise render quality (supersampling, high shadows) and pin the time of day; keep
 presets. A compact strip appears beside the game's own photo/selfie mode.
 
-Requires **Stellar framework ≥ 2.18.0** (capture, scene-visibility, look, photo-mode, render-quality and time-of-day
+Requires **Stellar framework ≥ 2.20.0** (capture, scene-visibility, look, photo-mode, render-quality and time-of-day
 services; 2.14.0 adds the free-camera services — camera override, input shield, scene freeze, emotes, entity picker —
 and `IHotkeys.MigrateSavedBinding` for the hide-all key move; 2.15.0 adds `IPosing`, posing a person inside the free
 camera — you live, other players as a local copy, NPCs as a stand-in model; 2.17.0 adds `IReShade` and checked
-plugin downloads; 2.18.0 adds `XYPadElement` for the Head/Eyes aim grid).
+plugin downloads; 2.18.0 adds `XYPadElement` for the Head/Eyes aim grid; 2.20.0 adds the game photo screen's full
+hide list as `VisibilityLayers`, `IHotkeys.IsActionHeld` and the `[` `]` `\` keys).
+
+**Hide list and field of view (1.7.0).** The Capture tab mirrors the game photo screen's hide list, in its order: Me, My
+own Spirit Echo, Other adventurers, Non-players, Enemy, Weapon, Friends, Party, Guild, Collectible, Other Spirit Echo. Like
+the game, a player stays visible while any group they belong to is shown; with Other adventurers, Friends, Party and Guild
+all on, Photo Studio uses the game's own "no other player" switch, so nobody is left. 1.6.0 settings carry over (Me → Me
++ My own Spirit Echo, Other players → the four player groups, Keep my party visible → all but Party), and the 1.6.0 key
+is kept so a rollback still finds them. In the free camera, the Look tab's Field of view slider (10–100°, ↺ = the game's
+own FOV) and three hotkeys change the FOV: FOV in `]`, FOV out `[` (hold to keep going), reset `\` — rebindable in
+Settings → Hotkeys; Shift+wheel still works.
 
 **ReShade (1.5.0).** Optional. The Stellar launcher installs ReShade 6.8.0 (add-on build, BSD-3-Clause) as the game
 folder's `dxgi.dll` and the Stellar ReShade bridge add-on (MIT) beside it, for Modded launches only (Photo Studio's page →

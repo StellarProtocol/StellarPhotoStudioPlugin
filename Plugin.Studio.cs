@@ -120,7 +120,7 @@ public sealed partial class Plugin
         if (_panelShown || _dockedShown || _overlayHidden)
         {
             var layers = _settings.Hides | (_overlayHidden ? VisibilityLayers.StellarOverlay : VisibilityLayers.None);
-            if ((layers & VisibilityLayers.OtherPlayers) == 0) layers &= ~VisibilityLayers.KeepParty;
+            layers = HideLayers.ToRequest(layers);   // all four player groups = the game's "no other player" switch
             // The game's own photo controls live under the same UI root as its HUD: hiding "Game HUD" there would
             // take them away too (the game's [F] key hides its own interface in photo mode).
             if (_services.PhotoMode.IsActive) layers &= ~VisibilityLayers.GameHud;
@@ -137,7 +137,7 @@ public sealed partial class Plugin
 
     private bool IsHidden(VisibilityLayers layer) => layer == VisibilityLayers.StellarOverlay
         ? _overlayHidden
-        : (_settings.Hides & layer) != 0;
+        : (_settings.Hides & layer) == layer;   // a set (the docked strip's player groups) counts only when all are on
 
     private void SetHidden(VisibilityLayers layer, bool hidden)
     {

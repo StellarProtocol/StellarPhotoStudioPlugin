@@ -24,6 +24,7 @@ public sealed partial class Plugin
         ArmSelfTest();
         ArmPosingSelfTest();      // Plugin.SelfTest.Posing.cs
         ArmShapeSelfTest();       // Plugin.SelfTest.Shapes.cs
+        ArmHideSelfTest();        // Plugin.SelfTest.Hide.cs
     }
 
     private void ArmSelfTest()
