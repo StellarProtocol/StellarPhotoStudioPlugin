@@ -48,6 +48,18 @@ public sealed class HideLangTests
                 "guild", "collectibles", "otherSpiritEchoes" }, k => en.GetProperty("ps.hide." + k).GetString()));
     }
 
+    // Framework 2.20.0 per-character hides (owner go 2026-10-07): Weapon hides EVERY player's weapon, and Friends / Party /
+    // Guild are real hides that work while Other adventurers is shown. The English help must say so — the 1.7.0 first
+    // draft described the game's own narrower switches.
+    [Fact]
+    public void English_help_describes_the_per_character_hides()
+    {
+        var en = Load("en");
+        Assert.Contains("every player's weapon", en.GetProperty("ps.help.hide.weapons").GetString());
+        foreach (var k in new[] { "friends", "party", "guild" })
+            Assert.Contains("even while Other adventurers is shown", en.GetProperty("ps.help.hide." + k).GetString());
+    }
+
     private static JsonElement Load(string code) =>
         JsonDocument.Parse(File.ReadAllText(Path.Combine(Root, code + ".json"))).RootElement;
 }
