@@ -305,6 +305,7 @@
   "sc.pill.posed": "{0} posed",
   "sc.pill.back": "{0} back to the camera",
   "sc.pill.open": "{0} Photo Studio",
+  "sc.pill.close": "{0} close Photo Studio",
   "fc.status.kept": "Free camera is off · scene kept. Press {0} to go back.",
   "pz.hint.selectOff": "‹ › to choose · clicking a character needs the free camera",
   "sc.status.frozenOnly": "Frozen · the whole game is paused",

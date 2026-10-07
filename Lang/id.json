@@ -305,6 +305,7 @@
   "sc.pill.posed": "{0} diberi pose",
   "sc.pill.back": "{0} kembali ke kamera",
   "sc.pill.open": "{0} Photo Studio",
+  "sc.pill.close": "{0} tutup Photo Studio",
   "fc.status.kept": "Kamera bebas nonaktif · adegan tetap. Tekan {0} untuk kembali.",
   "pz.hint.selectOff": "‹ › untuk memilih · klik karakter perlu kamera bebas",
   "sc.status.frozenOnly": "Dibekukan · seluruh game dijeda",

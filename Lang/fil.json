@@ -305,6 +305,7 @@
   "sc.pill.posed": "{0} naka-pose",
   "sc.pill.back": "{0} pabalik sa camera",
   "sc.pill.open": "{0} Photo Studio",
+  "sc.pill.close": "{0} isara ang Photo Studio",
   "fc.status.kept": "Naka-off ang free camera · nananatili ang eksena. Pindutin ang {0} para bumalik.",
   "pz.hint.selectOff": "‹ › para pumili · kailangan ng free camera para mag-click ng karakter",
   "sc.status.frozenOnly": "Nakahinto · nakahinto ang buong laro",

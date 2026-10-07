@@ -305,6 +305,7 @@
   "sc.pill.posed": "{0} 人ポーズ中",
   "sc.pill.back": "{0} でカメラに戻る",
   "sc.pill.open": "{0} Photo Studio",
+  "sc.pill.close": "{0} Photo Studio を閉じる",
   "fc.status.kept": "フリーカメラはオフ · シーンは維持中。{0} で戻ります。",
   "pz.hint.selectOff": "‹ › で選択 · キャラクターのクリック選択はフリーカメラ中のみ",
   "sc.status.frozenOnly": "停止中 · ゲーム全体が一時停止中",

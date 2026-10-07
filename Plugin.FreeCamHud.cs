@@ -62,6 +62,7 @@ public sealed partial class Plugin
         new PillElement(() => _loc.TFormat("sc.pill.back", BindingText(StudioHotkeys.FreeCam)),
             Color: () => _services.Theme.Colors.HudText),
         ReopenPill(),   // Plugin.Close.cs
+        ClosePill(),    // Plugin.Close.cs — the way out is on screen too (owner 2026-10-08)
     }, Gap: 6f, Justify: RowJustify.Center);
 
     private string HudLine() => _loc.TFormat("fc.hud.line",

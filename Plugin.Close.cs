@@ -104,4 +104,8 @@ public sealed partial class Plugin
     /// way back is always on screen.</summary>
     private HudElement ReopenPill() => new ConditionalElement(() => !_panelShown && !_dockedShown,
         new PillElement(() => _loc.TFormat("sc.pill.open", BindingText(StudioHotkeys.Panel)), Color: () => _services.Theme.Colors.HudText));
+
+    /// <summary>"Ctrl+Shift+F10 close Photo Studio" on the SCENE pill row — a frozen or posed scene always shows how to end it.</summary>
+    private HudElement ClosePill() => new PillElement(() => _loc.TFormat("sc.pill.close", BindingText(StudioHotkeys.Close)),
+        Color: () => _services.Theme.Colors.HudText);
 }

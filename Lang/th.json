@@ -305,6 +305,7 @@
   "sc.pill.posed": "จัดท่า {0} คน",
   "sc.pill.back": "{0} กลับไปที่กล้อง",
   "sc.pill.open": "{0} Photo Studio",
+  "sc.pill.close": "{0} ปิด Photo Studio",
   "fc.status.kept": "กล้องอิสระปิดอยู่ · ฉากยังคงอยู่ กด {0} เพื่อกลับไป",
   "pz.hint.selectOff": "‹ › เพื่อเลือก · การคลิกเลือกตัวละครต้องเปิดกล้องอิสระ",
   "sc.status.frozenOnly": "หยุดภาพอยู่ · เกมทั้งหมดหยุดชั่วคราว",
