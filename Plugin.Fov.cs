@@ -49,6 +49,8 @@ public sealed partial class Plugin
                 Enabled: () => _freeCam.Active),
             () => _freeCam.Fov > 0f ? F(_freeCam.Fov, "0") + "°" : "—",   // never entered yet: no FOV to show
             () => _freeCam.ResetFov(), enabled: () => _freeCam.Active, step: 1f, parse: ParseNumber),
+        new ConditionalElement(() => _freeCam.Active, new TextElement(() => _loc.TFormat("ps.look.fovKeys",
+            BindingText(StudioHotkeys.FovOut), BindingText(StudioHotkeys.FovIn), BindingText(StudioHotkeys.FovReset)), Color: Muted)),
         new ConditionalElement(() => !_freeCam.Active, new TextElement(
             () => _loc.TFormat("ps.look.fovOff", BindingText(StudioHotkeys.FreeCam)), Color: Muted)),
     }, Gap: 4f);

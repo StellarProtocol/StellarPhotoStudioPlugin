@@ -71,5 +71,5 @@ public sealed partial class Plugin
         F(_freeCam.Roll, "0"));
 
     private string HudHint() => _loc.TFormat(_freeCam.Mode == FreeCamMode.Orbit ? "fc.hint.orbit" : "fc.hint.fly",
-        BindingText(StudioHotkeys.FreeCam));
+        BindingText(StudioHotkeys.FreeCam), BindingText(StudioHotkeys.FovOut), BindingText(StudioHotkeys.FovIn));
 }
