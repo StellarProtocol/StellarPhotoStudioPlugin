@@ -17,13 +17,20 @@ hide list as `VisibilityLayers`, `IHotkeys.IsActionHeld` and the `[` `]` `\` key
 **Hide list and field of view (1.7.0).** The Capture tab mirrors the game photo screen's hide list, in its order: Me, My
 own Spirit Echo, Other adventurers, Non-players, Enemy, Weapon, Friends, Party, Guild, Collectible, Other Spirit Echo.
 Friends, Party and Guild really hide their members, even while Other adventurers is shown (the game's own switches only
-stop keeping them visible); a player stays visible while any group they belong to is still shown. Weapon hides every
+stop keeping them visible); a player in any hidden group is hidden, except that a party member stays while Party is
+shown. Weapon hides every
 player's weapon, not only yours. With Other adventurers, Friends, Party and Guild all on, Photo Studio uses the game's own
 "no other player" switch, so nobody is left. 1.6.0 settings carry over (Me → Me
 + My own Spirit Echo, Other players → the four player groups, Keep my party visible → all but Party), and the 1.6.0 key
 is kept so a rollback still finds them. In the free camera, the Look tab's Field of view slider (10–100°, ↺ = the game's
 own FOV) and three hotkeys change the FOV: FOV in `]`, FOV out `[` (hold to keep going), reset `\` — rebindable in
 Settings → Hotkeys; Shift+wheel still works.
+
+**Minimize and close (1.7.0).** The full panel's `–` minimizes it to the compact strip (in or out of the game's photo
+mode) and changes nothing. `✕` — on the panel or the strip, or the Close Photo Studio hotkey (`Ctrl+Shift+F10`) — always
+closes Photo Studio fully: it leaves the free camera, unfreezes, resets posed people and lamps and shows what you hid. When
+any of that is running it asks first, listing exactly what will end; a pinned Look stays. While neither the panel nor the
+strip is up, the SCENE / camera pills show the key that reopens Photo Studio.
 
 **ReShade (1.5.0).** Optional. The Stellar launcher installs ReShade 6.8.0 (add-on build, BSD-3-Clause) as the game
 folder's `dxgi.dll` and the Stellar ReShade bridge add-on (MIT) beside it, for Modded launches only (Photo Studio's page →

@@ -40,6 +40,7 @@ public sealed partial class Plugin
                 // Portrait-capture spec § 5: the shape + real output size beside the camera line while a shape is set.
                 new ConditionalElement(() => _settings.Shape != PhotoShape.Screen,
                     new PillElement(() => ShapeFrame.GuideLabel(_settings.Shape, PlannedSize()), Color: () => _services.Theme.Colors.HudText)),
+                ReopenPill(),   // Plugin.Close.cs
             }, Gap: 6f, Justify: RowJustify.Center),
             new ConditionalElement(() => !_fcSettings.HintHidden,
                 // The hint sits on its own HUD pill chip (mockup .hint) so it stays readable over a bright world.
@@ -60,6 +61,7 @@ public sealed partial class Plugin
             new PillElement(() => T("fc.badge.combat"), Color: () => _services.Theme.Colors.HpFill)),
         new PillElement(() => _loc.TFormat("sc.pill.back", BindingText(StudioHotkeys.FreeCam)),
             Color: () => _services.Theme.Colors.HudText),
+        ReopenPill(),   // Plugin.Close.cs
     }, Gap: 6f, Justify: RowJustify.Center);
 
     private string HudLine() => _loc.TFormat("fc.hud.line",

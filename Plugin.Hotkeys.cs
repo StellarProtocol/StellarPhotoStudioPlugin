@@ -21,6 +21,7 @@ public sealed partial class Plugin
         StudioHotkeys.Panel => TogglePanel,
         StudioHotkeys.FreeCam => ToggleFreeCamera,
         StudioHotkeys.HideAll => ToggleHideAll,
+        StudioHotkeys.Close => RequestClose,
         StudioHotkeys.FovIn => () => FovKeyPressed(zoomIn: true),
         StudioHotkeys.FovOut => () => FovKeyPressed(zoomIn: false),
         StudioHotkeys.FovReset => ResetFovKey,

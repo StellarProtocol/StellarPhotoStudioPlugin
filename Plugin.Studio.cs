@@ -19,7 +19,7 @@ public sealed partial class Plugin
 
     private bool _panelShown;
     private bool _dockedShown;
-    private bool _dockedDismissed;       // ✕ on the strip hides it for the current game-photo-mode visit only
+    private bool _dockedDismissed;       // Close Photo Studio hides the strip for the current game-photo-mode visit
     private bool _overlayHidden;         // never persisted (see StudioSettings)
     private bool _folderFellBack;
     private IDisposable? _liveHideToken;
@@ -65,6 +65,8 @@ public sealed partial class Plugin
     {
         if (_panelShown == show) return;
         _panelShown = show;
+        if (show) _minimized = false;
+        _freeCamHudWin?.MarkDirty();   // the "Shift+F10 Photo Studio" pill follows the panel
         _panelWin.SetVisible(show);
         _quality.SetComposing(_panelShown || _dockedShown);
         if (show) RescanLuts();
@@ -81,6 +83,8 @@ public sealed partial class Plugin
     {
         if (_dockedShown == show) return;
         _dockedShown = show;
+        if (!show) _minimized = false;
+        _freeCamHudWin?.MarkDirty();
         _dockedWin.SetVisible(show);
         _look.SetGamePhotoActive(show);
         _quality.SetComposing(_panelShown || _dockedShown);   // preview the look in the game's photo mode only with our controls on screen
@@ -93,14 +97,9 @@ public sealed partial class Plugin
     private void SetDockedForGamePhotoMode(bool active)
     {
         if (!active) _dockedDismissed = false;
-        ShowDocked(active && _settings.DockedAuto && !_panelShown && !_dockedDismissed);
+        // A minimized panel keeps its strip whether or not the game's photo mode is open.
+        ShowDocked(!_panelShown && (_minimized || (active && _settings.DockedAuto && !_dockedDismissed)));
         ApplyLiveHides();   // the Game-HUD hide is masked inside the game's photo mode (see ApplyLiveHides)
-    }
-
-    private void DismissDocked()
-    {
-        _dockedDismissed = true;
-        ShowDocked(false);
     }
 
     private void DockedToFullPanel()

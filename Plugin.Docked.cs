@@ -41,14 +41,14 @@ public sealed partial class Plugin
         LabeledToggle(() => T("ps.docked.keepLook"), () => _settings.Pinned, SetPinned),
         new SpacerElement(Width: 12f),
         new ButtonElement(() => T("ps.docked.fullPanel"), OnClick: DockedToFullPanel, Width: 96f),
-        new ButtonElement(() => "✕", OnClick: DismissDocked, Width: 28f),
+        new ButtonElement(() => "✕", OnClick: RequestClose, Width: 28f),   // Plugin.Close.cs
     }, Gap: 6f);
 
     // Row B shows the sliders, or — for the toast's few seconds after a capture from the strip — the saved line in
     // their place: the row is ~1034 of 1100 px wide already, so the line can't sit beside them, and a toast window
     // above would cover row A.
-    private HudElement DockedSliderRow() => new ConditionalElement(() => _toastLeft > 0f && _dockedShown,
-        DockedSavedRow(), DockedMinisRow());
+    private HudElement DockedSliderRow() => new ConditionalElement(() => _closeConfirm, DockedCloseConfirm(),
+        new ConditionalElement(() => _toastLeft > 0f && _dockedShown, DockedSavedRow(), DockedMinisRow()));
 
     private HudElement DockedMinisRow() => new RowElement(new HudElement[]
     {
