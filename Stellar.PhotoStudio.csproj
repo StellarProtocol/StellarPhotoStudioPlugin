@@ -14,9 +14,7 @@
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
   <ItemGroup>
-    <!-- DRAFT: unpublished framework 2.20.0 pack from the devkit local feed; the release commit switches to the
-         published 2.20.0 (as 1.6.0 did with 2.18.0). -->
-    <PackageReference Include="Stellar.Abstractions" Version="2.20.0-hidefull-dev" />
+    <PackageReference Include="Stellar.Abstractions" Version="2.20.0" />
     <PackageReference Include="Stellar.PluginContracts"    Version="2.0.0" />
     <PackageReference Include="Stellar.Plugin.InteropRefs" Version="2.0.0" />
   </ItemGroup>
