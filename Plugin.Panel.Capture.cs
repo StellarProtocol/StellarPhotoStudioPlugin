@@ -50,7 +50,6 @@ public sealed partial class Plugin
             new ButtonElement(() => T("ps.cap.showAll"), OnClick: ShowAllLayers, Width: 88f),
         }, Gap: 6f),
         HideToggle("hide.hud", VisibilityLayers.GameHud, "ps.hide.hud"),
-        HideToggle("hide.overlay", VisibilityLayers.StellarOverlay, "ps.hide.overlay"),
         HideToggle("hide.names", VisibilityLayers.Nameplates, "ps.hide.names"),
         // The game photo screen's own list, in its order (1.7.0; framework 2.20.0 layers — HideLayers).
         HideToggle("hide.me", VisibilityLayers.SelfCharacter, "ps.hide.me"),
@@ -169,10 +168,7 @@ public sealed partial class Plugin
     private string HideHelp(string key, VisibilityLayers layer)
     {
         if (!LayerAvailable(layer)) return T("ps.help.layerUnavailable");
-        // The overlay hide hides this panel too; name the live panel hotkey that brings it back.
-        return layer == VisibilityLayers.StellarOverlay
-            ? _loc.TFormat("ps.help." + key, BindingText("photostudio.panel"))
-            : T("ps.help." + key);
+        return T("ps.help." + key);
     }
 
     /// <summary>A sub-option row: a 22 px indent (the effect switches under "Effects").</summary>
