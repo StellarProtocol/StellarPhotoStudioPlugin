@@ -33,20 +33,22 @@ public sealed partial class Plugin
         new ButtonElement(() => "▶", OnClick: NextPreset, Width: 28f),
         new ConditionalElement(() => _modified, new PillElement(() => T("ps.pill.modified"), Color: () => _services.Theme.Colors.Accent)),
         new SpacerElement(),
-        new ConditionalElement(() => LayerAvailable(VisibilityLayers.OtherPlayers), LabeledToggle(() => T("ps.hide.others"),
-            () => IsHidden(VisibilityLayers.OtherPlayers), on => SetHidden(VisibilityLayers.OtherPlayers, on))),
+        // "Other players" here = all four player groups on the Capture tab (1.7.0; HideLayers.ToRequest makes that the
+        // game's no-other-player switch), so the strip and the full panel always agree.
+        new ConditionalElement(() => LayerAvailable(VisibilityLayerSets.PlayerGroups), LabeledToggle(() => T("ps.hide.others"),
+            () => IsHidden(VisibilityLayerSets.PlayerGroups), on => SetHidden(VisibilityLayerSets.PlayerGroups, on))),
         new SpacerElement(Width: 12f),   // separate the two [switch][label] pairs so each label reads as its own
         LabeledToggle(() => T("ps.docked.keepLook"), () => _settings.Pinned, SetPinned),
         new SpacerElement(Width: 12f),
         new ButtonElement(() => T("ps.docked.fullPanel"), OnClick: DockedToFullPanel, Width: 96f),
-        new ButtonElement(() => "✕", OnClick: DismissDocked, Width: 28f),
+        new ButtonElement(() => "✕", OnClick: RequestClose, Width: 28f),   // Plugin.Close.cs
     }, Gap: 6f);
 
     // Row B shows the sliders, or — for the toast's few seconds after a capture from the strip — the saved line in
     // their place: the row is ~1034 of 1100 px wide already, so the line can't sit beside them, and a toast window
     // above would cover row A.
-    private HudElement DockedSliderRow() => new ConditionalElement(() => _toastLeft > 0f && _dockedShown,
-        DockedSavedRow(), DockedMinisRow());
+    private HudElement DockedSliderRow() => new ConditionalElement(() => _closeConfirm, DockedCloseConfirm(),
+        new ConditionalElement(() => _toastLeft > 0f && _dockedShown, DockedSavedRow(), DockedMinisRow()));
 
     private HudElement DockedMinisRow() => new RowElement(new HudElement[]
     {

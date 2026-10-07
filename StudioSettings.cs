@@ -11,9 +11,10 @@ namespace Stellar.PhotoStudio;
 /// </summary>
 internal sealed class StudioSettings
 {
-    private const VisibilityLayers Persistable =
-        VisibilityLayers.GameHud | VisibilityLayers.Nameplates | VisibilityLayers.OtherPlayers | VisibilityLayers.KeepParty |
-        VisibilityLayers.Self | VisibilityLayerSets.Effects;
+    // 1.7.0 stores the hide toggles under "hide.layers2" (HideLayers) and keeps "hide.layers" as their 1.6.0 reading
+    // (HideLayers.LegacyProjection), so a rolled-back build still finds Me / Other players / Keep my party visible.
+    private const string HidesKey = "hide.layers2";
+    private const string LegacyHidesKey = "hide.layers";
 
     private readonly IConfigSection _cfg;
 
@@ -26,7 +27,7 @@ internal sealed class StudioSettings
         Folder = cfg.Get("capture.folder", "") ?? "";
         Shape = PhotoShapes.Parse(cfg.Get("capture.shape", "screen"));
         ShowFrameGuide = cfg.Get("capture.frameGuide", true);
-        Hides = (VisibilityLayers)cfg.Get("hide.layers", 0) & Persistable;
+        Hides = LoadHides(cfg);
         Pinned = cfg.Get("look.pinned", false);
         PresetName = cfg.Get("look.presetName", "Natural") ?? "Natural";
         WorkingJson = cfg.Get<string?>("look.working", null);
@@ -132,7 +133,27 @@ internal sealed class StudioSettings
     public void SetFormat(CaptureFormat f) { Format = f; Store("capture.format", f == CaptureFormat.Jpg ? "jpg" : "png"); }
     public void SetJpgQuality(int q) { JpgQuality = Math.Clamp(q, 1, 100); Store("capture.jpgQuality", JpgQuality); }
     public void SetFolder(string f) { Folder = f.Trim(); Store("capture.folder", Folder); }
-    public void SetHides(VisibilityLayers h) { Hides = h & Persistable; Store("hide.layers", (int)Hides); }
+    public void SetHides(VisibilityLayers h)
+    {
+        Hides = h & HideLayers.Persistable;
+        _cfg.Set(HidesKey, (int)Hides);
+        Store(LegacyHidesKey, (int)HideLayers.LegacyProjection(Hides));
+    }
+
+    /// <summary>The 1.7.0 key when present — unless the legacy key no longer matches its projection, which means an
+    /// older build changed the toggles after this one saved them: those changes win, migrated. No 1.7.0 key yet = a
+    /// 1.6.0 (or new) install: migrate the legacy toggles.</summary>
+    private static VisibilityLayers LoadHides(IConfigSection cfg)
+    {
+        var legacy = (VisibilityLayers)cfg.Get(LegacyHidesKey, 0);
+        var stored = cfg.Get(HidesKey, -1);
+        if (stored >= 0)
+        {
+            var hides = (VisibilityLayers)stored & HideLayers.Persistable;
+            if (HideLayers.LegacyProjection(hides) == (legacy & ~VisibilityLayers.StellarOverlay)) return hides;
+        }
+        return HideLayers.Migrate(legacy) & HideLayers.Persistable;
+    }
     public void SetPinned(bool p) { Pinned = p; Store("look.pinned", p); }
     public void SetPresetName(string n) { PresetName = n; Store("look.presetName", n); }
     public void SetWorkingJson(string? j) { WorkingJson = j; Store("look.working", j); }

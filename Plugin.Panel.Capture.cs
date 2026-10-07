@@ -50,11 +50,19 @@ public sealed partial class Plugin
             new ButtonElement(() => T("ps.cap.showAll"), OnClick: ShowAllLayers, Width: 88f),
         }, Gap: 6f),
         HideToggle("hide.hud", VisibilityLayers.GameHud, "ps.hide.hud"),
-        HideToggle("hide.overlay", VisibilityLayers.StellarOverlay, "ps.hide.overlay"),
         HideToggle("hide.names", VisibilityLayers.Nameplates, "ps.hide.names"),
-        HideToggle("hide.me", VisibilityLayers.Self, "ps.hide.me"),
-        HideToggle("hide.others", VisibilityLayers.OtherPlayers, "ps.hide.others"),
-        Indented(KeepPartyToggle()),
+        // The game photo screen's own list, in its order (1.7.0; framework 2.20.0 layers — HideLayers).
+        HideToggle("hide.me", VisibilityLayers.SelfCharacter, "ps.hide.me"),
+        HideToggle("hide.spiritEcho", VisibilityLayers.OwnSpiritEcho, "ps.hide.spiritEcho"),
+        HideToggle("hide.adventurers", VisibilityLayers.Strangers, "ps.hide.adventurers"),
+        HideToggle("hide.npcs", VisibilityLayers.NonPlayers, "ps.hide.npcs"),
+        HideToggle("hide.enemies", VisibilityLayers.Enemies, "ps.hide.enemies"),
+        HideToggle("hide.weapons", VisibilityLayers.Weapons, "ps.hide.weapons"),
+        HideToggle("hide.friends", VisibilityLayers.Friends, "ps.hide.friends"),
+        HideToggle("hide.party", VisibilityLayers.Party, "ps.hide.party"),
+        HideToggle("hide.guild", VisibilityLayers.Guild, "ps.hide.guild"),
+        HideToggle("hide.collectibles", VisibilityLayers.Collectibles, "ps.hide.collectibles"),
+        HideToggle("hide.otherSpiritEchoes", VisibilityLayers.OtherSpiritEchoes, "ps.hide.otherSpiritEchoes"),
         new TextElement(() => T("ps.hide.fx"), Color: Muted, FontSize: SubFont),
         Indented(HideToggle("hide.fx.mine", VisibilityLayers.EffectsMine, "ps.hide.fx.mine")),
         Indented(HideToggle("hide.fx.party", VisibilityLayers.EffectsParty, "ps.hide.fx.party")),
@@ -160,22 +168,13 @@ public sealed partial class Plugin
     private string HideHelp(string key, VisibilityLayers layer)
     {
         if (!LayerAvailable(layer)) return T("ps.help.layerUnavailable");
-        // The overlay hide hides this panel too; name the live panel hotkey that brings it back.
-        return layer == VisibilityLayers.StellarOverlay
-            ? _loc.TFormat("ps.help." + key, BindingText("photostudio.panel"))
-            : T("ps.help." + key);
+        return T("ps.help." + key);
     }
 
-    /// <summary>A sub-option row: the same 22 px indent the party row has always used.</summary>
+    /// <summary>A sub-option row: a 22 px indent (the effect switches under "Effects").</summary>
     private static HudElement Indented(HudElement e) => new RowElement(new HudElement[]
     {
         new SpacerElement(Width: 22f),
         new CellElement(e, Weight: 1f),
     });
-
-    private HudElement KeepPartyToggle() => HelpToggle("hide.party",
-        get: () => IsHidden(VisibilityLayers.KeepParty),
-        set: on => SetHidden(VisibilityLayers.KeepParty, on),
-        text: new HelpText(() => T("ps.hide.party"), () => T("ps.help.hide.party")),
-        enabled: () => IsHidden(VisibilityLayers.OtherPlayers) && LayerAvailable(VisibilityLayers.KeepParty));
 }

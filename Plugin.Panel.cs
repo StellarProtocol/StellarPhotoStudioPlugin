@@ -23,12 +23,17 @@ public sealed partial class Plugin
             ShouldRender = InWorld,
         },
         BuildPanelRoot(),
-        TitleTrailing: new ConditionalElement(() => _settings.Pinned,
-            new PillElement(() => T("ps.pill.pinned"), Color: () => _services.Theme.Colors.Accent)),
-        OnClose: () => _panel.Set(false)));
+        TitleTrailing: new RowElement(new HudElement[]
+        {
+            new ConditionalElement(() => _settings.Pinned,
+                new PillElement(() => T("ps.pill.pinned"), Color: () => _services.Theme.Colors.Accent)),
+            new ButtonElement(() => "–", OnClick: MinimizePanel, Width: 24f),   // Plugin.Close.cs — to the compact strip
+        }, Gap: 6f),
+        OnClose: RequestClose));   // the chrome ✕ = Close Photo Studio (asks first when a scene is running)
 
     private HudElement BuildPanelRoot() => new ColumnElement(new HudElement[]
     {
+        PanelCloseConfirm(),   // Plugin.Close.cs
         new RowElement(new HudElement[]
         {
             TabButton(StudioTabs.Capture, "ps.tab.capture"),
@@ -89,7 +94,11 @@ public sealed partial class Plugin
     private string BindingText(string id)
     {
         foreach (var h in _hotkeys)
-            if (h.Id == id) return h.CurrentBinding?.ToString() ?? "—";
+            if (h.Id == id) return h.CurrentBinding is { } b ? KeyLabel(b) : "—";
         return "—";
     }
+
+    /// <summary>"Shift+F10", and the bracket keys as the characters on the key ("[", "]", "\") rather than their names.</summary>
+    internal static string KeyLabel(KeyBinding b) =>
+        b.ToString().Replace("LeftBracket", "[").Replace("RightBracket", "]").Replace("Backslash", "\\");
 }

@@ -30,4 +30,9 @@ public sealed class StudioHotkeysTests
         var bound = StudioHotkeys.Defaults.Where(d => d.Key is not null).Select(d => d.Key!.Value).ToList();
         Assert.Equal(bound.Count, bound.Distinct().Count());
     }
+
+    // Owner 2026-10-08 ("Close Photo Studio" hotkey with a default; players can rebind it).
+    [Fact]
+    public void Close_is_Ctrl_Shift_F10() =>
+        Assert.Equal(new KeyBinding(StellarKeyCode.F10, ModifierKeys.Ctrl | ModifierKeys.Shift), Default(StudioHotkeys.Close));
 }

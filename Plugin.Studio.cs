@@ -19,7 +19,7 @@ public sealed partial class Plugin
 
     private bool _panelShown;
     private bool _dockedShown;
-    private bool _dockedDismissed;       // ✕ on the strip hides it for the current game-photo-mode visit only
+    private bool _dockedDismissed;       // Close Photo Studio hides the strip for the current game-photo-mode visit
     private bool _overlayHidden;         // never persisted (see StudioSettings)
     private bool _folderFellBack;
     private IDisposable? _liveHideToken;
@@ -65,6 +65,8 @@ public sealed partial class Plugin
     {
         if (_panelShown == show) return;
         _panelShown = show;
+        if (show) _minimized = false;
+        _freeCamHudWin?.MarkDirty();   // the "Shift+F10 Photo Studio" pill follows the panel
         _panelWin.SetVisible(show);
         _quality.SetComposing(_panelShown || _dockedShown);
         if (show) RescanLuts();
@@ -81,6 +83,8 @@ public sealed partial class Plugin
     {
         if (_dockedShown == show) return;
         _dockedShown = show;
+        if (!show) _minimized = false;
+        _freeCamHudWin?.MarkDirty();
         _dockedWin.SetVisible(show);
         _look.SetGamePhotoActive(show);
         _quality.SetComposing(_panelShown || _dockedShown);   // preview the look in the game's photo mode only with our controls on screen
@@ -93,14 +97,9 @@ public sealed partial class Plugin
     private void SetDockedForGamePhotoMode(bool active)
     {
         if (!active) _dockedDismissed = false;
-        ShowDocked(active && _settings.DockedAuto && !_panelShown && !_dockedDismissed);
+        // A minimized panel keeps its strip whether or not the game's photo mode is open.
+        ShowDocked(!_panelShown && (_minimized || (active && _settings.DockedAuto && !_dockedDismissed)));
         ApplyLiveHides();   // the Game-HUD hide is masked inside the game's photo mode (see ApplyLiveHides)
-    }
-
-    private void DismissDocked()
-    {
-        _dockedDismissed = true;
-        ShowDocked(false);
     }
 
     private void DockedToFullPanel()
@@ -120,7 +119,7 @@ public sealed partial class Plugin
         if (_panelShown || _dockedShown || _overlayHidden)
         {
             var layers = _settings.Hides | (_overlayHidden ? VisibilityLayers.StellarOverlay : VisibilityLayers.None);
-            if ((layers & VisibilityLayers.OtherPlayers) == 0) layers &= ~VisibilityLayers.KeepParty;
+            layers = HideLayers.ToRequest(layers);   // all four player groups = the game's "no other player" switch
             // The game's own photo controls live under the same UI root as its HUD: hiding "Game HUD" there would
             // take them away too (the game's [F] key hides its own interface in photo mode).
             if (_services.PhotoMode.IsActive) layers &= ~VisibilityLayers.GameHud;
@@ -137,7 +136,7 @@ public sealed partial class Plugin
 
     private bool IsHidden(VisibilityLayers layer) => layer == VisibilityLayers.StellarOverlay
         ? _overlayHidden
-        : (_settings.Hides & layer) != 0;
+        : (_settings.Hides & layer) == layer;   // a set (the docked strip's player groups) counts only when all are on
 
     private void SetHidden(VisibilityLayers layer, bool hidden)
     {

@@ -11,6 +11,11 @@ internal static class StudioHotkeys
     public const string FreeCam = "photostudio.freecam";
     public const string HideAll = "photostudio.hideall";
     public const string NextPreset = "photostudio.nextpreset";
+    public const string Close = "photostudio.close";
+    // 1.7.0 (player request "FOV Slider"): free camera only; in/out repeat while held (FovKeys).
+    public const string FovIn = "photostudio.fovin";
+    public const string FovOut = "photostudio.fovout";
+    public const string FovReset = "photostudio.fovreset";
 
     public static readonly (string Id, string LocKey, KeyBinding? Key)[] Defaults =
     {
@@ -19,5 +24,9 @@ internal static class StudioHotkeys
         (FreeCam, "hotkey.freecam", new KeyBinding(StellarKeyCode.F10, ModifierKeys.Alt)),
         (HideAll, "hotkey.hideall", new KeyBinding(StellarKeyCode.F10, ModifierKeys.Ctrl)),
         (NextPreset, "hotkey.nextpreset", null),
+        (Close, "hotkey.close", new KeyBinding(StellarKeyCode.F10, ModifierKeys.Ctrl | ModifierKeys.Shift)),
+        (FovIn, "hotkey.fovin", new KeyBinding(StellarKeyCode.RightBracket)),
+        (FovOut, "hotkey.fovout", new KeyBinding(StellarKeyCode.LeftBracket)),
+        (FovReset, "hotkey.fovreset", new KeyBinding(StellarKeyCode.Backslash)),
     };
 }
