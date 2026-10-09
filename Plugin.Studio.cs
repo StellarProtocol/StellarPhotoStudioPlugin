@@ -23,6 +23,7 @@ public sealed partial class Plugin
     private bool _overlayHidden;         // never persisted (see StudioSettings)
     private bool _folderFellBack;
     private IDisposable? _liveHideToken;
+    private bool _liveHidesSawGameUi;   // the FreeCamGameUiShown the live hides were last built with
 
     private PresetSession _presetSession = null!;
 
@@ -116,6 +117,7 @@ public sealed partial class Plugin
         // "nothing hidden", shows everything and hides it again — a reflection round-trip and a visible flicker.
         var previous = _liveHideToken;
         _liveHideToken = null;
+        _liveHidesSawGameUi = FreeCamGameUiShown;
         if (_panelShown || _dockedShown || _overlayHidden)
         {
             var layers = _settings.Hides | (_overlayHidden ? VisibilityLayers.StellarOverlay : VisibilityLayers.None);
@@ -123,6 +125,8 @@ public sealed partial class Plugin
             // The game's own photo controls live under the same UI root as its HUD: hiding "Game HUD" there would
             // take them away too (the game's [F] key hides its own interface in photo mode).
             if (_services.PhotoMode.IsActive) layers &= ~VisibilityLayers.GameHud;
+            // Free camera with the game UI shown (U): the Capture tab's "Game HUD" yields too (game UI spec § 2).
+            if (FreeCamGameUiShown) layers &= ~VisibilityLayers.GameHud;
             if (layers != VisibilityLayers.None) _liveHideToken = _services.SceneVisibility.Hide(layers);
         }
         previous?.Dispose();

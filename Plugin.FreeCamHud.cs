@@ -16,7 +16,7 @@ public sealed partial class Plugin
         new WindowSpec(
             Id: "photostudio.freecam.hud",
             Title: T("fc.title.hud"),
-            DefaultRect: new WindowRect(0f, 16f, 1000f, 0f),   // 1000: the id fly hint with "(scene stays)", "L / Shift+L" and Ctrl+Shift+F10 measures 964 px of chip (sandbox, 2026-10-03)
+            DefaultRect: new WindowRect(0f, 16f, 1240f, 0f),   // 1240: the id/fil fly hint with Ctrl+Shift+F10 + 1.9.0 "U game UI" measures ~1170 px of text (sandbox 2026-10-10; 1000 overflowed since 1.7.0's FOV keys)
             Category: WindowCategory.HUD,
             Style: WindowPanelStyle.Borderless)
         {
@@ -37,6 +37,9 @@ public sealed partial class Plugin
                     new PillElement(() => T("fc.badge.frozen"), Color: () => _services.Theme.Colors.HudText)),   // ❄ carries the meaning; HudAccent was unreadable / same red as combat in Crimson (sandbox S2)
                 new ConditionalElement(() => _services.CombatState.LocalPlayerInCombat,
                     new PillElement(() => T("fc.badge.combat"), Color: () => _services.Theme.Colors.HpFill)),
+                // Game UI spec 2026-10-10: the game's interface is shown (U).
+                new ConditionalElement(() => _freeCam.GameUiShown,
+                    new PillElement(() => T("fc.badge.gameUi"), Color: () => _services.Theme.Colors.HudText)),
                 // Portrait-capture spec § 5: the shape + real output size beside the camera line while a shape is set.
                 new ConditionalElement(() => _settings.Shape != PhotoShape.Screen,
                     new PillElement(() => ShapeFrame.GuideLabel(_settings.Shape, PlannedSize()), Color: () => _services.Theme.Colors.HudText)),

@@ -81,6 +81,7 @@ internal sealed partial class FreeCamSession : IDisposable
         _input.Prime(_shield);
         _rmbDown = false;
         _lookFromOwnWindow = false;
+        GameUiShown = false;   // game UI spec § B: every entry starts with the entry hides as configured
         _entry = control.GamePose;
         Subject = EntrySubject(subject);
         _subjectPos = SubjectPosition(CameraMath.ToVec(_entry.Position));
@@ -186,6 +187,7 @@ internal sealed partial class FreeCamSession : IDisposable
         ReleaseStep(() => { _shield?.Dispose(); _shield = null; });
         ReleaseStep(() => { if (!frameworkEnded) c.Dispose(); });
         ReleaseStep(() => { _look?.Dispose(); _look = null; });
+        ReleaseStep(EndGameUi);   // before the hides go to the scene: the scene keeps the FULL entry hide
         ReleaseStep(() => ReleaseEntryHides(keep: reason != CameraReleaseReason.PluginUnloaded && _scene.KeepsCamera));
 
         ScriptedIntent = null;
