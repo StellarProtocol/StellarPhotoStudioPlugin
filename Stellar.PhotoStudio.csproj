@@ -9,7 +9,7 @@
     <NoWarn>CS8632;CS8765</NoWarn>
     <RootNamespace>Stellar.PhotoStudio</RootNamespace>
     <AssemblyName>Stellar.PhotoStudio</AssemblyName>
-    <Version>1.7.0</Version>
+    <Version>1.8.0</Version>
     <Deterministic>true</Deterministic>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
@@ -25,6 +25,7 @@
     <EmbeddedResource Include="Lang/th.json" LogicalName="Stellar.PhotoStudio.Lang.th.json" />
     <EmbeddedResource Include="Lang/id.json" LogicalName="Stellar.PhotoStudio.Lang.id.json" />
     <EmbeddedResource Include="Lang/fil.json" LogicalName="Stellar.PhotoStudio.Lang.fil.json" />
+    <EmbeddedResource Include="Lang/ko.json" LogicalName="Stellar.PhotoStudio.Lang.ko.json" />
     <!-- Launcher-tile icon (camera + sparkles, owner-supplied 2026-10-01). -->
     <EmbeddedResource Include="Resources/photostudio-icon.png" LogicalName="Stellar.PhotoStudio.photostudio-icon.png" />
     <EmbeddedResource Include="Resources/Presets/cinematic-warm.ini" LogicalName="Stellar.PhotoStudio.Presets.cinematic-warm.ini" />

@@ -11,9 +11,11 @@ public sealed partial class Plugin
 
     private void RegisterLauncherTile()
     {
+        // Title stays the fixed literal "Photo Studio" — the stable pin-identity key (ILauncher.cs:49-50) —
+        // so a pinned tile survives a language change; TitleProvider carries the live-localized display.
         _launcherEntry = _services.Launcher.Register(new LauncherEntry(
-            _loc.T("ps.title"), LoadIconPng(), IconKey: null, OnOpen: () => _panel.Set(true))
-        // Re-localize the tile title live on a language change (Title alone is a captured string).
+            "Photo Studio", LoadIconPng(), IconKey: null, OnOpen: () => _panel.Set(true))
+        // Re-localize the tile DISPLAY on a language change; Title above never changes (pin identity).
         { TitleProvider = () => _loc.T("ps.title") });
     }
 
