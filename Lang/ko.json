@@ -14,7 +14,7 @@
   "look.unavailable": "이 클라이언트에서는 룩을 사용할 수 없습니다.",
   "lut.bad": "올바른 LUT가 아닙니다: {0} (256×16 또는 1024×32 PNG를 사용하세요).",
   "preset.bad": "저장된 룩을 읽을 수 없어 건너뛰었습니다.",
-  "ps.title": "Photo Studio",
+  "ps.title": "포토 스튜디오",
   "ps.close.title": "Photo Studio를 닫으시겠습니까?",
   "ps.close.freecam": "자유 카메라 종료",
   "ps.close.unfreeze": "게임 일시정지 해제",
