@@ -14,7 +14,10 @@ public sealed partial class Plugin
 
     private IWindowControl RegisterFreeCamHud() => _services.Windows.Register(new WindowRegistration(
         new WindowSpec(
-            Id: "photostudio.freecam.hud",
+            // ".centred" (1.9.0): a fresh layout name, so every player's HUD starts centred once. Saves under the old id kept
+            // the ORIGINAL 800 px window's left edge across every width change (owner MAIN 2026-10-10: 220 px right of
+            // centre); framework 2.22.0 keeps anchored windows in place from here on.
+            Id: "photostudio.freecam.hud.centred",
             Title: T("fc.title.hud"),
             DefaultRect: new WindowRect(0f, 16f, 1240f, 0f),   // 1240: the id/fil fly hint with Ctrl+Shift+F10 + 1.9.0 "U game UI" measures ~1170 px of text (sandbox 2026-10-10; 1000 overflowed since 1.7.0's FOV keys)
             Category: WindowCategory.HUD,
