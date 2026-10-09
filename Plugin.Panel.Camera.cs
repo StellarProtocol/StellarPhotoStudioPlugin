@@ -31,6 +31,9 @@ public sealed partial class Plugin
             new CellElement(new ButtonElement(() => _freeCam.Active ? T("fc.exit") : T("fc.enter"),
                 OnClick: () => ToggleFreeCamera(), Style: MenuButtonStyle.Filled), Width: 150f),
         }, Gap: 8f),
+        // Game UI spec 2026-10-10: shows the game's interface without leaving the free camera (same as U); off = greyed.
+        HelpToggle("fc.gameUi", () => _freeCam.GameUiShown, on => _freeCam.SetGameUi(on),
+            new HelpText(() => T("fc.gameUi"), () => T("fc.help.gameUi")), enabled: () => _freeCam.Active),
         new SeparatorElement(),
         SceneGroup(),
         new SeparatorElement(),

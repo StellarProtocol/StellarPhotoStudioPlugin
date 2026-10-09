@@ -32,6 +32,12 @@ closes Photo Studio fully: it leaves the free camera, unfreezes, resets posed pe
 any of that is running it asks first, listing exactly what will end; a pinned Look stays. While neither the panel nor the
 strip is up, the SCENE / camera pills show the key that reopens Photo Studio.
 
+**Game UI in the free camera (1.9.0).** `U`, or the Camera tab's **Show game UI** switch, brings the game's interface back
+without leaving the free camera, so you can use game windows and their sliders. Clicks, drags and the mouse wheel over a
+game window go to the game, not the camera. Keyboard keys stay with the free camera, so open game windows by clicking. It
+also overrides the Capture tab's Game HUD hide; `Ctrl+F10` (hide all) still hides everything. Photos never include it,
+and every free-camera entry starts with it off. Needs framework 2.22.0.
+
 **ReShade (1.5.0).** Optional. The Stellar launcher installs ReShade 6.8.0 (add-on build, BSD-3-Clause) as the game
 folder's `dxgi.dll` and the Stellar ReShade bridge add-on (MIT) beside it, for Modded launches only (Photo Studio's page →
 Dependencies). Photo Studio's Look tab turns ReShade on/off, switches presets and effects, and downloads shader packs

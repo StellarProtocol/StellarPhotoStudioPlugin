@@ -45,15 +45,16 @@ internal sealed partial class FreeCamSession
         return (GateOwnWindows(intent, h.Pointer), edges);
     }
 
-    /// <summary>A wheel turn over Photo Studio's own windows, or a right-button drag that STARTED over them, belongs to
-    /// the window, not the camera. The hit test runs only on a wheel turn or a right-button press, never every frame.</summary>
+    /// <summary>A wheel turn over Photo Studio's own windows (or, while the game UI is shown, the game's), or a
+    /// right-button drag that STARTED over them, belongs to the window, not the camera. The hit test runs only on a wheel
+    /// turn or a right-button press, never every frame.</summary>
     private CamIntent GateOwnWindows(CamIntent intent, (float X, float Y) pointer)
     {
-        if (intent.Looking && !_rmbDown) _lookFromOwnWindow = _host.PointerOverOwnWindow(pointer.X, pointer.Y);
+        if (intent.Looking && !_rmbDown) _lookFromOwnWindow = PointerOverUi(pointer.X, pointer.Y);
         _rmbDown = intent.Looking;
         if (!intent.Looking) _lookFromOwnWindow = false;
         if (_lookFromOwnWindow) intent = intent with { Looking = false, LookX = 0f, LookY = 0f };
-        if (intent.Wheel != 0f && _host.PointerOverOwnWindow(pointer.X, pointer.Y)) intent = intent with { Wheel = 0f };
+        if (intent.Wheel != 0f && PointerOverUi(pointer.X, pointer.Y)) intent = intent with { Wheel = 0f };
         return intent;
     }
 
@@ -100,9 +101,10 @@ internal sealed partial class FreeCamSession
         if (e.ToggleFreeze) ToggleFreeze();
         if (e.Reset) ResetPose();
         if (e.ToggleHint) _settings.SetHintHidden(!_settings.HintHidden);
+        if (e.ToggleGameUi) SetGameUi(!GameUiShown);
         if (e.DropLamp || e.MoveLamp) LampKey?.Invoke(e.MoveLamp);   // lights spec § 2 — the plugin owns the lamps
         if (e.BackToSelf) SetSubject(_p.Snapshot.LocalEntityId);
-        if (e.Click is not { } at || Mode != FreeCamMode.Orbit || _host.PointerOverOwnWindow(at.X, at.Y)) return;
+        if (e.Click is not { } at || Mode != FreeCamMode.Orbit || PointerOverUi(at.X, at.Y)) return;
         if (_p.Picker.TryPickEntity(at.X, at.Y, out var picked)) SetSubject(picked);
     }
 

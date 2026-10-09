@@ -80,6 +80,9 @@ internal sealed class FakeShield : IInputShield
     public FakeShieldHandle Handle = new();
     public int Raised;
     public bool IsShielded => Raised > 0 && Handle.Disposed == 0;
+    /// <summary>Whether the pointer is over the game's own interface (framework 2.22.0).</summary>
+    public bool OverGameUi;
+    public bool IsPointerOverGameUi => OverGameUi;
     public IInputShieldHandle Shield() { Raised++; return Handle; }
 }
 
@@ -127,6 +130,14 @@ internal sealed class FakeVisibility : ISceneVisibility
     public VisibilityLayers Available => (VisibilityLayers)31;
     public event Action<VisibilityLayers>? Changed { add { } remove { } }
     public IDisposable Hide(VisibilityLayers layers) { var h = new FakeHandle(); Hides.Add((layers, h)); return h; }
+
+    /// <summary>The union of the hides still held.</summary>
+    public VisibilityLayers Held()
+    {
+        var all = VisibilityLayers.None;
+        foreach (var (layers, handle) in Hides) if (handle.Disposed == 0) all |= layers;
+        return all;
+    }
 }
 
 internal sealed class FakeTransforms : IEntityTransforms

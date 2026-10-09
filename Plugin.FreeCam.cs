@@ -52,8 +52,13 @@ public sealed partial class Plugin
     {
         SyncPosing();   // Plugin.Posing.cs — selection follows the orbit subject while the free camera is on
         SyncSceneHud();
+        if (FreeCamGameUiShown != _liveHidesSawGameUi) ApplyLiveHides();   // only on a flip: a hide swap is a reflection round-trip
         _panelWin.MarkDirty();
     }
+
+    /// <summary>The game's interface is shown in the free camera (U / the Camera tab switch) — the Capture tab's live
+    /// "Game HUD" hide yields while this is true.</summary>
+    private bool FreeCamGameUiShown => _freeCam is { Active: true, GameUiShown: true };   // null before StartFreeCamera
 
     // The event may arrive off the main thread: compare ids only after posting to the main thread. Death only matters
     // while frozen (spec § 7: the freeze ends — with or without the free camera, the freeze is the scene's), so any other

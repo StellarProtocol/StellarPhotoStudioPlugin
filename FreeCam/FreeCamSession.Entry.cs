@@ -55,7 +55,8 @@ internal sealed partial class FreeCamSession
             (_hide, _hideLayers) = (kept, keptLayers);
             return;
         }
-        if (want != VisibilityLayers.None) (_hide, _hideLayers) = (_p.Visibility.Hide(want), want);
+        // Always set both: a stale _hideLayers from the last session would let the game-UI swap re-hide old layers.
+        (_hide, _hideLayers) = want != VisibilityLayers.None ? (_p.Visibility.Hide(want), want) : (null, VisibilityLayers.None);
         kept?.Dispose();
     }
 
