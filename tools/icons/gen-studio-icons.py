@@ -16,6 +16,8 @@ from resvg_py import svg_to_bytes
 
 RAIL_SIZES = (12, 15, 16, 20, 24, 30, 32, 40, 64, 128)
 HEADER_SIZES = (16, 18, 24, 32, 36, 48, 64, 128)
+FOLD_SIZES = (9, 12, 15, 16, 18, 24)
+BUTTON_SIZES = (12, 15, 16, 18, 24, 32)
 SUPERSAMPLE = 16
 ROOT = Path(__file__).resolve().parents[2]
 WHITE = (255, 255, 255)
@@ -247,6 +249,105 @@ def reshade(grid):
     return main + accent
 
 
+def fold(grid, *, closed):
+    # Keep the round-stroked bounds about twice as wide as they are tall.
+    half_span, rise = {
+        9: (2.5, 2),
+        12: (3.5, 2.5),
+        15: (4, 3),
+        16: (4.5, 3.5),
+        18: (5, 4),
+        24: (6.5, 5.5),
+    }[grid.size]
+    c = grid.center
+    start, tip = c - rise / 2, c + rise / 2
+    near, far = c - half_span, c + half_span
+    if closed:
+        return line(f'M {start:g} {near:g} L {tip:g} {c:g} {start:g} {far:g}')
+    return line(f'M {near:g} {start:g} L {c:g} {tip:g} {far:g} {start:g}')
+
+
+def fold_open(grid):
+    return fold(grid, closed=False)
+
+
+def fold_closed(grid):
+    return fold(grid, closed=True)
+
+
+def pause(grid):
+    # Mirror the bars about the center so the gap stays centered at odd sizes.
+    left, top, inner = {
+        12: (2.75, 2.25, 4.875),
+        15: (3.25, 2.75, 5.875),
+        16: (3.5, 2.75, 6.375),
+        18: (4, 3.25, 7.25),
+        24: (5.5, 4, 10),
+        32: (7.25, 5.25, 13.25),
+    }[grid.size]
+    s = grid.size
+    width, height = inner - left, s - 2 * top
+    return ''.join(
+        f'<rect x="{x:g}" y="{top:g}" width="{width:g}" height="{height:g}" '
+        f'rx="{width / 2:g}" fill="white" stroke="none"/>'
+        for x in (left, s - inner)
+    )
+
+
+def play(grid):
+    # Give the tip more room to the right to balance the weight of the back edge.
+    left, top, tip, corner = {
+        12: (3.5, 1.875, 10.75, .95),
+        15: (4.375, 2.375, 13.625, 1.2),
+        16: (4.75, 2.5, 14.5, 1.25),
+        18: (5.25, 2.75, 16.25, 1.4),
+        24: (7, 3.75, 21.75, 1.8),
+        32: (9.25, 5, 29, 2.4),
+    }[grid.size]
+    c = grid.center
+    bottom = grid.size - top
+    inset = corner * (c - top) / (tip - left)
+    path = (
+        f'M {left:g} {top + corner:g} '
+        f'Q {left:g} {top:g} {left + corner:g} {top + inset:g} '
+        f'L {tip - corner:g} {c - inset:g} '
+        f'Q {tip:g} {c:g} {tip - corner:g} {c + inset:g} '
+        f'L {left + corner:g} {bottom - inset:g} '
+        f'Q {left:g} {bottom:g} {left:g} {bottom - corner:g} Z'
+    )
+    return f'<path d="{path}" fill="white" stroke="none"/>'
+
+
+def reset(grid):
+    radius, back, wing, drop = {
+        12: (3.375, 1.8, 1.55, .375),
+        15: (4.5, 2.15, 1.8, .5),
+        16: (4.875, 2.25, 1.9, .5),
+        18: (5.5, 2.5, 2.1, .5),
+        24: (7.5, 3.35, 2.75, .75),
+        32: (10, 4.4, 3.55, 1),
+    }[grid.size]
+    c = grid.center
+    # Lower the orbit slightly to balance the arrowhead at the top.
+    cy = c + drop
+    start_angle = math.radians(155)
+    end_angle = math.radians(-146)
+    dx, dy = math.cos(end_angle), math.sin(end_angle)
+    start_x = c + radius * math.cos(start_angle)
+    start_y = cy + radius * math.sin(start_angle)
+    end_x, end_y = c + radius * dx, cy + radius * dy
+    arc = line(f'M {start_x:g} {start_y:g} A {radius:g} {radius:g} 0 1 0 {end_x:g} {end_y:g}')
+
+    # Aim the head along the counter-clockwise tangent at the upper-left end.
+    back_x, back_y = end_x - back * dy, end_y + back * dx
+    wing_x, wing_y = wing * dx, wing * dy
+    arrow = line(
+        f'M {back_x + wing_x:g} {back_y + wing_y:g} L {end_x:g} {end_y:g} '
+        f'L {back_x - wing_x:g} {back_y - wing_y:g}'
+    )
+    return arc + arrow
+
+
 DESIGNS = {
     "header": (header, HEADER_SIZES),
     "rail_capture": (capture, RAIL_SIZES),
@@ -256,6 +357,11 @@ DESIGNS = {
     "rail_lights": (lights, RAIL_SIZES),
     "rail_look": (look, RAIL_SIZES),
     "rail_reshade": (reshade, RAIL_SIZES),
+    "fold_open": (fold_open, FOLD_SIZES),
+    "fold_closed": (fold_closed, FOLD_SIZES),
+    "pause": (pause, BUTTON_SIZES),
+    "play": (play, BUTTON_SIZES),
+    "reset": (reset, BUTTON_SIZES),
 }
 
 
@@ -291,7 +397,7 @@ def preview_pair(icon, background, tint):
 
 
 def contact(path, icons):
-    sizes = sorted(set(RAIL_SIZES + HEADER_SIZES))
+    sizes = sorted({size for _, size in icons})
     margin, gap = 24, 12
     width = 4160
     sections = []
