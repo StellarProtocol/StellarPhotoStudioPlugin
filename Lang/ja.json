@@ -440,5 +440,8 @@
   "pz.aim.fine": "細かく",
   "pz.aim.normal": "標準",
   "pz.aim.coarse": "粗く",
-  "pz.aim.readout": "x {0} · y {1}"
+  "pz.aim.readout": "x {0} · y {1}",
+  "ps.kit.on": "オン",
+  "ps.kit.off": "オフ",
+  "ps.kit.help": "ヘルプ"
 }

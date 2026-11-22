@@ -440,5 +440,8 @@
   "pz.aim.fine": "Pino",
   "pz.aim.normal": "Normal",
   "pz.aim.coarse": "Magaspang",
-  "pz.aim.readout": "x {0} · y {1}"
+  "pz.aim.readout": "x {0} · y {1}",
+  "ps.kit.on": "Bukas",
+  "ps.kit.off": "Sarado",
+  "ps.kit.help": "Tulong"
 }

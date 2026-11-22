@@ -28,6 +28,12 @@
     <EmbeddedResource Include="Lang/ko.json" LogicalName="Stellar.PhotoStudio.Lang.ko.json" />
     <!-- Launcher-tile icon (camera + sparkles, owner-supplied 2026-10-01). -->
     <EmbeddedResource Include="Resources/photostudio-icon.png" LogicalName="Stellar.PhotoStudio.photostudio-icon.png" />
+    <!-- House-style glyphs, pre-drawn per size (Resources/icons/<size>/<name>.png, Style/Plugin.Style.Icons.cs).
+         Embedded as "Stellar.PhotoStudio.icons.<size>.<name>.png" whatever the OS path separator; an empty or partial
+         folder is fine (a missing icon draws nothing). -->
+    <EmbeddedResource Include="Resources/icons/**/*.png">
+      <LogicalName>Stellar.PhotoStudio.icons.$([System.String]::Copy('%(RecursiveDir)').Replace('\','.').Replace('/','.'))%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="Resources/Presets/cinematic-warm.ini" LogicalName="Stellar.PhotoStudio.Presets.cinematic-warm.ini" />
     <EmbeddedResource Include="Resources/Presets/soft-anime.ini" LogicalName="Stellar.PhotoStudio.Presets.soft-anime.ini" />
     <EmbeddedResource Include="Resources/Presets/cool-night.ini" LogicalName="Stellar.PhotoStudio.Presets.cool-night.ini" />

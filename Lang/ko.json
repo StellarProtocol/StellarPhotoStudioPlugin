@@ -440,5 +440,8 @@
   "pz.aim.fine": "작게",
   "pz.aim.normal": "보통",
   "pz.aim.coarse": "크게",
-  "pz.aim.readout": "x {0} · y {1}"
+  "pz.aim.readout": "x {0} · y {1}",
+  "ps.kit.on": "켬",
+  "ps.kit.off": "끔",
+  "ps.kit.help": "도움말"
 }

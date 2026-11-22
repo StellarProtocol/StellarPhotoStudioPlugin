@@ -440,5 +440,8 @@
   "pz.aim.fine": "Fine",
   "pz.aim.normal": "Normal",
   "pz.aim.coarse": "Coarse",
-  "pz.aim.readout": "x {0} · y {1}"
+  "pz.aim.readout": "x {0} · y {1}",
+  "ps.kit.on": "On",
+  "ps.kit.off": "Off",
+  "ps.kit.help": "Help"
 }
