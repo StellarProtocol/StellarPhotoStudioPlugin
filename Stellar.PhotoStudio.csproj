@@ -14,9 +14,9 @@
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Stellar.Abstractions" Version="2.22.0" />
-    <PackageReference Include="Stellar.PluginContracts"    Version="2.0.0" />
-    <PackageReference Include="Stellar.Plugin.InteropRefs" Version="2.0.0" />
+    <PackageReference Include="Stellar.Abstractions" Version="2.34.0" />
+    <PackageReference Include="Stellar.PluginContracts"    Version="2.34.0" />
+    <PackageReference Include="Stellar.Plugin.InteropRefs" Version="2.34.0" />
   </ItemGroup>
 
   <ItemGroup>
