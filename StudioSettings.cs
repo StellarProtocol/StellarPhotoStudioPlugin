@@ -31,7 +31,7 @@ internal sealed class StudioSettings
         Pinned = cfg.Get("look.pinned", false);
         PresetName = cfg.Get("look.presetName", "Natural") ?? "Natural";
         WorkingJson = cfg.Get<string?>("look.working", null);
-        Tab = ReadTab(cfg);
+        Section = ReadSection(cfg);
         LampsOpen = cfg.Get("ui.lights.lampsOpen", true);
         ShowLampMarkers = cfg.Get("lights.markers", true);
         PersonLightOpen = cfg.Get("ui.lights.personOpen", true);
@@ -113,7 +113,8 @@ internal sealed class StudioSettings
     public string PresetName { get; private set; }
     /// <summary>The unsaved working look (a preset JSON), so edits survive a relaunch; null = none.</summary>
     public string? WorkingJson { get; private set; }
-    public int Tab { get; private set; }
+    /// <summary>The panel section shown (2.0.0 icon rail, <see cref="StudioSections"/>).</summary>
+    public int Section { get; private set; }
     public LookGroups OpenGroups { get; private set; }
     public bool DockedAuto { get; private set; }
 
@@ -157,9 +158,18 @@ internal sealed class StudioSettings
     public void SetPinned(bool p) { Pinned = p; Store("look.pinned", p); }
     public void SetPresetName(string n) { PresetName = n; Store("look.presetName", n); }
     public void SetWorkingJson(string? j) { WorkingJson = j; Store("look.working", j); }
-    // 1.3.0 stores the tab under "ui.tab3" (0..4, Lights inserted at 3); "ui.tab2" (1.1.0, 0..3) and "ui.tab" (1.0.0) are
-    // read once for migration and never written, so a rollback keeps its own value.
-    public void SetTab(int t) { Tab = Math.Clamp(t, StudioTabs.Capture, StudioTabs.Presets); Store("ui.tab3", Tab); }
+    // 2.0.0 (icon rail) stores the section under "ui.section". The old tab keys are read once for the migration and never
+    // written: "ui.tab3" (1.3.0, 0..4, Lights inserted at 3), "ui.tab2" (1.1.0, 0..3) and "ui.tab" (1.0.0), so a rollback
+    // keeps its own value.
+    private const string SectionKey = "ui.section";
+
+    public void SetSection(int s) { Section = Math.Clamp(s, StudioSections.Capture, StudioSections.ReShade); Store(SectionKey, Section); }
+
+    private static int ReadSection(IConfigSection cfg)
+    {
+        var now = cfg.Get(SectionKey, -1);
+        return now >= 0 ? Math.Clamp(now, StudioSections.Capture, StudioSections.ReShade) : StudioSections.FromLegacyTab(ReadTab(cfg));
+    }
 
     private static int ReadTab(IConfigSection cfg)
     {
@@ -207,8 +217,26 @@ internal sealed class StudioSettings
     private static int Normalize(int s) => s is 1 or 2 or 4 ? s : 2;
 }
 
-/// <summary>Panel tab indices (1.3.0 order: Capture · Look · Camera · Lights · Presets).</summary>
+/// <summary>The 1.x panel tab indices (1.3.0 order: Capture · Look · Camera · Lights · Presets) — read only to migrate
+/// "ui.tab3" to <see cref="StudioSections"/>.</summary>
 internal static class StudioTabs
 {
     public const int Capture = 0, Look = 1, Camera = 2, Lights = 3, Presets = 4;
+}
+
+/// <summary>The 2.0.0 icon-rail sections, in rail order.</summary>
+internal static class StudioSections
+{
+    public const int Capture = 0, Hide = 1, Camera = 2, Pose = 3, Lights = 4, Look = 5, ReShade = 6;
+
+    /// <summary>A 1.x tab → its 2.0.0 home: Capture, Look, Camera and Lights keep their names; the Presets tab became the
+    /// preset bar at the top of Look.</summary>
+    public static int FromLegacyTab(int tab) => tab switch
+    {
+        StudioTabs.Look => Look,
+        StudioTabs.Camera => Camera,
+        StudioTabs.Lights => Lights,
+        StudioTabs.Presets => Look,
+        _ => Capture,
+    };
 }

@@ -31,28 +31,48 @@ public sealed class StudioSettingsTests
         Assert.Equal(LookGroups.Color, s.OpenGroups);
     }
 
-    // Lights spec (2026-10-03): the Lights tab is inserted at 3, so Presets moves to 4. A 1.1/1.2 user who left the panel on
-    // Presets ("ui.tab2" = 3) must land on Presets, not Lights; the new value is stored under "ui.tab3".
+    // 2.0.0 icon rail: the 1.x tab ("ui.tab3", 0 Capture · 1 Look · 2 Camera · 3 Lights · 4 Presets) migrates once to
+    // "ui.section"; the Presets tab became the preset bar at the top of Look.
     [Theory]
-    [InlineData(0, StudioTabs.Capture)]
-    [InlineData(2, StudioTabs.Camera)]
-    [InlineData(3, StudioTabs.Presets)]
-    public void A_v11_saved_tab_migrates_past_the_new_Lights_tab(int savedTab2, int expected)
+    [InlineData(StudioTabs.Capture, StudioSections.Capture)]
+    [InlineData(StudioTabs.Look, StudioSections.Look)]
+    [InlineData(StudioTabs.Camera, StudioSections.Camera)]
+    [InlineData(StudioTabs.Lights, StudioSections.Lights)]
+    [InlineData(StudioTabs.Presets, StudioSections.Look)]
+    public void A_v13_saved_tab_migrates_to_its_section(int savedTab3, int expected)
     {
         var cfg = new MemSection();
-        cfg.Values["ui.tab2"] = savedTab2;
-        Assert.Equal(expected, new StudioSettings(cfg).Tab);
+        cfg.Values["ui.tab3"] = savedTab3;
+        Assert.Equal(expected, new StudioSettings(cfg).Section);
+    }
+
+    // The older keys still feed the migration: 1.1.0 "ui.tab2" (3 = Presets) and 1.0.0 "ui.tab" (2 = Presets).
+    [Theory]
+    [InlineData("ui.tab2", 0, StudioSections.Capture)]
+    [InlineData("ui.tab2", 2, StudioSections.Camera)]
+    [InlineData("ui.tab2", 3, StudioSections.Look)]
+    [InlineData("ui.tab", 1, StudioSections.Look)]
+    [InlineData("ui.tab", 2, StudioSections.Look)]
+    public void Older_tab_keys_migrate_too(string key, int saved, int expected)
+    {
+        var cfg = new MemSection();
+        cfg.Values[key] = saved;
+        Assert.Equal(expected, new StudioSettings(cfg).Section);
     }
 
     [Fact]
-    public void The_Lights_tab_is_stored_under_the_new_key()
+    public void The_section_is_stored_under_its_own_key_and_the_tab_keys_are_never_written()   // rollback-safe
     {
         var cfg = new MemSection();
-        new StudioSettings(cfg).SetTab(StudioTabs.Lights);
-        Assert.Equal(StudioTabs.Lights, cfg.Values["ui.tab3"]);
-        Assert.False(cfg.Values.ContainsKey("ui.tab2"));
-        Assert.Equal(StudioTabs.Lights, new StudioSettings(cfg).Tab);
+        cfg.Values["ui.tab3"] = StudioTabs.Presets;
+        new StudioSettings(cfg).SetSection(StudioSections.Pose);
+        Assert.Equal(StudioSections.Pose, cfg.Values["ui.section"]);
+        Assert.Equal(StudioTabs.Presets, cfg.Values["ui.tab3"]);
+        Assert.Equal(StudioSections.Pose, new StudioSettings(cfg).Section);   // the new key wins over the old one
     }
+
+    [Fact]
+    public void A_fresh_install_opens_on_Capture() => Assert.Equal(StudioSections.Capture, new StudioSettings(new MemSection()).Section);
 
     [Fact]
     public void Stellar_overlay_hide_is_never_persisted()

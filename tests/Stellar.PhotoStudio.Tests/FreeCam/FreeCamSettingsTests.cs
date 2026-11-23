@@ -125,23 +125,15 @@ public sealed class FreeCamSettingsTests
     }
 
     [Fact]
-    public void Old_presets_tab_migrates_to_the_new_index_without_touching_the_old_key()   // rollback-safe (rules § 6)
+    public void Old_presets_tab_migrates_to_Look_without_touching_the_old_key()   // rollback-safe (rules § 6)
     {
         var cfg = new MemConfigSection();
-        cfg.Values["ui.tab"] = 2;                       // 1.0.0: 2 = Presets
+        cfg.Values["ui.tab"] = 2;                       // 1.0.0: 2 = Presets → 2.0.0: the preset bar in Look
         var s = new StudioSettings(cfg);
-        Assert.Equal(StudioTabs.Presets, s.Tab);
-        s.SetTab(StudioTabs.Camera);
+        Assert.Equal(StudioSections.Look, s.Section);
+        s.SetSection(StudioSections.Camera);
         Assert.Equal(2, cfg.Values["ui.tab"]);          // a 1.0.0 rollback still reads its own key
-        Assert.Equal(StudioTabs.Camera, new StudioSettings(cfg).Tab);
-    }
-
-    [Fact]
-    public void Old_look_tab_keeps_its_index()
-    {
-        var cfg = new MemConfigSection();
-        cfg.Values["ui.tab"] = 1;
-        Assert.Equal(StudioTabs.Look, new StudioSettings(cfg).Tab);
+        Assert.Equal(StudioSections.Camera, new StudioSettings(cfg).Section);
     }
 
     [Fact]
