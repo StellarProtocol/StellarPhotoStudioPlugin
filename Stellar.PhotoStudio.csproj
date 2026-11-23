@@ -14,9 +14,12 @@
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Stellar.Abstractions" Version="2.34.0" />
-    <PackageReference Include="Stellar.PluginContracts"    Version="2.34.0" />
-    <PackageReference Include="Stellar.Plugin.InteropRefs" Version="2.34.0" />
+    <!-- StackLayer.OnEscape (framework 2.35.0) is unreleased: pre-release 2.35.0-local.esc.1 (Mod\local-nuget-feed;
+         build with -p:RestoreAdditionalProjectSources=<that folder>) until framework 2.35.0 is released — then switch all
+         three to 2.35.0 from nuget.org. All three pinned together so no older transitive Abstractions can shadow it. -->
+    <PackageReference Include="Stellar.Abstractions"       Version="2.35.0-local.esc.1" />
+    <PackageReference Include="Stellar.PluginContracts"    Version="2.35.0-local.esc.1" />
+    <PackageReference Include="Stellar.Plugin.InteropRefs" Version="2.35.0-local.esc.1" />
   </ItemGroup>
 
   <ItemGroup>

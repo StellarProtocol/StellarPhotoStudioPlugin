@@ -12,8 +12,9 @@ namespace Stellar.PhotoStudio;
 //            anchored above the footer's Keys pill;
 //   layer 3  More: Save as / Rename / Import / Export / Delete (Danger text), anchored under the Look preset bar's More pill.
 // ⚠️ A LayerRect is fixed at build time, so More always opens at the preset bar's place at the top of Look (the bar is the
-// first panel there; a scrolled Look section still shows it there). Esc closes them only inside the free camera (its Esc
-// hook, DismissModalUi): the 2.34 public API has no Esc for an in-window layer — see the phase-3 report.
+// first panel there; a scrolled Look section still shows it there). Esc closes them through the layers' OnEscape (fw
+// 2.35): the framework's ticker picks the shown popover (the modal confirm and a focused field take Esc first). The press
+// is not hidden from the game; inside the free camera its input shield keeps it from the game anyway.
 public sealed partial class Plugin
 {
     private const float KeysCardW = 340f, KeysCardH = 452f, KeyColW = 112f, KeyRowH = 20f;
@@ -34,12 +35,31 @@ public sealed partial class Plugin
         _panelWin.MarkDirty();
     }
 
-    /// <summary>Esc inside the free camera (FreeCamHost.DismissModalUi): closes the "?" tip, a popover or the modal confirm
-    /// first; true when one was open (then Esc does nothing else).</summary>
+    // The frame the framework's Esc closed a popover in (OnEscape); -10 = none (FrameCount starts at 0, no overflow).
+    private long _popoverEscFrame = -10;
+
+    /// <summary>StackLayer.OnEscape of the Keys / More layers (fw 2.35, per render frame from the framework's ticker).</summary>
+    private void OnPopoverEscape()
+    {
+        if (!PopoverOpen()) return;
+        ClosePopovers();
+        _popoverEscFrame = _services.Framework.FrameCount;
+    }
+
+    /// <summary>Esc inside the free camera (FreeCamHost.DismissModalUi): closes the "?" tip or the modal confirm, and
+    /// reports an open popover; true when any of them was open (then Esc does nothing else — it does not leave the free
+    /// camera).</summary>
     private bool DismissPanelOverlays()
     {
-        var any = DismissHelpPopover() | PopoverOpen() | _panelConfirm.IsOpen;
-        ClosePopovers();
+        // Precedence: the free camera reads Esc in its own per-frame callback, the popover's OnEscape runs from the
+        // framework ticker, and the two are not ordered within a frame. The popover is closed ONLY by OnEscape (the
+        // framework also decides whether a focused field / pop-up / the confirm takes the press first); this hook just
+        // keeps that same Esc from leaving the free camera. Hook first: the popover is still open → true, and the ticker
+        // closes it later this frame. Ticker first: it is already closed, so a popover OnEscape closed this frame (or the
+        // one before — FrameCount is bumped between the two passes in an unknown order) still counts. Consumed on use.
+        var escClosedPopover = _services.Framework.FrameCount - _popoverEscFrame <= 1;
+        _popoverEscFrame = -10;
+        var any = DismissHelpPopover() | PopoverOpen() | escClosedPopover | _panelConfirm.IsOpen;
         _panelConfirm.Cancel();
         return any;
     }
@@ -68,9 +88,9 @@ public sealed partial class Plugin
         new StackLayer(new SelectableElement(new SpacerElement(0f, 0f), OnClick: ClosePopovers) { Bare = true })
             { Visible = PopoverOpen, BlocksInput = true },
         new StackLayer(KeysCard())
-            { Visible = () => _keysOpen, BlocksInput = true, Rect = new LayerRect { Right = 0f, Bottom = FooterBand, Width = KeysCardW, Height = KeysCardH } },
+            { Visible = () => _keysOpen, BlocksInput = true, OnEscape = OnPopoverEscape, Rect = new LayerRect { Right = 0f, Bottom = FooterBand, Width = KeysCardW, Height = KeysCardH } },
         new StackLayer(MoreCard())
-            { Visible = () => _moreOpen, BlocksInput = true, Rect = new LayerRect { Right = MoreCardRight, Top = MoreCardTop, Width = MoreCardW, Height = MoreCardH } },
+            { Visible = () => _moreOpen, BlocksInput = true, OnEscape = OnPopoverEscape, Rect = new LayerRect { Right = MoreCardRight, Top = MoreCardTop, Width = MoreCardW, Height = MoreCardH } },
     });
 
     private ColorRgba CardColor8() => StyleMath.Over(CardLift, WindowBg());

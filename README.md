@@ -7,13 +7,13 @@ Spirit Echoes); take supersampled captures
 LUT, bloom, vignette, film grain); raise render quality (supersampling, high shadows) and pin the time of day; keep
 presets. A compact strip appears beside the game's own photo/selfie mode.
 
-Requires **Stellar framework ≥ 2.34.0** (capture, scene-visibility, look, photo-mode, render-quality and time-of-day
+Requires **Stellar framework ≥ 2.35.0** (capture, scene-visibility, look, photo-mode, render-quality and time-of-day
 services; 2.14.0 adds the free-camera services — camera override, input shield, scene freeze, emotes, entity picker —
 and `IHotkeys.MigrateSavedBinding` for the hide-all key move; 2.15.0 adds `IPosing`, posing a person inside the free
 camera — you live, other players as a local copy, NPCs as a stand-in model; 2.17.0 adds `IReShade` and checked
 plugin downloads; 2.18.0 adds `XYPadElement` for the Head/Eyes aim grid; 2.20.0 adds the game photo screen's full
 hide list as `VisibilityLayers`, `IHotkeys.IsActionHeld` and the `[` `]` `\` keys; 2.22.0 hands game-UI clicks back
-to the game in the free camera; 2.34.0 adds the theme status colours and tinted, crisp images for the house-style panel).
+to the game in the free camera; 2.34.0 adds the theme status colours and tinted, crisp images for the house-style panel; 2.35.0 lets Esc close the panel's Keys and More pop-ups).
 
 **Hide list and field of view (1.7.0).** The Capture tab mirrors the game photo screen's hide list, in its order: Me, My
 own Spirit Echo, Other adventurers, Non-players, Enemy, Weapon, Friends, Party, Guild, Collectible, Other Spirit Echo.
