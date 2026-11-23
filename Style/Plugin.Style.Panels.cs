@@ -43,9 +43,14 @@ public sealed partial class Plugin
 
     private HudElement SectionPanelWithTrailing(string captionKey, string? hintKey, HudElement[]? trailing,
         HudElement[] children)
+        => LivePanel(UpperLoc(captionKey), hintKey == null ? null : Loc(hintKey), trailing, children);
+
+    /// <summary>A panel whose caption / hint are composed at runtime ("LAMP 1 · KEY", "3 hidden", "4 on"). Both Funcs
+    /// must hand back CACHED strings (they are polled every refresh); the caption is drawn as given (pass it upper-cased).</summary>
+    private HudElement LivePanel(Func<string> caption, Func<string>? hint, HudElement[]? trailing, HudElement[] children)
     {
-        var caption = new RowElement(new HudElement[] { CaptionText(captionKey), HintText(hintKey) }, Gap: 6f);
-        return PanelShell(CaptionRow(caption, trailing), children);
+        var row = new RowElement(new HudElement[] { CaptionText(caption), HintText(hint) }, Gap: 6f);
+        return PanelShell(CaptionRow(row, trailing), children);
     }
 
     // ── foldable panel ────────────────────────────────────────────────────────────────────────────────────────────
@@ -80,26 +85,37 @@ public sealed partial class Plugin
 
     private HudElement FoldPanel(string captionKey, string? hintKey, FoldFlag open, HudElement[]? trailing,
         HudElement[] children)
+        => FoldPanelLive(UpperLoc(captionKey), hintKey == null ? null : Loc(hintKey), open, trailing, children);
+
+    /// <summary><see cref="FoldPanel"/> with a runtime hint ("6 packs", "n/a"); the Funcs hand back cached strings.</summary>
+    private HudElement FoldPanelLive(Func<string> caption, Func<string>? hint, FoldFlag open, HudElement[]? trailing,
+        HudElement[] children)
     {
-        var closedPick = new IconPick(this, "fold_closed", ChevronUnits);
-        var openPick = new IconPick(this, "fold_open", ChevronUnits);
-        var chevron = new CellElement(new ImageElement(() => open.Get() ? openPick.Get() : closedPick.Get(), ChevronUnits, ChevronUnits)
-        {
-            Live = true, Crisp = true, Tint = () => MutedColor(),
-        }, Width: ChevronUnits);
         var header = new SelectableElement(
-            new RowElement(new HudElement[] { chevron, CaptionText(captionKey), HintText(hintKey) }, Gap: 6f),
+            new RowElement(new HudElement[] { Chevron(open.Get), CaptionText(caption), HintText(hint) }, Gap: 6f),
             OnClick: () => open.Set(!open.Get())) { Bare = true };
         var body = new ConditionalElement(open.Get, new ColumnElement(children, Gap: 6f));
         return PanelShell(CaptionRow(header, trailing), new HudElement[] { body });
     }
 
-    private HudElement CaptionText(string key)
-        => new TextElement(UpperLoc(key), Color: () => TextColor(), NoWrap: true, FontSize: CaptionFont) { Bold = true };
+    /// <summary>The fold chevron as a 12-unit image (fold_open / fold_closed, tinted Muted) — also used by in-list folds
+    /// (the ReShade "All effects" pack headings), where the text "▾ ▸" fell back to a taller OS face.</summary>
+    private HudElement Chevron(Func<bool> open)
+    {
+        var closedPick = new IconPick(this, "fold_closed", ChevronUnits);
+        var openPick = new IconPick(this, "fold_open", ChevronUnits);
+        return new CellElement(new ImageElement(() => open() ? openPick.Get() : closedPick.Get(), ChevronUnits, ChevronUnits)
+        {
+            Live = true, Crisp = true, Tint = () => MutedColor(),
+        }, Width: ChevronUnits);
+    }
 
-    // The hint takes the leftover width (weighted cell), right-aligned and ellipsized; null key = an empty filler.
-    private HudElement HintText(string? key)
-        => new CellElement(new TextElement(key == null ? static () => string.Empty : Loc(key), Color: () => MutedColor(),
+    private HudElement CaptionText(Func<string> caption)
+        => new TextElement(caption, Color: () => TextColor(), NoWrap: true, FontSize: CaptionFont) { Bold = true };
+
+    // The hint takes the leftover width (weighted cell), right-aligned and ellipsized; null = an empty filler.
+    private HudElement HintText(Func<string>? hint)
+        => new CellElement(new TextElement(hint ?? (static () => string.Empty), Color: () => MutedColor(),
             Align: TextAlign.Right, NoWrap: true, FontSize: CaptionFont) { RichEmoji = true, Ellipsize = true }, Weight: 1f);
 
     private static HudElement CaptionRow(HudElement captionAndHint, HudElement[]? trailing)

@@ -12,9 +12,8 @@ namespace Stellar.PhotoStudio;
 // A "?" carries CATALOG KEYS (HelpKeys); the popover's Funcs resolve whichever set is current through _loc.T, so an open
 // tip follows a live language switch. Clicking another "?" swaps the text and re-anchors; re-clicking the open one closes.
 //
-// NOT WIRED YET (phase 1 = no visible change): the panel still uses the old "photostudio.tip" (Plugin.Help.cs). Phase 2
-// calls RegisterHelpPopover() from RegisterWindows (+ RemoveWindows), HelpPopoverTick() from TickStudio and
-// CloseHelpPopover() wherever DismissHelpTip() is called today. Until then a HelpButton click does nothing.
+// Wired in RegisterWindows / RemoveWindows (Plugin.Studio.cs); HelpPopoverTick() runs from TickStudio; the free camera's Esc
+// closes an open tip first (DismissHelpPopover, the FreeCamHost.DismissModalUi hook). It replaced "photostudio.tip".
 public sealed partial class Plugin
 {
     /// <summary>A "?"'s catalog keys: the popover title (usually the row's own label key), the body, and the section the
@@ -148,7 +147,7 @@ public sealed partial class Plugin
 
     private void ToggleHelpPopover(WindowRect r, HelpKeys keys)
     {
-        if (_helpPop == null) return;   // not registered yet (phase 1)
+        if (_helpPop == null) return;   // not registered (unload in progress)
         if (_helpPop.IsShown && ReferenceEquals(_helpPopKeys, keys)) { CloseHelpPopover(); return; }
         _helpPopKeys = keys;
         // OnClickWithRect reports SCREEN PIXELS; SetRect takes CANVAS units — scale first, or the tip drifts off its
@@ -170,6 +169,14 @@ public sealed partial class Plugin
         // The first-ever open mounts the window and applies its DefaultRect AFTER this SetRect → re-apply the anchored
         // rect for the next few ticks so it lands under the "?" on the first open too.
         _helpPopRepositionTicks = 4;
+    }
+
+    /// <summary>Esc in the free camera: closes an open tip and reports whether one was open (then Esc does nothing else).</summary>
+    private bool DismissHelpPopover()
+    {
+        var open = _helpPop is { IsShown: true };
+        CloseHelpPopover();
+        return open;
     }
 
     private void CloseHelpPopover()

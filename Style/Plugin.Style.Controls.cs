@@ -23,12 +23,12 @@ public sealed partial class Plugin
     private const float PillPairLabelW = 96f;   // both halves of a PillPair get the same label box (equal split)
 
     private HudElement Pill(PillKind kind, string labelKey, Action onClick, float labelW = 0f, Func<bool>? enabled = null,
-        Func<ColorRgba>? surface = null)
-        => Pill(kind, Loc(labelKey), onClick, labelW, enabled, surface);
+        Func<ColorRgba>? surface = null, Action<WindowRect>? withRect = null)
+        => Pill(kind, Loc(labelKey), onClick, labelW, enabled, surface, withRect);
 
     // Func-label form for the few labels composed at runtime ("Capture (F10)"); the Func must hand back a cached string.
     private HudElement Pill(PillKind kind, Func<string> label, Action onClick, float labelW = 0f, Func<bool>? enabled = null,
-        Func<ColorRgba>? surface = null)
+        Func<ColorRgba>? surface = null, Action<WindowRect>? withRect = null)
     {
         var hover = new HoverFlag();
         var disabled = new DisabledLabelCache();
@@ -58,7 +58,10 @@ public sealed partial class Plugin
                 new SpacerElement(PillPadX, PillH),
             }, Gap: 0.01f, Justify: RowJustify.Center),
             OnClick: () => { if (En()) onClick(); })
-            { Bare = true, OnHover = over => hover.On = over })
+            {
+                Bare = true, OnHover = over => hover.On = over,
+                OnClickWithRect = withRect == null ? null : r => { if (En()) withRect(r); },
+            })
         {
             FillColorFn = () => !En() ? DisabledShade : Fade(hover.On ? HoverFill(fill()) : fill()),
             CornerRadius = RoundRadius(PillH), PaddingX = 0f, PaddingY = 0f,
@@ -163,7 +166,7 @@ public sealed partial class Plugin
     private const float IconButtonSize = 28f;
 
     private HudElement IconButton(string glyph, Action onClick, IconButtonKind kind = IconButtonKind.Raised,
-        Func<bool>? enabled = null, Func<ColorRgba>? surface = null)
+        Func<bool>? enabled = null, Func<ColorRgba>? surface = null, float size = IconButtonSize)
     {
         var glyphCache = new ContrastCache();
         var disabled = new DisabledLabelCache();
@@ -180,9 +183,9 @@ public sealed partial class Plugin
                 _ => hover.On ? TextColor() : MutedColor(),
             };
         }
-        var content = new TextElement(() => glyph, Color: () => GlyphColor(), Width: IconButtonSize,
+        var content = new TextElement(() => glyph, Color: () => GlyphColor(), Width: size,
             Align: TextAlign.Center, NoWrap: true) { CenterGlyphs = true };
-        return IconButtonShell(content, onClick, kind, hover, En, under);
+        return IconButtonShell(content, onClick, kind, hover, En, under, size);
     }
 
     // Same shell around a white glyph PNG (Resources\icons, tinted live) — for a symbol the text faces can't draw.
@@ -202,12 +205,12 @@ public sealed partial class Plugin
     private const int IconButtonGlyph = 16;
 
     private HudElement IconButtonShell(HudElement content, Action onClick, IconButtonKind kind, HoverFlag hover,
-        Func<bool> enabled, Func<ColorRgba> surface)
+        Func<bool> enabled, Func<ColorRgba> surface, float size = IconButtonSize)
         => new CellElement(new BubbleElement(new SelectableElement(
             new RowElement(new HudElement[]
             {
-                new SpacerElement(0f, IconButtonSize),
-                new CellElement(content, Width: IconButtonSize),
+                new SpacerElement(0f, size),
+                new CellElement(content, Width: size),
             }, Gap: 0.01f, Justify: RowJustify.Center),
             OnClick: () => { if (enabled()) onClick(); })
             { Bare = true, OnHover = over => hover.On = over && enabled() })
@@ -218,10 +221,52 @@ public sealed partial class Plugin
                 IconButtonKind.Remove => hover.On ? Fade(RemoveWash()) : Transparent,
                 _ => hover.On ? Fade(StyleMath.Over(TextColor() with { A = HoverMix }, surface())) : Transparent,
             },
-            CornerRadius = RoundRadius(IconButtonSize), PaddingX = 0f, PaddingY = 0f, MaxWidth = IconButtonSize,
-        }, Width: IconButtonSize);
+            CornerRadius = RoundRadius(size), PaddingX = 0f, PaddingY = 0f, MaxWidth = size,
+        }, Width: size);
 
     // The house "Remove hover": the theme Danger red as a 22 % wash, glyph a lighter red (#ff8a8b on the dark presets).
     private ColorRgba RemoveWash()  => DangerColor() with { A = ChipWashAlpha };
     private ColorRgba RemoveGlyph() => StyleMath.Mix(DangerColor(), StyleMath.White, 0.25f);
+
+    // ── 18 px fine-step buttons (‹ ›) ────────────────────────────────────────────────────────────────────────────
+    // The slider rows keep their ‹ › fine steps (user decision 2026-11-23: the approved mock had none, typing alone was
+    // not enough), drawn as small round raised buttons so they read as part of the value, not as row controls. "‹" / "›"
+    // draw in the plain 14 px face (they are in use in-game today).
+    private const float StepButtonSize = 18f;
+
+    private HudElement StepButton(string glyph, Action onClick, Func<bool>? enabled = null)
+        => IconButton(glyph, onClick, IconButtonKind.Raised, enabled, size: StepButtonSize);
+
+    // ── picker pill ───────────────────────────────────────────────────────────────────────────────────────────────
+    // A 28 px Neutral pill that OPENS something below it (the Pose list): [bold label, left, ellipsized] … [chevron]. It
+    // fills its cell (put it in a weighted Cell). Same look as the framework's Pill dropdown trigger, but the click is ours.
+    private HudElement PickerPill(Func<string> label, Func<bool> open, Action onClick, Func<bool>? enabled = null)
+    {
+        var hover = new HoverFlag();
+        var text = new ContrastCache();
+        var disabled = new DisabledLabelCache();
+        bool En() => enabled == null || enabled();
+        return new BubbleElement(new SelectableElement(
+            new RowElement(new HudElement[]
+            {
+                new SpacerElement(PillPadX, PillH),
+                new CellElement(DropBold(new TextElement(label,
+                    Color: () => En() ? text.Get(TextColor(), NeutralFill(), PillMinContrast) : DisabledLabel(PanelColor(), disabled),
+                    NoWrap: true, FontSize: 13) { Bold = true, Ellipsize = true }), Weight: 1f),
+                Chevron(open),
+                new SpacerElement(PillPadX - 4f, PillH),
+            }, Gap: 6f),
+            OnClick: () => { if (En()) onClick(); })
+            { Bare = true, OnHover = over => hover.On = over && En() })
+        {
+            FillColorFn = () => !En() ? DisabledShade : Fade(hover.On ? HoverFill(NeutralFill()) : NeutralFill()),
+            CornerRadius = RoundRadius(PillH), PaddingX = 0f, PaddingY = 0f,
+        };
+    }
+
+    // ── pill dropdown ─────────────────────────────────────────────────────────────────────────────────────────────
+    // The framework draws it (fw ≥ 2.29: Style Pill + CornerRadius ≥ 13 = capsule). Put it in a weighted Cell to fill.
+    private static DropdownElement PillDropdown(Func<int> selected, Func<System.Collections.Generic.IReadOnlyList<string>> options,
+        Action<int> onSelect)
+        => new(selected, options, onSelect) { Style = DropdownStyle.Pill, CornerRadius = RoundRadius(PillH) };
 }

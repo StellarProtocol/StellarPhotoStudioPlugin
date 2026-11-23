@@ -29,12 +29,18 @@ public sealed partial class Plugin
     /// <param name="set">Called with the clicked index (not called for the already-selected option).</param>
     private HudElement Segmented(string[] optionKeys, float[] labelWidths, Func<int> get, Action<int> set,
         Func<bool>? enabled = null)
+        => SegmentedText(Array.ConvertAll(optionKeys, Loc), labelWidths, get, set, enabled);
+
+    /// <summary><see cref="Segmented"/> with label Funcs — for labels that are not catalog keys ("1×", "PNG", "9:16").
+    /// Each Func must hand back a cached string.</summary>
+    private HudElement SegmentedText(Func<string>[] labels, float[] labelWidths, Func<int> get, Action<int> set,
+        Func<bool>? enabled = null)
     {
-        if (labelWidths.Length != optionKeys.Length)
+        if (labelWidths.Length != labels.Length)
             throw new ArgumentException("one label width per option", nameof(labelWidths));
         bool En() => enabled == null || enabled();
-        var options = new HudElement[optionKeys.Length];
-        for (int i = 0; i < options.Length; i++) options[i] = SegmentOption(optionKeys[i], labelWidths[i], i, get, set, En);
+        var options = new HudElement[labels.Length];
+        for (int i = 0; i < options.Length; i++) options[i] = SegmentOption(labels[i], labelWidths[i], i, get, set, En);
         return new BubbleElement(new RowElement(options, Gap: SegGap))
         {
             // Sunken track: translucent black over whatever it sits on (fades with the window opacity by itself).
@@ -43,7 +49,7 @@ public sealed partial class Plugin
         };
     }
 
-    private HudElement SegmentOption(string key, float labelW, int index, Func<int> get, Action<int> set, Func<bool> enabled)
+    private HudElement SegmentOption(Func<string> label, float labelW, int index, Func<int> get, Action<int> set, Func<bool> enabled)
     {
         var hover = new HoverFlag();
         var solid = new SolidLabelCache();
@@ -63,7 +69,7 @@ public sealed partial class Plugin
             new RowElement(new HudElement[]
             {
                 new SpacerElement(SegPadX, SegOptionH),
-                DropBold(new TextElement(Loc(key), Color: () => Label(), Width: labelW, Align: TextAlign.Center,
+                DropBold(new TextElement(label, Color: () => Label(), Width: labelW, Align: TextAlign.Center,
                     NoWrap: true, FontSize: SegLabelFont) { Bold = true, Ellipsize = true }),
                 new SpacerElement(SegPadX, SegOptionH),
             }, Gap: 0.01f, Justify: RowJustify.Center),
