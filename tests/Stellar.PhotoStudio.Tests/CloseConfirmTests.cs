@@ -36,4 +36,13 @@ public sealed class CloseConfirmTests
         Assert.Equal(new[] { "ps.close.lights" }, CloseConfirm.Lines(Idle with { LitPeople = true }).Select(l => l.Key));
         Assert.Empty(CloseConfirm.Lines(Idle));
     }
+
+    // "Resets 1 posed people" (phase-3 review): exactly one posed person / one lamp uses its own singular line.
+    [Fact]
+    public void One_posed_person_or_lamp_uses_the_singular_line()
+    {
+        var lines = CloseConfirm.Lines(Idle with { Posed = 1, Lamps = 1 });
+        Assert.Equal(new[] { "ps.close.posedOne", "ps.close.lampsOne" }, lines.Select(l => l.Key));
+        Assert.All(lines, l => Assert.Equal(-1, l.Count));
+    }
 }

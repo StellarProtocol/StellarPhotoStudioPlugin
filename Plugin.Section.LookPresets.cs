@@ -9,14 +9,14 @@ namespace Stellar.PhotoStudio;
 
 // The PRESET bar at the top of the Look section (2.0.0 — it replaces the 1.x Presets tab): ‹ [pill dropdown] › Save More,
 // a Modified tag, Reset all. The dropdown lists what the old list did: any set-aside "Unsaved look (from X)" first, then
-// the built-ins and the player's presets A→Z. "More" opens the old actions inline (Save as / Rename / Import / Export /
-// Delete); the in-window popover and the modal delete confirm are the next phase. There is no native file dialog, so
+// the built-ins and the player's presets A→Z. "More" opens the in-window popover (Plugin.Panel.Popovers.cs); Delete asks
+// through the modal confirm (ConfirmHostElement, Danger). There is no native file dialog, so
 // import / export use folders under stellar/photostudio/ with an "Open folder" button. All preset state lives in
 // PresetSession (Presets/PresetSession.cs, unit-tested); this file is the view.
 public sealed partial class Plugin
 {
     private const float PresetBarPillW = 48f;
-    private enum NameMode { None, SaveAs, Rename, ConfirmDelete, Import }
+    private enum NameMode { None, SaveAs, Rename, Import }
 
     private NameMode _nameMode;
     private bool _moreOpen;
@@ -41,16 +41,14 @@ public sealed partial class Plugin
             new CellElement(PillDropdown(PresetBarSelected, PresetBarOptions, SelectPresetBarRow), Weight: 1f),
             IconButton("›", NextPreset),
             Pill(PillKind.Primary, "ps.pre.save", () => _presetSession.Save(), PresetBarPillW, enabled: () => _canSaveCached),   // lights review I-5
-            Pill(PillKind.Neutral, "ps.look.more", () => { _moreOpen = !_moreOpen; _nameMode = NameMode.None; }, PresetBarPillW),
+            Pill(PillKind.Neutral, "ps.look.more", ToggleMore, PresetBarPillW),   // the More popover, Plugin.Panel.Popovers.cs
         }, Gap: RowGap),
         new RowElement(new HudElement[]
         {
             Pill(PillKind.Neutral, "ps.look.resetAll", ResetAllToPreset, 72f),
             new CellElement(NoteLine(Loc("ps.look.resetNote")), Weight: 1f),
         }, Gap: RowGap),
-        new ConditionalElement(() => _moreOpen && _nameMode == NameMode.None, MoreActions()),
         new ConditionalElement(() => _nameMode is NameMode.SaveAs or NameMode.Rename, NameEditor()),
-        new ConditionalElement(() => _nameMode == NameMode.ConfirmDelete, DeleteConfirm()),
         new ConditionalElement(() => _nameMode == NameMode.Import, ImportPicker()),
     });
 
@@ -77,31 +75,6 @@ public sealed partial class Plugin
         var all = _presets.All;
         var k = row - UnsavedRows;
         if (k >= 0 && k < all.Count) ApplyPreset(all[k]);
-    }
-
-    // ── More: the 1.x Presets-tab actions, as a list of rows ─────────────────────────────────────────────────────
-
-    private HudElement MoreActions() => new ColumnElement(new HudElement[]
-    {
-        MenuRow("ps.pre.saveAs", () => BeginName(NameMode.SaveAs, _activePresetName + T("ps.pre.mineSuffix"))),
-        MenuRow("ps.pre.rename", () => BeginName(NameMode.Rename, _activePresetName), () => !ActiveIsBuiltIn),
-        MenuRow("ps.pre.import", BeginImport),
-        MenuRow("ps.pre.export", () => { _moreOpen = false; ExportActive(); }),
-        MenuRow("ps.pre.delete", () => _nameMode = NameMode.ConfirmDelete, () => !ActiveIsBuiltIn, danger: true),
-    }, Gap: 2f);
-
-    /// <summary>One action row: a 26 px tile, full width, lighter on hover; a destructive one in the remove red.</summary>
-    private HudElement MenuRow(string labelKey, Action onClick, Func<bool>? enabled = null, bool danger = false)
-    {
-        var hover = new HoverFlag();
-        bool En() => enabled == null || enabled();
-        return ListTile(new SelectableElement(new RowElement(new HudElement[]
-            {
-                new SpacerElement(8f, ListTileH),
-                new TextElement(Loc(labelKey), Color: () => !En() ? MutedColor() : danger ? RemoveGlyph() : TextColor(), NoWrap: true),
-            }, Gap: 0.01f), OnClick: () => { if (En()) onClick(); })
-            { Bare = true, OnHover = over => hover.On = over && En() },
-            hovered: () => hover.On);
     }
 
     // ── save as / rename / delete ────────────────────────────────────────────────────────────────────────────
@@ -171,18 +144,23 @@ public sealed partial class Plugin
         CloseNameMode();
     }
 
-    private Cached<(string, string)>? _deleteText;
-
-    private HudElement DeleteConfirm() => new ColumnElement(new HudElement[]
+    /// <summary>More › Delete…: the framework's modal confirm over the whole panel (Danger: the preset file is removed).</summary>
+    private void ConfirmDeletePreset()
     {
-        NoteLine(() => (_deleteText ??= new Cached<(string, string)>(k => _loc.TFormat("ps.pre.confirmDelete", k.Item1)))
-            .Get((_activePresetName, T("ps.pre.confirmDelete"))), CautionColor),
-        new RowElement(new HudElement[]
+        var name = _activePresetName;
+        _panelConfirm.Show(new ConfirmRequest(_loc.TFormat("ps.pre.confirmDelete", name), T("ps.pre.deleteMsg"), () =>
         {
-            Pill(PillKind.Danger, "ps.pre.delete", () => { CloseNameMode(); _presetSession.Delete(); }, 56f),
-            Pill(PillKind.Neutral, "ps.cancel", CloseNameMode, 56f),
-        }, Gap: RowGap),
-    }, Gap: 6f);
+            if (string.Equals(name, _activePresetName, StringComparison.OrdinalIgnoreCase) && !ActiveIsBuiltIn) _presetSession.Delete();
+        })
+        {
+            Subtitle = T("ps.title"),
+            Emphasis = T("ps.pre.deleteEmphasis"),
+            Severity = ConfirmSeverity.Danger,
+            ConfirmLabel = T("ps.pre.delete"),
+            CancelLabel = T("ps.cancel"),
+        });
+        _panelWin.MarkDirty();
+    }
 
     // ── import / export ──────────────────────────────────────────────────────────────────────────────────────
 

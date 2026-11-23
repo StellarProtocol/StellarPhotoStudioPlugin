@@ -72,7 +72,7 @@ public sealed partial class Plugin
         _quality.SetComposing(_panelShown || _dockedShown);
         if (show) RescanLuts();
         if (show && _dockedShown) ShowDocked(false);    // never both sets of controls at once
-        if (!show) CloseHelpPopover();
+        if (!show) { CloseHelpPopover(); _keysOpen = false; _moreOpen = false; }   // a reopened panel starts without popovers
         if (!show) FlushWorkingLook();
         ApplyLiveHides();
         // Closing the full panel while the game's photo mode is still open brings the strip back.

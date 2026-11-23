@@ -18,7 +18,6 @@ public sealed partial class Plugin
     private bool _hdrStatusAccent;              // accent while the free camera is on, muted while off (prototype)
     private string _fcStatus = string.Empty;    // Camera › Free camera status line
     private string _sceneStatus = string.Empty; // Camera › Scene status line
-    private string _keysBody = string.Empty;    // Keys pill popover (the 1.x footer hotkey line)
     private string _fovNote = string.Empty;     // Camera › Lens note under the slider
     private string _fovHelp = string.Empty;     // Camera › Lens "?" body (names the FOV keys)
     private string _hideAllNote = string.Empty; // Hide › Hide now: "Ctrl+F10 hides everything at once."
@@ -26,7 +25,6 @@ public sealed partial class Plugin
     private Cached<(bool, FreeCamMode, string, bool, string, string)>? _hdrCache;
     private Cached<(bool, FreeCamMode, string, bool, string, string)>? _fcCache;
     private Cached<(bool, int, string)>? _sceneCache;
-    private Cached<(string, string, string, string)>? _keysCache;
     private Cached<(bool, string, string, string, string, string)>? _fovNoteCache;
     private Cached<(string, string, string, string)>? _fovHelpCache;
     private Cached<(string, string)>? _hideAllCache;
@@ -46,7 +44,6 @@ public sealed partial class Plugin
         bool on = _freeCam.Active, frozen = SceneFrozen, kept = SceneIsSet;
         var mode = _freeCam.Mode;
         var subject = on && mode == FreeCamMode.Orbit ? SubjectName() : string.Empty;
-        string capKey = BindingText(StudioHotkeys.Capture), panelKey = BindingText(StudioHotkeys.Panel);
         string hideKey = BindingText(StudioHotkeys.HideAll), camKey = BindingText(StudioHotkeys.FreeCam);
         string fovIn = BindingText(StudioHotkeys.FovIn), fovOut = BindingText(StudioHotkeys.FovOut);
         string fovReset = BindingText(StudioHotkeys.FovReset);
@@ -64,8 +61,6 @@ public sealed partial class Plugin
         _sceneCache ??= new Cached<(bool, int, string)>(k => SceneStatusText(k.Item1, k.Item2));
         _sceneStatus = _sceneCache.Get((frozen, ScenePosedCount, T("sc.status.empty")));
 
-        _keysCache ??= new Cached<(string, string, string, string)>(k => _loc.TFormat("ps.hint.hotkeys", k.Item1, k.Item2, k.Item3));
-        _keysBody = _keysCache.Get((capKey, panelKey, hideKey, T("ps.hint.hotkeys")));
 
         _fovNoteCache ??= new Cached<(bool, string, string, string, string, string)>(k => k.Item1
             ? _loc.TFormat("ps.look.fovKeys", k.Item3, k.Item2, k.Item4)
@@ -77,6 +72,7 @@ public sealed partial class Plugin
 
         _hideAllCache ??= new Cached<(string, string)>(k => _loc.TFormat("ps.hide.allNote", k.Item1));
         _hideAllNote = _hideAllCache.Get((hideKey, T("ps.hide.allNote")));
+        RefreshKeyLabels();   // Plugin.Panel.Popovers.cs — only while the Keys popover is open
     }
 
     private string HeaderStatus(bool on, FreeCamMode mode, string subject, bool frozen, string preset)
@@ -143,6 +139,14 @@ public sealed partial class Plugin
     }
 
     // ── hotkey labels ─────────────────────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>The current binding (for cache keys — a value compare, no string built, no boxing).</summary>
+    private KeyBinding? BindingOf(string id)
+    {
+        foreach (var h in _hotkeys)
+            if (h.Id == id) return h.CurrentBinding;
+        return null;
+    }
 
     private string BindingText(string id)
     {

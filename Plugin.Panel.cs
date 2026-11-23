@@ -7,7 +7,7 @@ namespace Stellar.PhotoStudio;
 // The full panel, 2.0.0 house-style redesign (approved prototype _scratch\prototypes\photostudio-redesign-APPROVED.html,
 // option A "rail"): a GlassMenu 600 px wide whose height resizes 560–1000, laid out as
 //   ToolHeader [icon · Photo Studio / live status · Keep look chip · ?]
-//   close confirm (inline until the modal confirm lands)
+//   (the close / delete confirms are the framework modal over all of it; Keys and More are in-window popovers)
 //   [64 px icon rail: Capture · Hide · Camera · Pose · Lights · Look · ReShade] [the section, scrolling inside, FILLS the height]
 //   footer [Capture pill · one status line · Keys]
 // A NEW window id ("photostudio.studio"): the 1.x "photostudio.panel" saved rect was 440 px wide, so it must not apply.
@@ -21,6 +21,7 @@ public sealed partial class Plugin
     private const float RailPad = 4f;
     private const float FooterCaptureLabelW = 126f;   // 150 px pill (prototype), "Capturing..." in every locale
     private const float FooterKeysLabelW = 44f;
+    private const float ConfirmPillLabelW = 80f;      // "Close" / "Delete" in every locale (the modal confirm pill)
 
     private IWindowControl RegisterPanelWindow()
     {
@@ -54,15 +55,16 @@ public sealed partial class Plugin
         return win;
     }
 
-    private HudElement BuildPanelRoot() => new ColumnElement(new HudElement[]
+    // The confirm host covers the whole content (the modal locks the header, rail and footer too); the popovers sit
+    // inside it, so an open confirm also covers an open popover.
+    private HudElement BuildPanelRoot() => new ConfirmHostElement(WithPopovers(new ColumnElement(new HudElement[]
     {
         PanelHeader(),
-        PanelCloseConfirm(),   // Plugin.Close.cs — inline for now (the modal ConfirmHostElement is the next phase)
         // Fill: the rail + section row takes every spare pixel of the window's height, so a taller window shows more
         // of the section instead of empty space under the footer (1.x was stuck at a 420 px tab area).
         new ConditionalElement(static () => true, new RowElement(new HudElement[] { Rail(), SectionArea() }, Gap: 8f), Fill: true),
         PanelFooter(),
-    }, Gap: 8f);
+    }, Gap: 8f)), _panelConfirm) { ConfirmLabelWidth = ConfirmPillLabelW };
 
     // ── header ────────────────────────────────────────────────────────────────────────────────────────────────────
     // "Keep look" + its chip replace both the 1.x "Keep look while playing" toggle and the "Look pinned" title-bar pill
@@ -126,8 +128,8 @@ public sealed partial class Plugin
     private static HudElement SectionColumn(params HudElement[] panels) => new ColumnElement(panels, Gap: 8f);
 
     // ── footer ────────────────────────────────────────────────────────────────────────────────────────────────────
-    // [Capture 150] [one status line: "2× · PNG · 3840 × 2160 · ReShade on"] … [Keys]. The Keys pill opens the help
-    // popover with the hotkey line until the real Keys popover lands (next phase).
+    // [Capture 150] [one status line: "2× · PNG · 3840 × 2160 · ReShade on"] … [Keys]. Keys opens the in-window Keys
+    // popover (Plugin.Panel.Popovers.cs: every hotkey with its current binding).
     private HudElement PanelFooter() => new RowElement(new HudElement[]
     {
         Pill(PillKind.Primary, () => Capturing ? T("ps.capturing") : T("ps.capture"), CaptureNow, FooterCaptureLabelW,
@@ -138,10 +140,7 @@ public sealed partial class Plugin
             new ConditionalElement(() => _services.ReShade.State == ReShadeState.Ready && _rs.Enabled,
                 new TextElement(ReShadeOnSuffix, Color: () => MutedColor(), NoWrap: true)),
         }, Gap: 0.01f), Weight: 1f),
-        Pill(PillKind.Neutral, "ps.foot.keys", static () => { }, FooterKeysLabelW, surface: WindowBg,
-            withRect: r => ToggleHelpPopover(r, KeysHelp)),
+        Pill(PillKind.Neutral, "ps.foot.keys", ToggleKeys, FooterKeysLabelW, surface: WindowBg),   // Plugin.Panel.Popovers.cs
     }, Gap: 10f);
 
-    private HelpKeys? _keysHelp;
-    private HelpKeys KeysHelp => _keysHelp ??= new HelpKeys("ps.keys.title", "ps.hint.hotkeys", "ps.title") { Body = () => _keysBody };
 }
