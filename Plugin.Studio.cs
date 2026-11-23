@@ -8,8 +8,8 @@ using Stellar.PhotoStudio.ReShade;
 namespace Stellar.PhotoStudio;
 
 // Panel coordination: window registration, live hides while composing, the preset session, the saved toast timer
-// and the shutter flash. Tab contents live in Plugin.Panel.*.cs; the docked strip in Plugin.Docked.cs; the "?"
-// popover in Plugin.Help.cs.
+// and the shutter flash. The window shell is Plugin.Panel.cs and each section a Plugin.Section.*.cs; the docked strip is
+// Plugin.Docked.cs; the "?" popover is Style/Plugin.Style.Help.cs.
 public sealed partial class Plugin
 {
     private IWindowControl _panelWin = null!;
@@ -47,14 +47,14 @@ public sealed partial class Plugin
         _panelWin = RegisterPanelWindow();      // Plugin.Panel.cs
         _dockedWin = RegisterDockedWindow();    // Plugin.Docked.cs
         _toastWin = RegisterToastWindow();      // Plugin.Toast.cs
-        _tipWindow = RegisterTipWindow();       // Plugin.Help.cs
+        RegisterHelpPopover();                  // Style/Plugin.Style.Help.cs — the house "?" popover
         _flashWin = RegisterFlashWindow();      // Plugin.Toast.cs
         _freeCamHudWin = RegisterFreeCamHud();   // Plugin.FreeCamHud.cs
     }
 
     private void RemoveWindows()
     {
-        foreach (var w in new[] { _panelWin, _dockedWin, _toastWin, _tipWindow, _flashWin, _freeCamHudWin })
+        foreach (var w in new[] { _panelWin, _dockedWin, _toastWin, _helpPop, _flashWin, _freeCamHudWin })
             w?.Remove();
         HideGuide();   // Plugin.FrameGuide.cs
         RemoveMarkers();   // Plugin.LampMarkers.cs
@@ -72,7 +72,7 @@ public sealed partial class Plugin
         _quality.SetComposing(_panelShown || _dockedShown);
         if (show) RescanLuts();
         if (show && _dockedShown) ShowDocked(false);    // never both sets of controls at once
-        if (!show && _tipWindow.IsShown) { _tipKey = ""; _tipWindow.SetVisible(false); }
+        if (!show) CloseHelpPopover();
         if (!show) FlushWorkingLook();
         ApplyLiveHides();
         // Closing the full panel while the game's photo mode is still open brings the strip back.
@@ -182,6 +182,7 @@ public sealed partial class Plugin
         if (_presetSession.Modified) _workingSaveIn = WorkingSaveDelay;
         else { _workingSaveIn = -1f; _settings.SetWorkingJson(null); }
         _presetNamesCache = null;
+        _presetBarOptions = null;
     }
 
     private void FlushWorkingLook()
@@ -285,7 +286,8 @@ public sealed partial class Plugin
             if (_workingSaveIn <= 0f) { _workingSaveIn = 0f; FlushWorkingLook(); }
         }
         TickHourSave(dt);
-        TipRepositionTick();
+        HelpPopoverTick();                      // Style/Plugin.Style.Help.cs — re-anchors a just-opened tip
+        TickPanelTexts(dt);                     // Plugin.Panel.Status.cs — header / camera / key texts, 4 Hz while open
     }
 
     /// <summary>The real panel behind the <see cref="IStudioView"/> seam.</summary>

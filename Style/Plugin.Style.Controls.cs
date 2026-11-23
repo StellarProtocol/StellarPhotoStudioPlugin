@@ -139,6 +139,10 @@ public sealed partial class Plugin
     // A NON-clickable tag on a caption row or a list tile ("Modified", "Photo only", "Depth" in the approved prototype):
     // bold 12 coloured text on a wash of its colour, hugging its label (padding 8). `color` is live (accent / Caution).
     private HudElement TagChip(string labelKey, Func<ColorRgba> color, Func<ColorRgba>? surface = null)
+        => TagChipText(Loc(labelKey), color, surface);
+
+    /// <summary><see cref="TagChip"/> with a composed label ("3 of 5 effects"); the Func hands back a cached string.</summary>
+    private HudElement TagChipText(Func<string> label, Func<ColorRgba> color, Func<ColorRgba>? surface = null)
     {
         var text = new ContrastCache();
         Func<ColorRgba> under = surface ?? PanelColor;
@@ -146,7 +150,7 @@ public sealed partial class Plugin
         return new BubbleElement(new RowElement(new HudElement[]
             {
                 new SpacerElement(8f, ChipH),
-                DropBold(new TextElement(Loc(labelKey), Color: () => text.Get(color(), Fill(), ChipMinContrast),
+                DropBold(new TextElement(label, Color: () => text.Get(color(), Fill(), ChipMinContrast),
                     NoWrap: true, FontSize: ChipLabelFont) { Bold = true }),
                 new SpacerElement(8f, ChipH),
             }, Gap: 0.01f, Justify: RowJustify.Center))

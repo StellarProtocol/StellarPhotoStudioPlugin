@@ -4,7 +4,7 @@ using Stellar.PhotoStudio.FreeCam;
 
 namespace Stellar.PhotoStudio;
 
-// Field of view (1.7.0, player request "Photo Studio - FOV Slider"): a Look-tab slider beside depth of field and three
+// Field of view (1.7.0, player request "Photo Studio - FOV Slider"): the Camera › Lens slider (Plugin.Section.Camera.cs) and three
 // rebindable hotkeys (FOV in ], FOV out [, reset \ by default) — all free camera only; the game camera is never changed.
 // Shift+wheel inside the free camera keeps working.
 public sealed partial class Plugin
@@ -32,26 +32,4 @@ public sealed partial class Plugin
         var delta = _fovKeys.Tick(_services.Hotkeys.IsActionHeld(StudioHotkeys.FovIn), _services.Hotkeys.IsActionHeld(StudioHotkeys.FovOut), dt);
         if (delta != 0f) _freeCam.NudgeFov(delta);
     }
-
-    /// <summary>Look tab: [Field of view] [slider 10–100°] … [↺ = the game's FOV at free-camera entry], then a hint while
-    /// the free camera is off (the slider is disabled and shows the last value).</summary>
-    private HudElement FovRow() => new ColumnElement(new HudElement[]
-    {
-        new RowElement(new HudElement[]
-        {
-            new TextElement(() => T("ps.look.fov"), Emphasis: true, Color: () => _freeCam.Active ? Normal() : MenuMuted()),
-            new SpacerElement(),
-            HelpDot("look.fov", () => T("ps.look.fov"), () => _loc.TFormat("ps.help.look.fov",
-                BindingText(StudioHotkeys.FovIn), BindingText(StudioHotkeys.FovOut), BindingText(StudioHotkeys.FovReset))),
-        }, Gap: 6f),
-        SliderRow(() => T("ps.look.fovAngle"),
-            new SliderElement(() => CameraMath.ClampFov(_freeCam.Fov), v => _freeCam.SetFov(v), CameraMath.MinFov, CameraMath.MaxFov,
-                Enabled: () => _freeCam.Active),
-            () => _freeCam.Fov > 0f ? F(_freeCam.Fov, "0") + "°" : "—",   // never entered yet: no FOV to show
-            () => _freeCam.ResetFov(), enabled: () => _freeCam.Active, step: 1f, parse: ParseNumber),
-        new ConditionalElement(() => _freeCam.Active, new TextElement(() => _loc.TFormat("ps.look.fovKeys",
-            BindingText(StudioHotkeys.FovOut), BindingText(StudioHotkeys.FovIn), BindingText(StudioHotkeys.FovReset)), Color: Muted)),
-        new ConditionalElement(() => !_freeCam.Active, new TextElement(
-            () => _loc.TFormat("ps.look.fovOff", BindingText(StudioHotkeys.FreeCam)), Color: Muted)),
-    }, Gap: 4f);
 }

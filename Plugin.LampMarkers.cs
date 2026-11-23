@@ -19,7 +19,7 @@ public sealed partial class Plugin
     private readonly (float X, float Y)[] _markerAt = new (float, float)[LightsController.MaxLamps];
 
     private bool MarkersWanted() => _settings.ShowLampMarkers && InWorld() && _lights.Count > 0 &&
-        (_freeCam.Active || (_panelWin.IsShown && _settings.Tab == StudioTabs.Lights));
+        (_freeCam.Active || (_panelWin.IsShown && _settings.Section == StudioSections.Lights));
 
     /// <summary>Called from OnUpdate. Off: hides any marker (no allocation). On: one projection per lamp; a window is
     /// registered lazily per slot the first time it is needed and only re-placed when it moved.</summary>

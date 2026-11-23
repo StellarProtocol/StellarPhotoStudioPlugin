@@ -4,9 +4,10 @@ using Stellar.Abstractions.Services;
 
 namespace Stellar.PhotoStudio;
 
-// Look tab → "Render quality" group (spec 2026-10-01-photo-studio-render-quality-design.md § 5): supersampling 2× +
-// TAA and high shadows from the framework's IRenderQuality, time of day from ITimeOfDay. Each lever is Off / While
-// composing (panel or docked strip open) / Always; the token lifetimes live in RenderQualityController (tested).
+// Render quality (spec 2026-10-01-photo-studio-render-quality-design.md § 5): supersampling 2× + TAA and high shadows from
+// the framework's IRenderQuality, time of day from ITimeOfDay. Each lever is Off / While composing (panel or docked strip
+// open) / Always; the token lifetimes live in RenderQualityController (tested). The controls are in the Capture section
+// (quality) and Camera › Scene (time of day) since 2.0.0.
 public sealed partial class Plugin
 {
     private RenderQualityController _quality = null!;
@@ -18,53 +19,6 @@ public sealed partial class Plugin
         _quality = new RenderQualityController(_services.RenderQuality, _services.TimeOfDay);
         _quality.Configure(_settings.Supersample, _settings.Shadows, _settings.TimeMode, _settings.TimeHour, _settings.BoostForCapture);
     }
-
-    private HudElement QualityGroup() => new ColumnElement(new HudElement[]
-    {
-        new RowElement(new HudElement[]
-        {
-            new SelectableElement(new RowElement(new HudElement[]
-            {
-                new TextElement(() => _settings.QualityOpen ? "▾" : "▸", Width: 14f),
-                new TextElement(() => T("ps.q.title"), Emphasis: true),
-            }, Gap: 4f), OnClick: () => _settings.SetQualityOpen(!_settings.QualityOpen)),
-            new SpacerElement(),
-            HelpDot("q.title", () => T("ps.q.title"), () => T("ps.help.q.title")),
-        }, Gap: 6f),
-        new ConditionalElement(() => _settings.QualityOpen, new RowElement(new HudElement[]
-        {
-            new SpacerElement(Width: 16f),
-            new CellElement(new ColumnElement(new HudElement[]
-            {
-                ModeRow("q.ssaa", () => _quality.Supersample, SetSupersample, () => _services.RenderQuality.Capabilities.RenderScale),
-                ModeRow("q.shadows", () => _quality.Shadows, SetShadows, () => _services.RenderQuality.Capabilities.Shadows),
-                HelpToggle("q.boost", () => _quality.BoostForCapture, SetBoostForCapture,
-                    new HelpText(() => T("ps.q.boost"), () => T("ps.help.q.boost")),
-                    enabled: () => _services.RenderQuality.Capabilities.Shadows),
-                ModeRow("q.time", () => _quality.Time, SetTimeMode, () => _services.TimeOfDay.IsAvailable),
-                SliderRow(() => T("ps.q.hour"),
-                    new SliderElement(() => _quality.Hour, SetHour, 0f, 24f, Enabled: () => _services.TimeOfDay.IsAvailable),
-                    HourText,
-                    () => SetHour(12f), step: 5f / 60f, parse: ParseHour),   // 5-minute steps
-                new TextElement(LiveQualityText, Color: Muted),
-            }, Gap: 4f), Weight: 1f),
-        })),
-    }, Gap: 4f);
-
-    /// <summary>[label] [Off][Composing][Always] … [?] — greyed out when the lever is unavailable on this client.</summary>
-    private HudElement ModeRow(string key, Func<QualityMode> get, Action<QualityMode> set, Func<bool> available)
-        => new RowElement(new HudElement[]
-        {
-            new CellElement(new TextElement(() => T("ps." + key), Color: () => available() ? Muted() : MenuMuted()), Width: LabelW),
-            ModeButton(QualityMode.Off, "ps.q.off", get, set, available),
-            ModeButton(QualityMode.WhileComposing, "ps.q.composing", get, set, available),
-            ModeButton(QualityMode.Always, "ps.q.always", get, set, available),
-            new SpacerElement(),
-            HelpDot(key, () => T("ps." + key), () => available() ? T("ps.help." + key) : T("ps.help.q.unavailable")),
-        }, Gap: 4f);
-
-    private HudElement ModeButton(QualityMode mode, string labelKey, Func<QualityMode> get, Action<QualityMode> set, Func<bool> available)
-        => new ButtonElement(() => T(labelKey), OnClick: () => set(mode), Enabled: available, Active: () => get() == mode);
 
     private void SetSupersample(QualityMode m) { _settings.SetSupersample(m); _quality.SetSupersample(m); }
     private void SetShadows(QualityMode m) { _settings.SetShadows(m); _quality.SetShadows(m); }
@@ -109,9 +63,19 @@ public sealed partial class Plugin
         _settings.SetTimeHour(_quality.Hour, save: true);
     }
 
-    private string HourText() => _quality.Time != QualityMode.Off && _services.TimeOfDay.IsAvailable
-        ? _loc.TFormat("ps.q.hourLive", FormatHour(_quality.Hour), FormatHour(_services.TimeOfDay.CurrentHour))
-        : FormatHour(_quality.Hour);
+    // Cached on the shown minutes (the slider fires every drag frame; the live clock moves once a game minute).
+    private Cached<(bool, int, int, string)>? _hourText;
+
+    private string HourText()
+    {
+        bool live = _quality.Time != QualityMode.Off && _services.TimeOfDay.IsAvailable;
+        _hourText ??= new Cached<(bool, int, int, string)>(k => k.Item1
+            ? _loc.TFormat("ps.q.hourLive", FormatHour(k.Item2 / 60f), FormatHour(k.Item3 / 60f))
+            : FormatHour(k.Item2 / 60f));
+        return _hourText.Get((live, Minutes(_quality.Hour), live ? Minutes(_services.TimeOfDay.CurrentHour) : 0, T("ps.q.hourLive")));
+    }
+
+    private static int Minutes(float hour) => (int)Math.Round(hour * 60f);
 
     private string LiveQualityText() => _liveText;
 

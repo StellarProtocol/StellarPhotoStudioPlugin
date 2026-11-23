@@ -16,7 +16,7 @@ public sealed partial class Plugin
     private (PhotoShape Shape, int W, int H) _guideBuilt;
 
     private bool GuideWanted() => InWorld() && ShapeFrame.GuideVisible(_settings.Shape, _settings.ShowFrameGuide,
-        _freeCam.Active, _panelWin.IsShown && _settings.Tab == StudioTabs.Capture);
+        _freeCam.Active, _panelWin.IsShown && _settings.Section == StudioSections.Capture);
 
     /// <summary>Called from OnUpdate: a few int compares. The window stays mounted while its inputs are unchanged (its
     /// ShouldRender hides it), so switching tabs or the free camera costs nothing; it is only rebuilt — paint, encode,

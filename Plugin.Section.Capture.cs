@@ -1,130 +1,141 @@
 using System;
+using System.Globalization;
 using System.IO;
 using Stellar.Abstractions.Domain;
 using Stellar.Abstractions.Services;
 
 namespace Stellar.PhotoStudio;
 
-// Capture tab: output (scale, format, JPG quality, folder, file name), hide toggles, game-photo-mode option.
+// Capture section (approved prototype, section "Capture"): OUTPUT (resolution, shape, frame guide, format, JPG quality —
+// shown RECESSED for PNG instead of hidden), QUALITY (the render-quality levers moved here from the 1.x Look tab; the
+// logic is Plugin.Quality.cs), SAVE TO (folder, change / default / open, file name) and GAME PHOTO MODE. The 1.x hide
+// toggles moved to the Hide section.
 public sealed partial class Plugin
 {
+    private const string SecCapture = "ps.tab.capture";
     private bool _editingFolder;
     private string _folderDraft = "";
 
-    private HudElement BuildCaptureTab() => new ColumnElement(new HudElement[]
+    // Fixed label boxes (house rule 10: size for the longest locale, never reflow). Shape: 305 px track, fits the
+    // 309 px a SettingRow leaves at the 600 px window (sandbox maths: 475 inner − label 110 − "?" 24 − gaps 32).
+    private static readonly float[] ScaleSegW = { 22f, 22f, 22f };
+    private static readonly float[] ShapeSegW = { 48f, 27f, 27f, 27f, 27f, 27f };
+    private static readonly float[] FormatSegW = { 32f, 32f };
+    private static readonly float[] ModeSegW = { 32f, 72f, 48f };   // Off · Composing · Always (fil ellipsizes)
+    private static readonly int[] Scales = { 1, 2, 4 };
+    private static readonly PhotoShape[] Shapes =
     {
-        new TextElement(() => T("ps.cap.output"), Emphasis: true),
-        LabeledRow(() => T("ps.cap.resolution"),
-            ScaleButton(1), ScaleButton(2), ScaleButton(4), new SpacerElement(),
-            new TextElement(ResolutionText, Color: Muted, Align: TextAlign.Right)),
-        // Shape row (portrait-capture spec § 1; approved mockup 2026-10-03): Screen + the five shapes, wrapping on narrow panels.
-        LabeledRow(() => T("ps.cap.shape"), ShapeButtons()),
-        new RowElement(new HudElement[]
+        PhotoShape.Screen, PhotoShape.Portrait9x16, PhotoShape.Portrait4x5, PhotoShape.Portrait2x3, PhotoShape.Square, PhotoShape.Wide21x9,
+    };
+
+    private HudElement BuildCaptureSection() => SectionColumn(
+        LivePanel(UpperLoc("ps.cap.output"), ResolutionText, null, new HudElement[]
         {
-            new SpacerElement(Width: LabelW),
-            new CellElement(HelpToggle("capture.frameGuide", () => _settings.ShowFrameGuide, _settings.SetShowFrameGuide,
-                new HelpText(() => T("ps.cap.frameGuide"), () => T("ps.help.frameGuide"))), Weight: 1f),
+            SettingRow("ps.cap.resolution", SegmentedText(new Func<string>[] { static () => "1×", static () => "2×", static () => "4×" },
+                ScaleSegW, () => Array.IndexOf(Scales, _settings.Scale), i => _settings.SetScale(Scales[i]))),
+            SettingRow("ps.cap.shape", SegmentedText(ShapeLabels(), ShapeSegW, () => Array.IndexOf(Shapes, _settings.Shape),
+                i => _settings.SetShape(Shapes[i]))),
+            SettingToggle("ps.cap.frameGuide", () => _settings.ShowFrameGuide, _settings.SetShowFrameGuide,
+                new HelpKeys("ps.cap.frameGuide", "ps.help.frameGuide", SecCapture, "ps.cap.output")),
+            SettingRow("ps.cap.format", SegmentedText(new Func<string>[] { static () => "PNG", static () => "JPG" }, FormatSegW,
+                () => _settings.Format == CaptureFormat.Jpg ? 1 : 0, i => _settings.SetFormat(i == 1 ? CaptureFormat.Jpg : CaptureFormat.Png))),
+            SettingSlider("ps.cap.jpgQuality",
+                KitSlider(() => _settings.JpgQuality, v => _settings.SetJpgQuality((int)MathF.Round(v)), 1f, 100f,
+                    () => _settings.Format == CaptureFormat.Jpg),
+                JpgQualityText, () => _settings.SetJpgQuality(92), new SliderOpts(Step: 1f)),
+            NoteLine(Loc("ps.cap.jpgNote")),
         }),
-        LabeledRow(() => T("ps.cap.format"),
-            FormatButton(CaptureFormat.Png, "PNG"), FormatButton(CaptureFormat.Jpg, "JPG")),
-        new ConditionalElement(() => _settings.Format == CaptureFormat.Jpg, SliderRow(
-            () => T("ps.cap.jpgQuality"),
-            new SliderElement(() => _settings.JpgQuality, v => _settings.SetJpgQuality((int)MathF.Round(v)), 1f, 100f),
-            () => _settings.JpgQuality.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            () => _settings.SetJpgQuality(92))),
-        LabeledRow(() => T("ps.cap.folder"), new CellElement(new TextElement(FolderDisplay, NoWrap: true), Weight: 1f)),
-        new ConditionalElement(() => _folderFellBack && !string.IsNullOrWhiteSpace(_settings.Folder), new RowElement(new HudElement[]
+        SectionPanelWithTrailing("ps.cap.quality", "ps.cap.qualityHint",
+            new HudElement[] { HelpButton(new HelpKeys("ps.cap.quality", "ps.help.q.title", SecCapture)) }, new HudElement[]
         {
-            new SpacerElement(Width: LabelW),
-            new TextElement(() => T("ps.cap.folderFallback"), Color: () => _services.Theme.Colors.Warning),
-        }, Gap: 6f)),
-        FolderButtons(),
-        new ConditionalElement(() => _editingFolder, FolderEditor()),
-        LabeledRow(() => T("ps.cap.fileName"), new TextElement(NextFileName, Color: Muted, NoWrap: true)),
-        new SpacerElement(Height: 6f),
-        new SeparatorElement(),
-        new RowElement(new HudElement[]
+            ModeRow("ps.q.ssaa", "ps.help.q.ssaa", () => _quality.Supersample, SetSupersample, () => _services.RenderQuality.Capabilities.RenderScale),
+            ModeRow("ps.q.shadows", "ps.help.q.shadows", () => _quality.Shadows, SetShadows, () => _services.RenderQuality.Capabilities.Shadows),
+            SettingToggle("ps.q.boost", () => _quality.BoostForCapture, SetBoostForCapture,
+                new HelpKeys("ps.q.boost", "ps.help.q.boost", SecCapture, "ps.cap.quality"),
+                enabled: () => _services.RenderQuality.Capabilities.Shadows),
+            NoteLine(LiveQualityText),
+        }),
+        SectionPanel("ps.cap.saveTo", null, new HudElement[]
         {
-            new TextElement(() => T("ps.cap.hide"), Emphasis: true),
-            new SpacerElement(),
-            new ButtonElement(() => T("ps.cap.showAll"), OnClick: ShowAllLayers, Width: 88f),
-        }, Gap: 6f),
-        HideToggle("hide.hud", VisibilityLayers.GameHud, "ps.hide.hud"),
-        HideToggle("hide.names", VisibilityLayers.Nameplates, "ps.hide.names"),
-        // The game photo screen's own list, in its order (1.7.0; framework 2.20.0 layers — HideLayers).
-        HideToggle("hide.me", VisibilityLayers.SelfCharacter, "ps.hide.me"),
-        HideToggle("hide.spiritEcho", VisibilityLayers.OwnSpiritEcho, "ps.hide.spiritEcho"),
-        HideToggle("hide.adventurers", VisibilityLayers.Strangers, "ps.hide.adventurers"),
-        HideToggle("hide.npcs", VisibilityLayers.NonPlayers, "ps.hide.npcs"),
-        HideToggle("hide.enemies", VisibilityLayers.Enemies, "ps.hide.enemies"),
-        HideToggle("hide.weapons", VisibilityLayers.Weapons, "ps.hide.weapons"),
-        HideToggle("hide.friends", VisibilityLayers.Friends, "ps.hide.friends"),
-        HideToggle("hide.party", VisibilityLayers.Party, "ps.hide.party"),
-        HideToggle("hide.guild", VisibilityLayers.Guild, "ps.hide.guild"),
-        HideToggle("hide.collectibles", VisibilityLayers.Collectibles, "ps.hide.collectibles"),
-        HideToggle("hide.otherSpiritEchoes", VisibilityLayers.OtherSpiritEchoes, "ps.hide.otherSpiritEchoes"),
-        new TextElement(() => T("ps.hide.fx"), Color: Muted, FontSize: SubFont),
-        Indented(HideToggle("hide.fx.mine", VisibilityLayers.EffectsMine, "ps.hide.fx.mine")),
-        Indented(HideToggle("hide.fx.party", VisibilityLayers.EffectsParty, "ps.hide.fx.party")),
-        Indented(HideToggle("hide.fx.others", VisibilityLayers.EffectsOthers, "ps.hide.fx.others")),
-        Indented(HideToggle("hide.fx.monsters", VisibilityLayers.EffectsMonsters, "ps.hide.fx.monsters")),
-        new SpacerElement(Height: 6f),
-        new SeparatorElement(),
-        new TextElement(() => T("ps.cap.gamePhoto"), Emphasis: true),
-        HelpToggle("docked.auto", () => _settings.DockedAuto, _settings.SetDockedAuto,
-            new HelpText(() => T("ps.cap.dockedAuto"), () => T("ps.help.dockedAuto"))),
-    }, Gap: 6f);
+            FolderTile(),
+            new ConditionalElement(() => _folderFellBack && !string.IsNullOrWhiteSpace(_settings.Folder),
+                NoteLine(Loc("ps.cap.folderFallback"), CautionColor)),
+            new RowElement(new HudElement[]
+            {
+                Pill(PillKind.Neutral, "ps.cap.change", BeginFolderEdit, 72f),
+                Pill(PillKind.Neutral, "ps.cap.useDefault", () => { _settings.SetFolder(""); _editingFolder = false; }, 80f,
+                    enabled: () => !string.IsNullOrWhiteSpace(_settings.Folder)),
+                Pill(PillKind.Neutral, "ps.cap.openFolder", OpenScreenshotFolder, 80f),
+            }, Gap: 8f),
+            new ConditionalElement(() => _editingFolder, FolderEditor()),
+            NoteLine(FileNameLine),
+        }),
+        SectionPanel("ps.cap.gamePhoto", null, new HudElement[]
+        {
+            SettingToggle("ps.cap.dockedAuto", () => _settings.DockedAuto, _settings.SetDockedAuto,
+                new HelpKeys("ps.cap.dockedAuto", "ps.help.dockedAuto", SecCapture, "ps.cap.gamePhoto")),
+        }));
 
-    private HudElement ScaleButton(int s) => new ButtonElement(() => $"{s}×",
-        OnClick: () => _settings.SetScale(s), Active: () => _settings.Scale == s, Width: 40f);   // 40: the size text must fit at the 400 px minimum (sandbox)
-
-    // Sandbox-measured (2026-10-03): label 96 + these widths + 3 px gaps fit the 400 px minimum panel; a 4-character
-    // ratio ("9:16", "21:9") wraps below 44 px, a 3-character one fits 36.
-    private const float ShapeWideW = 44f, ShapeNarrowW = 36f, ShapeScreenW = 54f;
-
-    private HudElement ShapeButtons() => new RowElement(new HudElement[]
+    private Func<string>[] ShapeLabels()
     {
-        ShapeButton(PhotoShape.Screen, ShapeScreenW), ShapeButton(PhotoShape.Portrait9x16, ShapeWideW),
-        ShapeButton(PhotoShape.Portrait4x5, ShapeNarrowW), ShapeButton(PhotoShape.Portrait2x3, ShapeNarrowW),
-        ShapeButton(PhotoShape.Square, ShapeNarrowW), ShapeButton(PhotoShape.Wide21x9, ShapeWideW),
-    }, Gap: 3f);
+        var labels = new Func<string>[Shapes.Length];
+        labels[0] = Loc("ps.cap.shape.screen");
+        for (var i = 1; i < Shapes.Length; i++)
+        {
+            var text = PhotoShapes.RatioLabel(Shapes[i]);   // "9:16" — the same in every language
+            labels[i] = () => text;
+        }
+        return labels;
+    }
 
-    private HudElement ShapeButton(PhotoShape shape, float width) => new ButtonElement(
-        () => shape == PhotoShape.Screen ? T("ps.cap.shape.screen") : PhotoShapes.RatioLabel(shape),
-        OnClick: () => _settings.SetShape(shape), Active: () => _settings.Shape == shape, Width: width);
+    /// <summary>[label] [Off | Composing | Always] … [?] — recessed when the lever is unavailable on this client.</summary>
+    private HudElement ModeRow(string labelKey, string helpKey, Func<QualityMode> get, Action<QualityMode> set, Func<bool> available)
+        => SettingRow(labelKey,
+            Segmented(new[] { "ps.q.off", "ps.q.composing", "ps.q.always" }, ModeSegW, () => (int)get(), i => set((QualityMode)i), available),
+            new HelpKeys(labelKey, helpKey, SecCapture, "ps.cap.quality") { Body = () => T(available() ? helpKey : "ps.help.q.unavailable") },
+            available);
 
-    private HudElement FormatButton(CaptureFormat f, string label) => new ButtonElement(() => label,
-        OnClick: () => _settings.SetFormat(f), Active: () => _settings.Format == f, Width: 60f);
+    private Cached<int>? _jpgText;
+    private string JpgQualityText() => (_jpgText ??= new Cached<int>(static q => q.ToString(CultureInfo.InvariantCulture))).Get(_settings.JpgQuality);
 
-    private HudElement FolderButtons() => new RowElement(new HudElement[]
+    // The folder in a raised tile (prototype: "Default · stellar\screenshots"), one line, ellipsized.
+    private HudElement FolderTile() => new BubbleElement(new RowElement(new HudElement[]
+        {
+            new SpacerElement(0f, PillH),
+            new CellElement(new TextElement(FolderDisplay, Color: () => string.IsNullOrWhiteSpace(_settings.Folder) ? MutedColor() : TextColor(),
+                NoWrap: true) { Ellipsize = true }, Weight: 1f),
+        }, Gap: 0.01f))
     {
-        new SpacerElement(Width: LabelW),
-        new ButtonElement(() => T("ps.cap.change"), OnClick: BeginFolderEdit, Width: 80f),
-        new ButtonElement(() => T("ps.cap.useDefault"), OnClick: () => { _settings.SetFolder(""); _editingFolder = false; }, Width: 96f),
-        new ButtonElement(() => T("ps.cap.openFolder"), OnClick: OpenScreenshotFolder, Width: 96f),
-    }, Gap: 6f);
+        FillColorFn = () => Fade(TileColor()), CornerRadius = TileRadius, PaddingX = 8f, PaddingY = 0f,
+    };
 
     private HudElement FolderEditor() => new ColumnElement(new HudElement[]
     {
         new RowElement(new HudElement[]
         {
-            new SpacerElement(Width: LabelW),
-            new InputElement(() => _folderDraft, CommitFolder, Width: 220f, OnChange: s => _folderDraft = s),
-            new ButtonElement(() => T("ps.ok"), OnClick: () => CommitFolder(_folderDraft), Width: 48f),
-            new ButtonElement(() => T("ps.cancel"), OnClick: () => _editingFolder = false, Width: 72f),
-        }, Gap: 6f),
-        new TextElement(FolderHint, Color: Muted),
-    }, Gap: 4f);
+            new CellElement(new InputElement(() => _folderDraft, CommitFolder, Width: 240f, OnChange: s => _folderDraft = s), Weight: 1f),
+            Pill(PillKind.Primary, "ps.ok", () => CommitFolder(_folderDraft), 40f),
+            Pill(PillKind.Neutral, "ps.cancel", () => _editingFolder = false, 56f),
+        }, Gap: 8f),
+        NoteLine(FolderHint),
+    }, Gap: 6f);
 
-    private string FolderDisplay()
+    private string FolderDisplay() => string.IsNullOrWhiteSpace(_settings.Folder) ? T("ps.cap.folderDefault") : _settings.Folder;
+
+    private Cached<(string, string, bool)>? _folderHint;
+    private string FolderHint() => (_folderHint ??= new Cached<(string, string, bool)>(k => k.Item3 ? k.Item1 + k.Item2 : k.Item1))
+        .Get((T("ps.cap.folderHint"), T("ps.cap.folderHintWine"), FolderOpener.IsRunningUnderWine));
+
+    // "File name: BPSR_2026-11-23_14-05-09.png" — the clock ticks once a second, so the text is rebuilt once a second.
+    private Cached<(long, CaptureFormat, string)>? _fileNameLine;
+
+    private string FileNameLine()
     {
-        if (string.IsNullOrWhiteSpace(_settings.Folder)) return T("ps.cap.folderDefault");
-        return _settings.Folder;
+        var now = DateTime.Now;
+        _fileNameLine ??= new Cached<(long, CaptureFormat, string)>(k => _loc.TFormat("ps.cap.fileNameLine",
+            $"BPSR_{new DateTime(k.Item1 * TimeSpan.TicksPerSecond):yyyy-MM-dd_HH-mm-ss}.{(k.Item2 == CaptureFormat.Jpg ? "jpg" : "png")}"));
+        return _fileNameLine.Get((now.Ticks / TimeSpan.TicksPerSecond, _settings.Format, T("ps.cap.fileNameLine")));
     }
-
-    private string FolderHint() => FolderOpener.IsRunningUnderWine ? T("ps.cap.folderHint") + T("ps.cap.folderHintWine") : T("ps.cap.folderHint");
-
-    private string NextFileName() => $"BPSR_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.{(_settings.Format == CaptureFormat.Jpg ? "jpg" : "png")}";
 
     private void BeginFolderEdit()
     {
@@ -151,30 +162,4 @@ public sealed partial class Plugin
     }
 
     private void OpenScreenshotFolder() => OpenFolderSafe(EffectiveFolder(out _folderFellBack));
-
-    private void ShowAllLayers()
-    {
-        _overlayHidden = false;
-        _settings.SetHides(VisibilityLayers.None);
-        ApplyLiveHides();
-    }
-
-    private HudElement HideToggle(string key, VisibilityLayers layer, string labelKey) => HelpToggle(key,
-        get: () => LayerAvailable(layer) && IsHidden(layer),
-        set: on => SetHidden(layer, on),
-        text: new HelpText(() => T(labelKey), () => HideHelp(key, layer)),
-        enabled: () => LayerAvailable(layer));
-
-    private string HideHelp(string key, VisibilityLayers layer)
-    {
-        if (!LayerAvailable(layer)) return T("ps.help.layerUnavailable");
-        return T("ps.help." + key);
-    }
-
-    /// <summary>A sub-option row: a 22 px indent (the effect switches under "Effects").</summary>
-    private static HudElement Indented(HudElement e) => new RowElement(new HudElement[]
-    {
-        new SpacerElement(Width: 22f),
-        new CellElement(e, Weight: 1f),
-    });
 }

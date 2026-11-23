@@ -7,100 +7,101 @@ using Stellar.PhotoStudio.Presets;
 
 namespace Stellar.PhotoStudio;
 
-// Presets tab: a virtual list (built-ins first, then user presets A→Z, plus an "Unsaved look" row when edits were
-// set aside), Save / Save as / Rename / Delete, Import from a folder, Export to a folder. There is no native file
-// dialog, so import/export use folders under stellar/photostudio/ with an "Open folder" button. All preset state
-// lives in PresetSession (Presets/PresetSession.cs, unit-tested); this file is the view.
+// The PRESET bar at the top of the Look section (2.0.0 — it replaces the 1.x Presets tab): ‹ [pill dropdown] › Save More,
+// a Modified tag, Reset all. The dropdown lists what the old list did: any set-aside "Unsaved look (from X)" first, then
+// the built-ins and the player's presets A→Z. "More" opens the old actions inline (Save as / Rename / Import / Export /
+// Delete); the in-window popover and the modal delete confirm are the next phase. There is no native file dialog, so
+// import / export use folders under stellar/photostudio/ with an "Open folder" button. All preset state lives in
+// PresetSession (Presets/PresetSession.cs, unit-tested); this file is the view.
 public sealed partial class Plugin
 {
-    private const int PresetPool = 10;         // 220/28 ≈ 7.9 visible rows + margin for a part-scrolled row (CooldownBar recipe)
-    private const float PresetRowHeight = 28f;
+    private const float PresetBarPillW = 48f;
     private enum NameMode { None, SaveAs, Rename, ConfirmDelete, Import }
 
     private NameMode _nameMode;
+    private bool _moreOpen;
     private string _nameDraft = "";
-    private int _presetOffset;
     private List<string> _importFiles = new();
     private List<string>? _importOptionsCache;
+    private List<string>? _presetBarOptions;   // dropped on every preset-state change (OnPresetStateChanged)
     private int _importIndex;
 
     private string ImportFolder => Path.Combine(_studioFolder, "presets-import");
     private string ExportFolder => Path.Combine(_studioFolder, "exports");
 
-    private HudElement BuildPresetsTab()
+    private HudElement PresetBarPanel() => LivePanel(UpperLoc("ps.look.preset"), null, new HudElement[]
     {
-        var pool = new HudElement[PresetPool];
-        for (var i = 0; i < PresetPool; i++)
+        new ConditionalElement(() => _modified, TagChip("ps.pill.modified", AccentColor)),
+        HelpButton(new HelpKeys("ps.tab.presets", "ps.help.presets", SecLook)),
+    }, new HudElement[]
+    {
+        new RowElement(new HudElement[]
         {
-            var slot = i;
-            pool[i] = new ConditionalElement(() => _presetOffset + slot < PresetRowCount(), PresetSlot(slot));
-        }
-        return new ColumnElement(new HudElement[]
+            IconButton("‹", PrevPreset),
+            new CellElement(PillDropdown(PresetBarSelected, PresetBarOptions, SelectPresetBarRow), Weight: 1f),
+            IconButton("›", NextPreset),
+            Pill(PillKind.Primary, "ps.pre.save", () => _presetSession.Save(), PresetBarPillW, enabled: () => _canSaveCached),   // lights review I-5
+            Pill(PillKind.Neutral, "ps.look.more", () => { _moreOpen = !_moreOpen; _nameMode = NameMode.None; }, PresetBarPillW),
+        }, Gap: RowGap),
+        new RowElement(new HudElement[]
         {
-            new RowElement(new HudElement[]
-            {
-                new TextElement(() => T("ps.tab.presets"), Emphasis: true),
-                new SpacerElement(),
-                new TextElement(() => T("ps.pre.clickToApply"), Color: Muted),
-            }, Gap: 6f),
-            new VirtualListElement(PresetRowCount, PresetRowHeight, pool, o => _presetOffset = o, Height: 220f),
-            // No fixed widths: fixed-width buttons wrap their label by a hair at non-1.0 UI scales and render
-            // taller (D5, measured in game); auto-sized buttons never wrap and also fit every locale.
-            new RowElement(new HudElement[]
-            {
-                new ButtonElement(() => T("ps.pre.save"), OnClick: _presetSession.Save, Enabled: () => _canSaveCached),   // lights review I-5: also when lights differ
-                new ButtonElement(() => T("ps.pre.saveAs"), OnClick: () => BeginName(NameMode.SaveAs, _activePresetName + T("ps.pre.mineSuffix"))),
-                new ButtonElement(() => T("ps.pre.rename"), OnClick: () => BeginName(NameMode.Rename, _activePresetName), Enabled: () => !ActiveIsBuiltIn),
-                new ButtonElement(() => T("ps.pre.delete"), OnClick: () => _nameMode = NameMode.ConfirmDelete, Enabled: () => !ActiveIsBuiltIn),
-            }, Gap: 4f),
-            new RowElement(new HudElement[]
-            {
-                new ButtonElement(() => T("ps.pre.import"), OnClick: BeginImport),
-                new ButtonElement(() => T("ps.pre.export"), OnClick: ExportActive),
-                new SpacerElement(),
-                HelpDot("presets", () => T("ps.tab.presets"), () => T("ps.help.presets")),
-            }, Gap: 4f),
-            new ConditionalElement(() => _nameMode is NameMode.SaveAs or NameMode.Rename, NameEditor()),
-            new ConditionalElement(() => _nameMode == NameMode.ConfirmDelete, DeleteConfirm()),
-            new ConditionalElement(() => _nameMode == NameMode.Import, ImportPicker()),
-        }, Gap: 6f);
-    }
+            Pill(PillKind.Neutral, "ps.look.resetAll", ResetAllToPreset, 72f),
+            new CellElement(NoteLine(Loc("ps.look.resetNote")), Weight: 1f),
+        }, Gap: RowGap),
+        new ConditionalElement(() => _moreOpen && _nameMode == NameMode.None, MoreActions()),
+        new ConditionalElement(() => _nameMode is NameMode.SaveAs or NameMode.Rename, NameEditor()),
+        new ConditionalElement(() => _nameMode == NameMode.ConfirmDelete, DeleteConfirm()),
+        new ConditionalElement(() => _nameMode == NameMode.Import, ImportPicker()),
+    });
 
-    // ── list rows ────────────────────────────────────────────────────────────────────────────────────────────
+    // ── the dropdown ─────────────────────────────────────────────────────────────────────────────────────────────
 
     private int UnsavedRows => _presetSession.Stash.Count;
-    private int PresetRowCount() => UnsavedRows + _presets.All.Count;
 
-    private HudElement PresetSlot(int slot) => new SelectableElement(new RowElement(new HudElement[]
+    private IReadOnlyList<string> PresetBarOptions()
     {
-        new CellElement(new TextElement(() => RowName(slot), NoWrap: true, Color: () => IsUnsavedRow(slot) ? Muted() : Normal()), Weight: 1f),
-        new ConditionalElement(() => RowBuiltIn(slot), new PillElement(() => T("ps.pill.builtIn"))),
-        new ConditionalElement(() => IsUnsavedRow(slot) || (RowIsActive(slot) && _modified),
-            new PillElement(() => T("ps.pill.modified"), Color: () => _services.Theme.Colors.Accent)),
-    }, Gap: 6f), OnClick: () => ClickRow(slot), Selected: () => RowIsActive(slot));
-
-    private bool IsUnsavedRow(int slot) => _presetOffset + slot < UnsavedRows;
-
-    private Preset? RowPreset(int slot)
-    {
-        var k = _presetOffset + slot - UnsavedRows;
+        if (_presetBarOptions is not null) return _presetBarOptions;
         var all = _presets.All;
-        return k >= 0 && k < all.Count ? all[k] : null;
+        var names = new List<string>(UnsavedRows + all.Count);
+        for (var i = 0; i < UnsavedRows; i++) names.Add(_loc.TFormat("ps.pre.unsavedFrom", _presetSession.Stash[i].Origin));
+        foreach (var p in all) names.Add(p.Name);
+        return _presetBarOptions = names;
     }
 
-    private string RowName(int slot) => IsUnsavedRow(slot)
-        ? _loc.TFormat("ps.pre.unsavedFrom", _presetSession.Stash[_presetOffset + slot].Origin)
-        : RowPreset(slot)?.Name ?? "";
+    private int PresetBarSelected() => UnsavedRows + IndexOfPreset(_activePresetName);
 
-    private bool RowBuiltIn(int slot) => !IsUnsavedRow(slot) && (RowPreset(slot)?.BuiltIn ?? false);
-    private bool RowIsActive(int slot) => !IsUnsavedRow(slot)
-        && string.Equals(RowPreset(slot)?.Name, _activePresetName, StringComparison.OrdinalIgnoreCase);
-
-    private void ClickRow(int slot)
+    private void SelectPresetBarRow(int row)
     {
         _nameMode = NameMode.None;
-        if (IsUnsavedRow(slot)) { LampToast(_presetSession.RestoreUnsaved(_presetOffset + slot)); return; }
-        if (RowPreset(slot) is { } p) ApplyPreset(p);
+        if (row < UnsavedRows) { LampToast(_presetSession.RestoreUnsaved(row)); return; }
+        var all = _presets.All;
+        var k = row - UnsavedRows;
+        if (k >= 0 && k < all.Count) ApplyPreset(all[k]);
+    }
+
+    // ── More: the 1.x Presets-tab actions, as a list of rows ─────────────────────────────────────────────────────
+
+    private HudElement MoreActions() => new ColumnElement(new HudElement[]
+    {
+        MenuRow("ps.pre.saveAs", () => BeginName(NameMode.SaveAs, _activePresetName + T("ps.pre.mineSuffix"))),
+        MenuRow("ps.pre.rename", () => BeginName(NameMode.Rename, _activePresetName), () => !ActiveIsBuiltIn),
+        MenuRow("ps.pre.import", BeginImport),
+        MenuRow("ps.pre.export", () => { _moreOpen = false; ExportActive(); }),
+        MenuRow("ps.pre.delete", () => _nameMode = NameMode.ConfirmDelete, () => !ActiveIsBuiltIn, danger: true),
+    }, Gap: 2f);
+
+    /// <summary>One action row: a 26 px tile, full width, lighter on hover; a destructive one in the remove red.</summary>
+    private HudElement MenuRow(string labelKey, Action onClick, Func<bool>? enabled = null, bool danger = false)
+    {
+        var hover = new HoverFlag();
+        bool En() => enabled == null || enabled();
+        return ListTile(new SelectableElement(new RowElement(new HudElement[]
+            {
+                new SpacerElement(8f, ListTileH),
+                new TextElement(Loc(labelKey), Color: () => !En() ? MutedColor() : danger ? RemoveGlyph() : TextColor(), NoWrap: true),
+            }, Gap: 0.01f), OnClick: () => { if (En()) onClick(); })
+            { Bare = true, OnHover = over => hover.On = over && En() },
+            hovered: () => hover.On);
     }
 
     // ── save as / rename / delete ────────────────────────────────────────────────────────────────────────────
@@ -115,15 +116,30 @@ public sealed partial class Plugin
     {
         new RowElement(new HudElement[]
         {
-            new InputElement(() => _nameDraft, s => { _nameDraft = s; CommitName(); }, Width: 220f, OnChange: s => _nameDraft = s),
-            new ButtonElement(() => T("ps.ok"), OnClick: CommitName, Enabled: () => NameError() is null),
-            new ButtonElement(() => T("ps.cancel"), OnClick: () => _nameMode = NameMode.None),
-        }, Gap: 6f),
-        new ConditionalElement(() => NameError() is not null,
-            new TextElement(() => NameError() ?? "", Color: () => _services.Theme.Colors.Warning)),
-    }, Gap: 4f);
+            new CellElement(new InputElement(() => _nameDraft, s => { _nameDraft = s; CommitName(); }, Width: 240f,
+                OnChange: s => _nameDraft = s), Weight: 1f),
+            Pill(PillKind.Primary, "ps.ok", CommitName, 40f, enabled: () => NameError().Length == 0),
+            Pill(PillKind.Neutral, "ps.cancel", CloseNameMode, 56f),
+        }, Gap: RowGap),
+        new ConditionalElement(() => NameError().Length > 0, NoteLine(NameError, CautionColor)),
+    }, Gap: 6f);
 
-    private string? NameError()
+    private void CloseNameMode()
+    {
+        _nameMode = NameMode.None;
+        _moreOpen = false;
+    }
+
+    // Polled while the editor is open: cached on the draft (TooLong formats a number).
+    private Cached<(string, NameMode, string, string)>? _nameError;
+
+    private string NameError()
+    {
+        _nameError ??= new Cached<(string, NameMode, string, string)>(_ => ComputeNameError() ?? string.Empty);
+        return _nameError.Get((_nameDraft, _nameMode, _activePresetName, T("ps.pre.errEmpty")));
+    }
+
+    private string? ComputeNameError()
     {
         switch (PresetNames.Check(_nameDraft))
         {
@@ -140,7 +156,7 @@ public sealed partial class Plugin
 
     private void CommitName()
     {
-        if (NameError() is not null) return;
+        if (NameError().Length > 0) return;
         var name = _nameDraft.Trim();
         try
         {
@@ -152,15 +168,20 @@ public sealed partial class Plugin
             _view.ShowError(ex.Message);
             return;
         }
-        _nameMode = NameMode.None;
+        CloseNameMode();
     }
 
-    private HudElement DeleteConfirm() => new RowElement(new HudElement[]
+    private Cached<(string, string)>? _deleteText;
+
+    private HudElement DeleteConfirm() => new ColumnElement(new HudElement[]
     {
-        new TextElement(() => _loc.TFormat("ps.pre.confirmDelete", _activePresetName), Color: () => _services.Theme.Colors.Warning),
-        new SpacerElement(),
-        new ButtonElement(() => T("ps.pre.delete"), OnClick: () => { _nameMode = NameMode.None; _presetSession.Delete(); }),
-        new ButtonElement(() => T("ps.cancel"), OnClick: () => _nameMode = NameMode.None),
+        NoteLine(() => (_deleteText ??= new Cached<(string, string)>(k => _loc.TFormat("ps.pre.confirmDelete", k.Item1)))
+            .Get((_activePresetName, T("ps.pre.confirmDelete"))), CautionColor),
+        new RowElement(new HudElement[]
+        {
+            Pill(PillKind.Danger, "ps.pre.delete", () => { CloseNameMode(); _presetSession.Delete(); }, 56f),
+            Pill(PillKind.Neutral, "ps.cancel", CloseNameMode, 56f),
+        }, Gap: RowGap),
     }, Gap: 6f);
 
     // ── import / export ──────────────────────────────────────────────────────────────────────────────────────
@@ -179,17 +200,17 @@ public sealed partial class Plugin
     {
         new RowElement(new HudElement[]
         {
-            new CellElement(new DropdownElement(() => _importIndex, ImportOptions, i => _importIndex = i), Weight: 1f),
-            new ButtonElement(() => T("ps.pre.importOne"), OnClick: ImportSelected, Enabled: () => _importFiles.Count > 0),
-            new ButtonElement(() => T("ps.cancel"), OnClick: () => _nameMode = NameMode.None),
-        }, Gap: 6f),
+            new CellElement(PillDropdown(() => _importIndex, ImportOptions, i => _importIndex = i), Weight: 1f),
+            Pill(PillKind.Primary, "ps.pre.importOne", ImportSelected, 56f, enabled: () => _importFiles.Count > 0),
+            Pill(PillKind.Neutral, "ps.cancel", CloseNameMode, 56f),
+        }, Gap: RowGap),
         new RowElement(new HudElement[]
         {
-            new ButtonElement(() => T("ps.pre.openImport"), OnClick: () => OpenFolderSafe(ImportFolder)),
-            new ButtonElement(() => T("ps.look.rescan"), OnClick: BeginImport),
-        }, Gap: 6f),
-        new TextElement(() => T("ps.pre.importHint"), Color: Muted),
-    }, Gap: 4f);
+            Pill(PillKind.Neutral, "ps.pre.openImport", () => OpenFolderSafe(ImportFolder)),
+            Pill(PillKind.Neutral, "ps.look.rescan", BeginImport),
+        }, Gap: RowGap),
+        NoteLine(Loc("ps.pre.importHint")),
+    }, Gap: 6f);
 
     private IReadOnlyList<string> ImportOptions()
     {
@@ -207,8 +228,9 @@ public sealed partial class Plugin
         try { p = _presets.Import(File.ReadAllText(_importFiles[_importIndex])); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
         if (p is null) { _view.ShowError(_loc.TFormat("ps.pre.importFailed", Path.GetFileName(_importFiles[_importIndex]))); return; }
-        _nameMode = NameMode.None;
+        CloseNameMode();
         _presetNamesCache = null;
+        _presetBarOptions = null;
         ApplyPreset(p);
     }
 

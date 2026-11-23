@@ -1,172 +1,97 @@
 using System;
-using System.Collections.Generic;
 using Stellar.Abstractions.Domain;
 using Stellar.Abstractions.Services;
 using Stellar.PhotoStudio.FreeCam;
 
 namespace Stellar.PhotoStudio;
 
-// Camera tab (spec § 5, mockup 2026-10-01-free-camera-mockup.html): Free camera button + status line; Movement group
-// (speed, sensitivity, smoothing, leash, invert Y, entry hide layers); Pose group replaced in 1.2.0 by the Person group (Plugin.Panel.Person.cs; spec 2026-10-02).
+// Camera section (approved prototype "Camera", free camera on / off): FREE CAMERA (status + Start (Primary) / Exit
+// (Caution), Orbit / Fly, Show game UI), LENS (the field of view, moved from the 1.x Look tab), SCENE (Freeze / Reset scene
+// + status, and the time of day moved from the Look tab's render quality) and the MOVEMENT fold. The free-camera-only
+// controls (mode, game UI, field of view) are RECESSED while it is off (rule 22), never hidden. The on-entry hides moved to
+// the Hide section; the Person fold became the Pose section. Lambdas throughout: every target is read when it fires.
 public sealed partial class Plugin
 {
-    private const int EmotePoolSize = 10;
-    private const float EmoteRowHeight = 30f;
+    private const string SecCamera = "ps.tab.camera";
     private const float FcSliderSaveDelay = 0.5f;
-
-    private string _emoteQuery = "";
-    private List<EmoteInfo> _emoteView = new();
-    private bool _emoteListDirty = true;
-    private bool _emoteScrollReset;
-    private int _emoteFirst;
+    private const float CamPillLabelW = 126f;    // 150 px pill (prototype): "Exit free camera" in every locale
+    private static readonly float[] CamModeSegW = { 52f, 52f };
     private float _fcSliderSaveIn = -1f;
 
-    private HudElement BuildCameraTab() => new ColumnElement(new HudElement[]
-    {
-        // Mockup: status line left, Free camera button right, one row.
-        new RowElement(new HudElement[]
-        {
-            new CellElement(new TextElement(FreeCamStatus, Color: Muted), Weight: 1f),
-            // Fixed 150-px cell: the fil "Exit" label touched the border at content width (sandbox S6).
-            new CellElement(new ButtonElement(() => _freeCam.Active ? T("fc.exit") : T("fc.enter"),
-                OnClick: () => ToggleFreeCamera(), Style: MenuButtonStyle.Filled), Width: 150f),
-        }, Gap: 8f),
-        // Game UI spec 2026-10-10: shows the game's interface without leaving the free camera (same as U); off = greyed.
-        HelpToggle("fc.gameUi", () => _freeCam.GameUiShown, on => _freeCam.SetGameUi(on),
-            new HelpText(() => T("fc.gameUi"), () => T("fc.help.gameUi")), enabled: () => _freeCam.Active),
-        new SeparatorElement(),
-        SceneGroup(),
-        new SeparatorElement(),
-        MovementGroup(),
-        new SeparatorElement(),
-        PersonGroup(),
-    }, Gap: 8f);
-
-    private string FreeCamStatus() =>
-        !_freeCam.Active ? _loc.TFormat(SceneIsSet ? "fc.status.kept" : "fc.status.off", BindingText(StudioHotkeys.FreeCam))
-        : _freeCam.Mode == FreeCamMode.Fly ? T("fc.status.fly")
-        : _loc.TFormat("fc.status.orbit", SubjectName());
-
-    /// <summary>One Maestro slider row's inputs (a record keeps <see cref="HelpSliderRow"/> at one parameter).</summary>
-    private sealed record SliderSpec(string Key, string HelpKey, Func<float> Get, Action<float> Set, float Min, float Max,
-        Func<string> Value, float Reset);
-
-    // Lambdas, not method groups, throughout: the panel tree is built in RegisterWindows and every target is read when
-    // the control fires, never when the tree is built.
-    private HudElement MovementGroup() => FoldGroup("fc.group.movement", "fc.help.movement",
-        () => _fcSettings.MovementOpen, open => _fcSettings.SetMovementOpen(open), new HudElement[]
-        {
-            HelpSliderRow(new SliderSpec("fc.speed", "fc.help.speed", () => _fcSettings.MoveSpeed, v => _fcSettings.SetMoveSpeed(v, false),
-                FreeCamSettings.MinSpeed, FreeCamSettings.MaxSpeed, () => _loc.TFormat("fc.unit.speed", F(_fcSettings.MoveSpeed, "0.0")), FreeCamSettings.DefaultSpeed)),
-            HelpSliderRow(new SliderSpec("fc.sensitivity", "fc.help.sensitivity", () => _fcSettings.Sensitivity, v => _fcSettings.SetSensitivity(v, false),
-                FreeCamSettings.MinSensitivity, FreeCamSettings.MaxSensitivity, () => F(_fcSettings.Sensitivity, "0.00"), FreeCamSettings.DefaultSensitivity)),
-            HelpSliderRow(new SliderSpec("fc.smoothing", "fc.help.smoothing", () => _fcSettings.Smoothing, v => _fcSettings.SetSmoothing(v, false),
-                0f, 1f, () => F(_fcSettings.Smoothing, "0.00"), FreeCamSettings.DefaultSmoothing)),
-            HelpSliderRow(new SliderSpec("fc.leash", "fc.help.leash", () => _fcSettings.Leash, v => _fcSettings.SetLeash(v, false),
-                FreeCamSettings.MinLeash, FreeCamSettings.MaxLeash, () => _loc.TFormat("fc.unit.metres", F(_fcSettings.Leash, "0")), FreeCamSettings.DefaultLeash)),
-            HelpToggle("fc.invertY", () => _fcSettings.InvertY, on => _fcSettings.SetInvertY(on),
-                new HelpText(() => T("fc.invertY"), () => T("fc.help.invertY"))),
-            EntryHideToggle("fc.entryHide.hud", VisibilityLayers.GameHud),
-            EntryHideToggle("fc.entryHide.names", VisibilityLayers.Nameplates),
-            EntryHideToggle("fc.entryHide.others", VisibilityLayers.OtherPlayers),
-            EntryHideToggle("fc.entryHide.me", VisibilityLayers.Self),
-            EntryHideToggle("fc.entryHide.fx", VisibilityLayerSets.Effects, "fc.help.entryHide.fx"),
-        });
-
-    /// <summary>One entry-hide layer (spec §§ 3/5: which hide layers entry applies), the HelpToggle recipe. The effects
-    /// switch stores the whole effects group as a marker meaning "the Capture tab's Effects switches" (EntryHidePlan).</summary>
-    private HudElement EntryHideToggle(string key, VisibilityLayers layer, string helpKey = "fc.help.entryHides") => HelpToggle(key,
-        () => _fcSettings.EntryHidesLayer(layer), on => _fcSettings.SetEntryHide(layer, on),
-        new HelpText(() => T(key), () => T(helpKey)));
-
-    /// <summary>The foldable group header QualityGroup uses: ▾/▸ title … "?".</summary>
-    private HudElement FoldGroup(string titleKey, string helpKey, Func<bool> open, Action<bool> setOpen, HudElement[] rows) =>
-        new ColumnElement(new HudElement[]
+    private HudElement BuildCameraSection() => SectionColumn(
+        SectionPanel("fc.title.hud", null, new HudElement[]
         {
             new RowElement(new HudElement[]
             {
-                new SelectableElement(new RowElement(new HudElement[]
-                {
-                    new TextElement(() => open() ? "▾" : "▸", Width: 14f),
-                    new TextElement(() => T(titleKey), Emphasis: true),
-                }, Gap: 4f), OnClick: () => setOpen(!open())),
-                new SpacerElement(),
-                HelpDot(titleKey, () => T(titleKey), () => T(helpKey)),
-            }, Gap: 6f),
-            new ConditionalElement(open, new RowElement(new HudElement[]
-            {
-                new SpacerElement(Width: 16f),
-                new CellElement(new ColumnElement(rows, Gap: 4f), Weight: 1f),
-            })),
-        }, Gap: 4f);
+                new CellElement(new TextElement(() => _fcStatus, Color: () => _freeCam.Active ? AccentColor() : MutedColor()), Weight: 1f),
+                new ConditionalElement(() => _freeCam.Active,
+                    Pill(PillKind.Caution, "fc.exit", ToggleFreeCamera, CamPillLabelW),
+                    Pill(PillKind.Primary, "ps.cam.start", ToggleFreeCamera, CamPillLabelW, enabled: InWorld)),
+            }, Gap: 8f),
+            // Orbit / Fly is the free camera's own live mode (Tab switches it too); there is no stored default to set.
+            SettingRow("ps.cam.mode", Segmented(new[] { "ps.cam.orbit", "ps.cam.fly" }, CamModeSegW,
+                    () => _freeCam.Mode == FreeCamMode.Fly ? 1 : 0, _ => _freeCam.ToggleMode(), () => _freeCam.Active),
+                new HelpKeys("ps.cam.mode", "ps.help.cam.mode", SecCamera, "fc.title.hud"), () => _freeCam.Active),
+            // Game UI spec 2026-10-10: shows the game's interface without leaving the free camera (same as U).
+            SettingToggle("fc.gameUi", () => _freeCam.GameUiShown, on => _freeCam.SetGameUi(on),
+                new HelpKeys("fc.gameUi", "fc.help.gameUi", SecCamera, "fc.title.hud"), enabled: () => _freeCam.Active),
+        }),
+        SectionPanel("ps.cam.lens", null, new HudElement[]
+        {
+            // [ / ] / \ and Shift+wheel change it too, free camera only; ↺ = the game's FOV at free-camera entry.
+            SettingSlider("ps.look.fov",
+                KitSlider(() => CameraMath.ClampFov(_freeCam.Fov), v => _freeCam.SetFov(v), CameraMath.MinFov, CameraMath.MaxFov,
+                    () => _freeCam.Active),
+                ValueText(() => _freeCam.Fov, v => v > 0f ? F(v, "0") + "°" : "—"),   // never entered yet: no FOV to show
+                () => _freeCam.ResetFov(),
+                new SliderOpts(new HelpKeys("ps.look.fov", "ps.help.look.fov", SecCamera, "ps.cam.lens") { Body = () => _fovHelp },
+                    1f, ParseNumber)),
+            NoteLine(() => _fovNote),
+        }),
+        SectionPanelWithTrailing("sc.group", null,
+            new HudElement[] { HelpButton(new HelpKeys("sc.group", "sc.help", SecCamera)) }, new HudElement[]
+        {
+            // Scene-stays spec § 4: Freeze and Reset scene work with the free camera on or off.
+            PillPair(
+                new ConditionalElement(() => SceneFrozen,
+                    Pill(PillKind.Primary, "ps.cam.unfreeze", () => ToggleSceneFreeze(), PillPairLabelW),
+                    Pill(PillKind.Neutral, "ps.cam.freeze", () => ToggleSceneFreeze(), PillPairLabelW, enabled: InWorld)),
+                Pill(PillKind.Neutral, "sc.reset", () => ResetScene(), PillPairLabelW, enabled: () => SceneIsSet)),
+            NoteLine(() => _sceneStatus),
+            SettingRow("ps.q.time", Segmented(new[] { "ps.q.off", "ps.q.composing", "ps.q.always" }, ModeSegW,
+                    () => (int)_quality.Time, i => SetTimeMode((QualityMode)i), () => _services.TimeOfDay.IsAvailable),
+                new HelpKeys("ps.q.time", "ps.help.q.time", SecCamera, "sc.group")
+                    { Body = () => T(_services.TimeOfDay.IsAvailable ? "ps.help.q.time" : "ps.help.q.unavailable") },
+                () => _services.TimeOfDay.IsAvailable),
+            SettingSlider("ps.q.hour",
+                KitSlider(() => _quality.Hour, SetHour, 0f, 24f, () => _services.TimeOfDay.IsAvailable && _quality.Time != QualityMode.Off),
+                HourText, () => SetHour(12f), new SliderOpts(Step: 5f / 60f, Parse: ParseHour)),   // 5-minute steps
+        }),
+        FoldPanel("fc.group.movement", null, new FoldFlag(() => _fcSettings.MovementOpen, o => _fcSettings.SetMovementOpen(o)),
+            new HudElement[] { HelpButton(new HelpKeys("fc.group.movement", "fc.help.movement", SecCamera)) }, new HudElement[]
+        {
+            MoveSlider("fc.speed", "fc.help.speed", () => _fcSettings.MoveSpeed, v => _fcSettings.SetMoveSpeed(v, false),
+                FreeCamSettings.MinSpeed, FreeCamSettings.MaxSpeed, ValueText(() => _fcSettings.MoveSpeed,
+                    v => _loc.TFormat("fc.unit.speed", F(v, "0.0")), "fc.unit.speed"), FreeCamSettings.DefaultSpeed, 0.1f),
+            MoveSlider("fc.sensitivity", "fc.help.sensitivity", () => _fcSettings.Sensitivity, v => _fcSettings.SetSensitivity(v, false),
+                FreeCamSettings.MinSensitivity, FreeCamSettings.MaxSensitivity, ValueText(() => _fcSettings.Sensitivity, v => F(v, "0.00")),
+                FreeCamSettings.DefaultSensitivity, 0.05f),
+            MoveSlider("fc.smoothing", "fc.help.smoothing", () => _fcSettings.Smoothing, v => _fcSettings.SetSmoothing(v, false),
+                0f, 1f, ValueText(() => _fcSettings.Smoothing, v => F(v, "0.00")), FreeCamSettings.DefaultSmoothing, 0.01f),
+            MoveSlider("fc.leash", "fc.help.leash", () => _fcSettings.Leash, v => _fcSettings.SetLeash(v, false),
+                FreeCamSettings.MinLeash, FreeCamSettings.MaxLeash, ValueText(() => _fcSettings.Leash,
+                    v => _loc.TFormat("fc.unit.metres", F(v, "0")), "fc.unit.metres"), FreeCamSettings.DefaultLeash, 1f),
+            SettingToggle("fc.invertY", () => _fcSettings.InvertY, on => _fcSettings.SetInvertY(on),
+                new HelpKeys("fc.invertY", "fc.help.invertY", SecCamera, "fc.group.movement")),
+        }));
 
-    /// <summary>Maestro slider row: [label] [slider] [value] [↺] [?]. Drags save once they settle.</summary>
-    private HudElement HelpSliderRow(SliderSpec s) => new RowElement(new HudElement[]
-    {
-        new CellElement(SliderRow(() => T(s.Key), new SliderElement(s.Get, v => { s.Set(v); _fcSliderSaveIn = FcSliderSaveDelay; }, s.Min, s.Max),
-            s.Value, () => { s.Set(s.Reset); _fcSliderSaveIn = FcSliderSaveDelay; }), Weight: 1f),
-        HelpDot(s.Key, () => T(s.Key), () => T(s.HelpKey)),
-    }, Gap: 6f);
-
-    private HudElement[] BuildEmotePool()
-    {
-        var pool = new HudElement[EmotePoolSize];
-        for (var i = 0; i < pool.Length; i++) pool[i] = EmoteRow(i);
-        return pool;
-    }
-
-    private HudElement EmoteRow(int slot) => new RowElement(new HudElement[]
-    {
-        new CellElement(new ButtonElement(() => EmoteAt(slot) is { } e && _fcSettings.IsFavourite(e.Id) ? "★" : "☆",
-            OnClick: () => ToggleFavouriteAt(slot)), Width: 28f),
-        new CellElement(new SelectableElement(new TextElement(() => EmoteAt(slot)?.Name ?? "", NoWrap: true),
-            OnClick: () => PlayEmoteAt(slot)), Weight: 1f),
-    }, Gap: 6f);
-
-    private EmoteInfo? EmoteAt(int slot)
-    {
-        var view = EmoteView();
-        var i = _emoteFirst + slot;
-        return i >= 0 && i < view.Count ? view[i] : null;
-    }
-
-    private List<EmoteInfo> EmoteView()
-    {
-        if (!_emoteListDirty) return _emoteView;
-        _emoteView = EmoteFilter.Apply(_services.Emotes.Unlocked, _emoteQuery, _fcSettings.Favourites);
-        _emoteListDirty = false;
-        return _emoteView;
-    }
-
-    private void SetEmoteQuery(string q)
-    {
-        if (q == _emoteQuery) return;
-        _emoteQuery = q;
-        _emoteListDirty = true;
-        _emoteScrollReset = true;
-    }
-
-    private bool TakeEmoteScrollReset()
-    {
-        var reset = _emoteScrollReset;
-        _emoteScrollReset = false;
-        return reset;
-    }
-
-    private void ToggleFavouriteAt(int slot)
-    {
-        if (EmoteAt(slot) is not { } e) return;
-        _fcSettings.ToggleFavourite(e.Id);
-        _emoteListDirty = true;
-    }
-
-    /// <summary>An emote row poses the selected person (spec 2026-10-02 § 3); refusals are reported by the controller.</summary>
-    private void PlayEmoteAt(int slot)
-    {
-        if (EmoteAt(slot) is not { } e) return;
-        _posingCtl.Play(e);
-        _poseListOpen = false;
-    }
+    /// <summary>A movement slider: applied live, saved once the drag settles (a config save is a main-thread file write).</summary>
+    private HudElement MoveSlider(string key, string helpKey, Func<float> get, Action<float> set, float min, float max,
+        Func<string> value, float reset, float step)
+        => SettingSlider(key,
+            KitSlider(get, v => { set(v); _fcSliderSaveIn = FcSliderSaveDelay; }, min, max),
+            value, () => { set(reset); _fcSliderSaveIn = FcSliderSaveDelay; },
+            new SliderOpts(new HelpKeys(key, helpKey, SecCamera, "fc.group.movement"), step));
 
     private void TickFreeCamUi(float dt)
     {

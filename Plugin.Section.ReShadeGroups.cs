@@ -7,7 +7,7 @@ using Stellar.PhotoStudio.ReShade;
 namespace Stellar.PhotoStudio;
 
 // "All effects", grouped under each shader pack (owner 2026-10-05). The virtual list shows FxItems: a fold heading per
-// pack, then — when open — its effects. Built only when the rows, the pack index or a fold changes; the per-frame text is
+// pack, then — when open — its effects (house list tiles, Plugin.Section.ReShade.cs). Built only when the rows, the pack index or a fold changes; the per-frame text is
 // cached per (group, open, on, total).
 public sealed partial class Plugin
 {
@@ -55,20 +55,25 @@ public sealed partial class Plugin
         return i < items.Count ? items[i] : null;
     }
 
+    // A pack heading = [chevron image] [pack name] … [count], a bare row (the chevron is an image: "▾ ▸" text fell back to a
+    // taller OS face); an effect = the effect tile, one chevron's width in.
     private HudElement FxPoolItem(int slot) => new ConditionalElement(() => FxItemAt(slot)?.IsHeader == true,
         new SelectableElement(new RowElement(new HudElement[]
         {
-            new TextElement(() => FxHeaderText(slot).Title, NoWrap: true),
-            new SpacerElement(),
-            new TextElement(() => FxHeaderText(slot).Count, Color: Muted, NoWrap: true),
-        }, Gap: 6f), OnClick: () => ToggleFxGroup(slot)),
-        new RowElement(new HudElement[]   // effects sit one chevron's width in from their pack heading
+            new SpacerElement(0f, ListTileH),
+            Chevron(() => FxItemAt(slot) is { IsHeader: true } h && _fxOpenGroups.Contains(h.Group)),
+            new CellElement(new TextElement(() => FxHeaderText(slot).Title, Color: () => TextColor(), NoWrap: true, FontSize: 13)
+                { Bold = true, Ellipsize = true }, Weight: 1f),
+            new TextElement(() => FxHeaderText(slot).Count, Color: () => MutedColor(), NoWrap: true),
+            new SpacerElement(4f, ListTileH),
+        }, Gap: 6f), OnClick: () => ToggleFxGroup(slot)) { Bare = true },
+        new RowElement(new HudElement[]
         {
-            new SpacerElement(Width: FxGroupIndent),
+            new SpacerElement(FxGroupIndent, 1f),
             new CellElement(FxRowElement(() => FxItemAt(slot)?.Row), Weight: 1f),
-        }));
+        }, Gap: 0.01f));
 
-    private const float FxGroupIndent = 14f;
+    private const float FxGroupIndent = 18f;
 
     private (string Title, string Count) FxHeaderText(int slot)
     {
@@ -81,7 +86,7 @@ public sealed partial class Plugin
         var key = (item.Group, open, on, total);
         if (_fxHeaderText.TryGetValue(key, out var text)) return text;
         var name = item.Group.Length == 0 ? T("ps.rs.fx.other") : item.Group;
-        text = ((open ? "▾ " : "▸ ") + name,
+        text = (name,
             on > 0 ? _loc.TFormat("ps.rs.fx.groupCountOn", total, on) : _loc.TFormat("ps.rs.fx.groupCount", total));
         _fxHeaderText[key] = text;
         return text;

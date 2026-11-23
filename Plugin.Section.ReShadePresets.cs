@@ -6,102 +6,86 @@ using Stellar.PhotoStudio.ReShade;
 
 namespace Stellar.PhotoStudio;
 
+// ReShade › DOWNLOAD PRESETS (approved prototype): a segmented source picker — Photo Studio · Community · Author's page —
+// then that source's presets as rows [name / muted "uses …" line] [Download / status / Copy link] [?], and the "got a
+// preset .ini?" line with Open folder. The segment writes the three 1.x group folds (ui.reshade.presets.ownOpen /
+// communityOpen / linksOpen) so exactly the shown source is "open" — the keys keep working for a rollback.
 public sealed partial class Plugin
 {
-    private const float PresetRowGap = 10f;
-    private const float PresetGroupGap = 8f;      // + the section's 8 px gap = 16 px above a group: groups read as sections
-    private const float OpenFolderWidth = 120f;   // alone on its row; fil/ja labels outgrew the 104 px status width
     private static readonly TimeSpan CopiedShownFor = TimeSpan.FromSeconds(2.5);
     private static readonly PresetKind[] PresetGroups = { PresetKind.Own, PresetKind.Community, PresetKind.LinkOnly };
+    private static readonly float[] PresetSourceSegW = { 90f, 76f, 100f };
     private readonly Dictionary<string, (string Sub, string Cov, string Help)> _presetText = new(StringComparer.Ordinal);
     private readonly Dictionary<(DownloadFailure, string?), string> _failText = new();
     private string? _copiedPresetId;
     private DateTime _copiedAt;
 
-    private HudElement PresetsSection()
+    private HudElement DownloadPresetsPanel()
     {
-        var rows = new List<HudElement>
+        var items = new List<HudElement>
         {
-            new RowElement(new HudElement[]
-            {
-                new SelectableElement(new RowElement(new HudElement[]
-                {
-                    new TextElement(() => _settings.PresetsOpen ? "▾" : "▸", Width: 14f),
-                    new TextElement(() => T("ps.rs.presets"), Emphasis: true),
-                }, Gap: 4f), OnClick: () => _settings.SetPresetsOpen(!_settings.PresetsOpen)),
-                new SpacerElement(),
-                HelpDot("rs.presets", () => T("ps.rs.presets"), () => T("ps.help.rs.presets")),
-            }, Gap: 6f),
-            new ConditionalElement(() => _settings.PresetsOpen, Indent(new TextElement(() => T("ps.rs.presets.hint"), Color: Muted))),
+            Segmented(new[] { "ps.rs.preset.ours", "ps.rs.presets.community", "ps.rs.src.author" }, PresetSourceSegW,
+                PresetSourceIndex, SetPresetSource),
+            NoteLine(Loc("ps.rs.presets.hint")),
         };
-        foreach (var kind in PresetGroups)
-            rows.Add(new ConditionalElement(() => _settings.PresetsOpen, Indent(PresetGroup(kind))));
-        rows.Add(new ConditionalElement(() => _settings.PresetsOpen, Indent(new ColumnElement(new HudElement[]
+        for (var g = 0; g < PresetGroups.Length; g++)
         {
-            new TextElement(() => T("ps.rs.presets.import"), Color: Muted),   // full width: beside the button it wrapped to 5 lines (th)
-            new RowElement(new HudElement[]
-            {
-                new CellElement(new ButtonElement(() => T("ps.cap.openFolder"), OnClick: () => OpenFolderSafe(ReShadePresetFolder)),
-                    Width: OpenFolderWidth),   // fixed: an auto-width button clipped its label (sandbox, en/th)
-                new SpacerElement(),
-            }),
-        }, Gap: 4f))));
-        return new ColumnElement(rows, Gap: 8f);
+            var kind = PresetGroups[g];
+            var entries = new List<HudElement>();
+            foreach (var e in PresetCatalog.All)
+                if (e.Kind == kind) entries.Add(PresetRow(e));
+            var index = g;
+            items.Add(new ConditionalElement(() => PresetSourceIndex() == index, new ColumnElement(entries.ToArray(), Gap: 8f)));
+        }
+        items.Add(new RowElement(new HudElement[]
+        {
+            new CellElement(NoteLine(Loc("ps.rs.presets.import")), Weight: 1f),
+            Pill(PillKind.Neutral, "ps.cap.openFolder", () => OpenFolderSafe(ReShadePresetFolder), 80f),
+        }, Gap: RowGap));
+        return SectionPanelWithTrailing("ps.rs.download", null,
+            new HudElement[] { HelpButton(new HelpKeys("ps.rs.download", "ps.help.rs.presets", SecReShade)) }, items.ToArray());
     }
 
-    /// <summary>One fold per source: Photo Studio's own (open by default), Community, From the author's page.</summary>
-    private HudElement PresetGroup(PresetKind kind)
+    /// <summary>The first open 1.x group fold (none open = Photo Studio's own).</summary>
+    private int PresetSourceIndex()
     {
-        var entries = new List<HudElement>();
-        foreach (var e in PresetCatalog.All)
-            if (e.Kind == kind) entries.Add(PresetRow(e));
-        var count = "(" + entries.Count + ")";
-        return new ColumnElement(new HudElement[]
-        {
-            new SpacerElement(Height: PresetGroupGap),
-            new SelectableElement(new RowElement(new HudElement[]
-            {
-                new TextElement(() => _settings.PresetGroupOpen(kind) ? "▾" : "▸", Width: 14f),
-                new TextElement(() => PresetGroupLabel(kind), NoWrap: true),
-                new TextElement(() => count, Color: Muted, NoWrap: true),
-            }, Gap: 4f), OnClick: () => _settings.SetPresetGroupOpen(kind, !_settings.PresetGroupOpen(kind))),
-            new ConditionalElement(() => _settings.PresetGroupOpen(kind), Indent(new ColumnElement(entries, Gap: PresetRowGap))),
-        }, Gap: 6f);
+        for (var i = 0; i < PresetGroups.Length; i++)
+            if (_settings.PresetGroupOpen(PresetGroups[i])) return i;
+        return 0;
     }
 
-    private string PresetGroupLabel(PresetKind kind) => kind switch
+    private void SetPresetSource(int index)
     {
-        PresetKind.Own => T("ps.rs.preset.ours"),
-        PresetKind.Community => T("ps.rs.presets.community"),
-        _ => T("ps.rs.presets.links"),
-    };
+        for (var i = 0; i < PresetGroups.Length; i++) _settings.SetPresetGroupOpen(PresetGroups[i], i == index);
+    }
 
     private HudElement PresetRow(PresetEntry e)
     {
-        var lines = new List<HudElement>
+        var text = new List<HudElement>
         {
-            new RowElement(new HudElement[]
-            {
-                new CellElement(new TextElement(() => e.Name), Weight: 1f),   // wraps: at 400 px "StarLuxe Luminescence" ran into the button
-                new CellElement(PresetAction(e), Width: PackStatusWidth),
-                HelpDot("rs.preset." + e.Id, () => e.Name, () => PresetHelp(e)),
-            }, Gap: 6f),
+            new TextElement(() => e.Name, Color: () => TextColor(), NoWrap: true) { Ellipsize = true },
+            NoteLine(() => PresetTexts(e).Sub),
         };
         if (e.Kind == PresetKind.Community && e.Partial)   // full coverage needs no badge; a partial one is worth a glance
-            lines.Add(new RowElement(new HudElement[]
-            {
-                new PillElement(() => PresetTexts(e).Cov),   // menu text on the accent tint: Gold was 2.1:1 on Light (ux-ui)
-                new SpacerElement(),
-            }));
-        lines.Add(new TextElement(() => PresetTexts(e).Sub, Color: Muted));
+            text.Add(new RowElement(new HudElement[] { TagChipText(() => PresetTexts(e).Cov, AccentColor) }, Gap: 0.01f));
         if (e.Kind == PresetKind.LinkOnly)
         {
             var shown = DisplayUrl(e.PageUrl);   // the address, as text (Copy link puts the full one on the clipboard)
-            lines.Add(new TextElement(() => shown, Color: Muted, NoWrap: true));
+            text.Add(NoteLine(() => shown));
         }
-        else lines.Add(new ConditionalElement(() => _rsPresets.Status(e) == PresetStatus.Failed,
-            new TextElement(() => PresetFailedText(e), Color: () => _services.Theme.Colors.Warning)));
-        return new ColumnElement(lines, Gap: 2f);
+        else text.Add(new ConditionalElement(() => _rsPresets.Status(e) == PresetStatus.Failed, NoteLine(() => PresetFailedText(e), CautionColor)));
+        return new RowElement(new HudElement[]
+        {
+            new CellElement(new ColumnElement(text.ToArray(), Gap: 1f), Weight: 1f),
+            new CellElement(PresetAction(e), Width: PackStatusWidth),
+            HelpButton(new HelpKeys("ps.rs.download", "ps.help.rs.presets", SecReShade, "ps.rs.download") { Body = PresetHelpFn(e) }),
+        }, Gap: RowGap);
+    }
+
+    private Func<string> PresetHelpFn(PresetEntry e)
+    {
+        var cache = new Cached<(PresetStatus, string, string)>(_ => PresetHelp(e));
+        return () => cache.Get((_rsPresets.Status(e), _rsPresets.Error(e) ?? string.Empty, T("ps.help.rs.presets")));
     }
 
     internal static string DisplayUrl(string url) =>
@@ -110,12 +94,12 @@ public sealed partial class Plugin
     private HudElement PresetAction(PresetEntry e)
     {
         if (e.Kind == PresetKind.LinkOnly)
-            return new ButtonElement(() => ShowsCopied(e) ? T("ps.rs.preset.copied") : T("ps.rs.preset.copyLink"),
-                OnClick: () => CopyPresetLink(e));
+            return Pill(PillKind.Neutral, () => ShowsCopied(e) ? T("ps.rs.preset.copied") : T("ps.rs.preset.copyLink"), () => CopyPresetLink(e));
         return new ConditionalElement(() => PresetButtonKey(e) is not null,
-            new ButtonElement(() => T(PresetButtonKey(e) ?? "ps.rs.pack.download"), OnClick: () => _rsPresets.Request(e)),
-            new TextElement(() => PresetStatusText(e), Color: Muted, Align: TextAlign.Right, NoWrap: true));
+            Pill(PillKind.Neutral, () => T(PresetButtonKey(e) ?? "ps.rs.pack.download"), () => _rsPresets.Request(e)),
+            new TextElement(() => PresetStatusText(e), Color: () => MutedColor(), Align: TextAlign.Center, NoWrap: true));
     }
+
 
     private void CopyPresetLink(PresetEntry e)
     {

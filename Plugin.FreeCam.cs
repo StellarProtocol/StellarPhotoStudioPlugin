@@ -19,7 +19,7 @@ public sealed partial class Plugin
         _fcSettings = new FreeCamSettings(_services.Config.GetSection("photostudio"));
         var ports = new FreeCamPorts(_services.CameraOverride, _services.InputShield, _services.SceneFreeze, _services.CombatState,
             _services.SceneVisibility, _services.EntityTransforms, _services.CombatSnapshot, _services.EntityPicker, _services.Posing);
-        var host = new FreeCamHost(OnFreeCamNotice, PointerOverOwnWindow, DismissHelpTip, msg => _services.Log.Warning(msg),
+        var host = new FreeCamHost(OnFreeCamNotice, PointerOverOwnWindow, DismissHelpPopover, msg => _services.Log.Warning(msg),
             CaptureHides: () => _settings.Hides);
         _freeCam = new FreeCamSession(ports, _fcSettings, host, _scene);
         _freeCam.StateChanged += OnFreeCamStateChanged;
@@ -100,7 +100,7 @@ public sealed partial class Plugin
     {
         var fw = _services.Framework;
         var scale = fw.CanvasWidth > 0 ? (float)fw.ScreenWidth / fw.CanvasWidth : 1f;
-        _interactiveWins ??= new[] { _panelWin, _tipWindow, _dockedWin, _toastWin };
+        _interactiveWins ??= new[] { _panelWin, _helpPop!, _dockedWin, _toastWin };
         foreach (var w in _interactiveWins)
             if (w.IsShown && UiHitTest.Contains(w.Rect, x, y, scale)) return true;
         return false;
