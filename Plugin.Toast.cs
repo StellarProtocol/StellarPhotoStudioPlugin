@@ -25,19 +25,27 @@ public sealed partial class Plugin
             Category: WindowCategory.Tools,
             Style: WindowPanelStyle.GlassMenu)
         { ShowTitleBar = false, StartVisible = false, Anchor = WindowAnchor.Bottom, ShouldRender = InWorld },
+        // Approved prototype § 4 "Saved toast": [Saved chip] [file name] … [Open folder] [✕], then the size line and any
+        // warning. The chip carries the title (Saved / Exported), so it is one bold green wash either way.
         new ColumnElement(new HudElement[]
         {
             new RowElement(new HudElement[]
             {
-                new TextElement(() => _toastTitle, Emphasis: true),
-                new CellElement(new TextElement(() => _toastFile, Color: Muted, NoWrap: true), Weight: 1f),
-                new ButtonElement(() => T("ps.cap.openFolder"), OnClick: () => OpenFolderSafe(_toastDir), Width: 104f),
-                new ButtonElement(() => "✕", OnClick: () => { _toastLeft = 0f; _toastWin.SetVisible(false); }, Width: 28f),
-            }, Gap: 6f),
-            new TextElement(() => _toastDetail, Color: Muted),
-            new ConditionalElement(() => _toastWarning.Length > 0,
-                new TextElement(() => _toastWarning, Color: () => _services.Theme.Colors.Warning)),
-        }, Gap: 4f)));
+                TagChipText(() => _toastTitle, SuccessColor, WindowBg),
+                new CellElement(new TextElement(() => _toastFile, Color: () => TextColor(), NoWrap: true) { Ellipsize = true }, Weight: 1f),
+                Pill(PillKind.Neutral, "ps.cap.openFolder", () => OpenFolderSafe(_toastDir), 80f, surface: WindowBg),
+                IconButton("✕", HideToast, IconButtonKind.Bare, surface: WindowBg),
+            }, Gap: 8f),
+            NoteLine(() => _toastDetail),
+            new ConditionalElement(() => _toastWarning.Length > 0, NoteLine(() => _toastWarning, CautionColor)),
+        }, Gap: 6f)));
+
+    private void HideToast()
+    {
+        _toastLeft = 0f;
+        _toastWin.SetVisible(false);
+        _dockedWin.MarkDirty();   // the strip's saved line goes too
+    }
 
     private IWindowControl RegisterFlashWindow() => _services.Windows.Register(new WindowRegistration(
         new WindowSpec(
