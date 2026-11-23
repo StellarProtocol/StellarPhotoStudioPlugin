@@ -9,13 +9,6 @@ namespace Stellar.PhotoStudio;
 // popover, SettingSlider / SettingToggle / SettingRow).
 public sealed partial class Plugin
 {
-    // The compact strip, the toast and the close confirm (restyled in a later phase) still draw with these.
-    // TextMuted (not MenuMuted): MenuMuted is darker in every preset and failed the three dark themes (sandbox re-measure).
-    private ColorRgba? Muted() => _services.Theme.Colors.TextMuted;
-    private ColorRgba? MenuMuted() => _services.Theme.Colors.MenuMuted;
-    // Explicit default text colour: a Color func that flips back to null does not restore the chrome default
-    // (measured in-game: a pill kept its warning colour after unpinning), so dynamic colours never return null.
-    private ColorRgba? Normal() => _services.Theme.Colors.MenuText;
     private string T(string key) => _loc.T(key);
 
     /// <summary>One slider row's fine-step state: its ‹ › step, whether its value is being typed.</summary>
