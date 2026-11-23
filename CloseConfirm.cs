@@ -20,8 +20,8 @@ internal static class CloseConfirm
         var lines = new List<(string, int)>(5);
         if (r.FreeCam) lines.Add(("ps.close.freecam", -1));
         if (r.Frozen) lines.Add(("ps.close.unfreeze", -1));
-        if (r.Posed > 0) lines.Add(("ps.close.posed", r.Posed));
-        if (r.Lamps > 0) lines.Add(("ps.close.lamps", r.Lamps));
+        if (r.Posed > 0) lines.Add(r.Posed == 1 ? ("ps.close.posedOne", -1) : ("ps.close.posed", r.Posed));   // singular has its own key (no "1 people")
+        if (r.Lamps > 0) lines.Add(r.Lamps == 1 ? ("ps.close.lampsOne", -1) : ("ps.close.lamps", r.Lamps));
         else if (r.LitPeople) lines.Add(("ps.close.lights", -1));
         if (r.Hides) lines.Add(("ps.close.hides", -1));
         return lines;
